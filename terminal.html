@@ -178,13 +178,14 @@
       --tui-font-mono: 'IBM Plex Mono', monospace;
       /* «космический» шрифт с полной кириллицей — для текста плашек и кнопок
          (Robtronika не содержит строчных русских букв, поэтому там был системный шрифт) */
-      --tui-font-ui: 'Exo 2', 'Segoe UI', sans-serif;
+      --tui-font-ui: 'Robtronika', 'Exo 2', 'Segoe UI', sans-serif;
       --tui-frame-color: var(--tui-sky);
       /* коэффициент плотности плашек: 1 = полный размер, JS уменьшает его
          при инициализации/ресайзе, если контент колонки не помещается по
          высоте — так все 4 плашки в колонке гарантированно влезают без
          скролла на любом разумном разрешении */
       --tui-density: 1;
+      --tui-alert-color: #FF6B6B; /* цвет текущей тревоги — задаётся из базы (alerts.color) */
     }
 
     #terminal-ui {
@@ -651,8 +652,10 @@
       font-size: 12px;
       letter-spacing: 2px;
       color: #FFD9D9;
-      background: repeating-linear-gradient(45deg, #4a1010, #4a1010 10px, #5a1414 10px, #5a1414 20px);
-      border-bottom: 1px solid var(--tui-red);
+      background: repeating-linear-gradient(45deg,
+        color-mix(in srgb, var(--tui-alert-color) 28%, #000) 0 10px,
+        color-mix(in srgb, var(--tui-alert-color) 38%, #000) 10px 20px);
+      border-bottom: 1px solid var(--tui-alert-color);
       animation: tui-alert-pulse 1.5s ease-in-out infinite;
     }
     #tui-alert-banner.active { display: block; }
@@ -761,6 +764,57 @@
     @media (max-width: 700px) {
       .tui-auth-text { display: none; }
     }
+
+    /* ==========================================================
+       ТРЕВОГА: фон терминала окрашивается в цвет тревоги и мигает,
+       рамки плашек — в тот же цвет
+       ========================================================== */
+    #tui-alert-tint {
+      position: absolute; inset: 0; pointer-events: none; opacity: 0;
+      background:
+        radial-gradient(ellipse at 50% 45%, color-mix(in srgb, var(--tui-alert-color) 22%, transparent) 0%, transparent 60%),
+        radial-gradient(ellipse at 50% 50%, transparent 35%, color-mix(in srgb, var(--tui-alert-color) 55%, transparent) 100%),
+        color-mix(in srgb, var(--tui-alert-color) 14%, transparent);
+      transition: opacity 0.4s ease;
+    }
+    #terminal-ui.alerting #tui-alert-tint { animation: tui-alert-tint 1.6s ease-in-out infinite; }
+    @keyframes tui-alert-tint { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+    #terminal-ui.alerting .tui-panel { --tui-frame-color: var(--tui-alert-color); }
+    #terminal-ui.alerting .tui-panel-title { color: color-mix(in srgb, var(--tui-alert-color) 70%, #fff); }
+    #tui-alert-banner { font-size: 14px; padding: 12px 20px; z-index: 40; }
+    #tui-alert-sound-hint { display: none; font-size: 11px; opacity: 0.85; }
+    @media (prefers-reduced-motion: reduce) { #terminal-ui.alerting #tui-alert-tint { animation: none; opacity: 0.6; } }
+
+    /* ==========================================================
+       ШРИФТ ПЛАШЕК: Robtronika, всё заглавными. Шрифт широкий,
+       поэтому размеры подобраны отдельно для заголовков, подписей и значений;
+       длинные заголовки переносятся в две строки.
+       ========================================================== */
+    #terminal-ui .tui-panel-title {
+      font-weight: 400; letter-spacing: 1.2px; line-height: 1.2;
+      font-size: calc(13px * var(--tui-density));
+      white-space: normal; overflow: visible; text-overflow: clip;
+    }
+    #terminal-ui .tui-panel-title > span { display: block; }
+    #terminal-ui .tui-panel-body {
+      font-weight: 400; text-transform: uppercase; letter-spacing: 0.6px;
+      font-size: calc(12px * var(--tui-density));
+    }
+    #terminal-ui .tui-row > span:first-child { font-size: 0.86em; letter-spacing: 0.8px; }
+    #terminal-ui .tui-row .val { font-size: 1em; }
+    #terminal-ui .tui-pill { font-size: 0.95em; padding: 2px 8px; }
+    #terminal-ui .tui-ring-legend { font-size: calc(10px * var(--tui-density)); }
+    #terminal-ui .tui-counter-sub { font-size: 9px; letter-spacing: 0.6px; }
+    #terminal-ui .tui-drop-wrap span { font-size: 8.5px !important; }
+    #terminal-ui .tui-dock-btn { font-weight: 400; font-size: 12.5px; letter-spacing: 1.4px; }
+    #terminal-ui .tui-auth-text .tui-auth-msg { font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; max-width: 260px; }
+
+    /* при тревоге интерфейс сдвигается вниз под баннер, чтобы баннер не закрывал часы */
+    #tui-shell { transition: top 0.3s ease; }
+    #terminal-ui.alerting #tui-shell { top: 64px; }
+    #tui-footer { background: transparent; }
+    /* длинное имя оператора не должно наезжать на часы: ограничение ширины и перенос */
+    .tui-char-name { max-width: min(340px, 19vw); text-align: right; line-height: 1.15; font-size: clamp(12px, 1.05vw, 15px); }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -799,7 +853,8 @@
 </div>
 
 <div id="terminal-ui">
-  <div id="tui-alert-banner"></div>
+  <div id="tui-alert-tint"></div>
+  <div id="tui-alert-banner"><span id="tui-alert-text"></span><span id="tui-alert-sound-hint"> · 🔇 КОСНИТЕСЬ ЭКРАНА, ЧТОБЫ ВКЛЮЧИТЬ ЗВУК</span></div>
   <div id="tui-vignette"></div>
   <div id="tui-scanlines"></div>
 
@@ -2102,12 +2157,54 @@
     },
     render(alert) {
       const banner = document.getElementById('tui-alert-banner');
+      const ui = document.getElementById('terminal-ui');
       if (alert) {
-        banner.textContent = "⚠ " + alert.label;
+        document.getElementById('tui-alert-text').textContent = "⚠ " + alert.label;
+        ui.style.setProperty('--tui-alert-color', alert.color || '#FF6B6B');
         banner.classList.add('active');
+        if (!ui.classList.contains('alerting')) { ui.classList.add('alerting'); setTimeout(() => window.dispatchEvent(new Event('resize')), 350); }
       } else {
         banner.classList.remove('active');
+        if (ui.classList.contains('alerting')) { ui.classList.remove('alerting'); setTimeout(() => window.dispatchEvent(new Event('resize')), 350); }
       }
+      this.updateSound(alert);
+    },
+
+    /* ---------- Звук тревоги (alerts.sound_url, alerts.sound_loop) ----------
+       Браузер не даёт включать звук до первого касания страницы. Если запуск
+       заблокирован — в баннере появляется подсказка, и звук включается при
+       первом же касании/нажатии клавиши. В режиме киоска это снимается флагом
+       --autoplay-policy=no-user-gesture-required. */
+    audio: null,
+    soundKey: null,
+    soundBlocked: false,
+    updateSound(alert) {
+      const url = alert && alert.sound_url;
+      if (!url) { this.stopSound(); return; }
+      const key = alert.id + '|' + url + '|' + (alert.sound_loop !== false);
+      if (this.soundKey === key) return;
+      this.stopSound();
+      this.soundKey = key;
+      const a = new Audio(url);
+      a.loop = alert.sound_loop !== false;
+      this.audio = a;
+      this.tryPlay();
+    },
+    tryPlay() {
+      if (!this.audio) return;
+      this.audio.play()
+        .then(() => { this.soundBlocked = false; this.setSoundHint(false); })
+        .catch(() => { this.soundBlocked = true; this.setSoundHint(true); });
+    },
+    stopSound() {
+      if (this.audio) { this.audio.pause(); this.audio.removeAttribute('src'); this.audio.load(); }
+      this.audio = null;
+      this.soundKey = null;
+      this.soundBlocked = false;
+      this.setSoundHint(false);
+    },
+    setSoundHint(on) {
+      document.getElementById('tui-alert-sound-hint').style.display = on ? 'inline' : 'none';
     },
     start() {
       this.check();
@@ -2930,6 +3027,10 @@
      реагирует (hover), но клик ничего не делает. addEventListener этому
      не подвержен.
      ========================================================================= */
+  ['pointerdown', 'keydown', 'touchstart'].forEach(evt => document.addEventListener(evt, () => {
+    if (AlertManager.soundBlocked) AlertManager.tryPlay();
+  }, true));
+
   document.addEventListener('change', (e) => {
     if (e.target && e.target.id === 'journalAudioFile') App.onAudioFilePicked(e.target.files && e.target.files[0]);
   });
