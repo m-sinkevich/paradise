@@ -37,7 +37,7 @@
   <title>Терминал колониста</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <!-- Локальные техно-шрифты с кириллицей. ВАЖНО: папка fonts/ (с файлами Robtronika-4Bq8p.woff
        и Y224-pgj1O.woff внутри) должна лежать РЯДОМ с ЭТИМ html-файлом на сервере — если открываете
        terminal_full_5_1.html из другого места, скопируйте fonts/ и туда же.
@@ -171,6 +171,9 @@
       --tui-font-display: 'Robtronika', sans-serif;
       --tui-font-digital: 'Y224', monospace;
       --tui-font-mono: 'IBM Plex Mono', monospace;
+      /* «космический» шрифт с полной кириллицей — для текста плашек и кнопок
+         (Robtronika не содержит строчных русских букв, поэтому там был системный шрифт) */
+      --tui-font-ui: 'Exo 2', 'Segoe UI', sans-serif;
       --tui-frame-color: var(--tui-sky);
       /* коэффициент плотности плашек: 1 = полный размер, JS уменьшает его
          при инициализации/ресайзе, если контент колонки не помещается по
@@ -218,11 +221,12 @@
       position: absolute;
       inset: 22px;
       display: grid;
-      grid-template-rows: 92px 1fr 52px;
+      grid-template-rows: 92px 1fr auto 22px;
       grid-template-columns: 460px 1fr 460px;
       grid-template-areas:
         "header header header"
         "left   center right"
+        "dock   dock   dock"
         "footer footer footer";
       gap: 16px;
     }
@@ -255,16 +259,15 @@
     #tui-col-right > .tui-panel:last-child  { width: 575px; margin-left: -115px; }
 
     #tui-center {
-      grid-area: center;
+      grid-area: dock;
       display: flex;
-      flex-direction: column;
-      justify-content: flex-end;
+      justify-content: center;
       align-items: center;
-      padding-bottom: 6px;
+      min-width: 0;
     }
 
     @media (max-width: 1160px) {
-      #tui-shell { grid-template-columns: 1fr; grid-template-areas: "header" "center" "footer"; }
+      #tui-shell { grid-template-columns: 1fr; grid-template-areas: "header" "center" "dock" "footer"; }
       #tui-col-left, #tui-col-right { display: none; }
     }
 
@@ -363,9 +366,11 @@
       align-items: center;
       gap: 10px;
       flex: 1 1 auto;
-      font-family: var(--tui-font-display);
+      font-family: var(--tui-font-ui);
+      font-weight: 600;
+      text-transform: uppercase;
       font-size: 17px;
-      letter-spacing: 0.5px;
+      letter-spacing: 1.4px;
       color: var(--tui-cyan);
     }
     .tui-panel--danger .tui-panel-title { color: var(--tui-red); }
@@ -379,7 +384,7 @@
 
     /* уплотнено под 4 плашки в колонке вместо 3 (п. редизайна): меньше паддинги/шрифт,
        без потери читаемости — плотность сохраняет фирменный HUD-стиль */
-    .tui-panel-body { font-family: var(--tui-font-display); padding: calc(9px * var(--tui-density)) calc(15px * var(--tui-density)) calc(11px * var(--tui-density)); font-size: calc(13.5px * var(--tui-density)); }
+    .tui-panel-body { font-family: var(--tui-font-ui); font-weight: 500; letter-spacing: 0.3px; font-variant-numeric: tabular-nums; padding: calc(9px * var(--tui-density)) calc(15px * var(--tui-density)) calc(11px * var(--tui-density)); font-size: calc(13.5px * var(--tui-density)); }
 
     .tui-row { display: flex; justify-content: space-between; align-items: baseline; margin: calc(3.5px * var(--tui-density)) 0; color: var(--tui-ink-400); gap: 12px; }
     .tui-row .val { color: var(--tui-ink-100); }
@@ -536,15 +541,16 @@
     .tui-timer-badge span#tui-session-timer { font-family: var(--tui-font-digital); font-size: 16px; font-weight: 400; color: var(--tui-amber); letter-spacing: 1px; white-space: nowrap; }
 
     /* ---------- Центральный док с кнопками действий ---------- */
-    .tui-dock { display: flex; gap: 12px; padding: 12px 16px; }
+    .tui-dock { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; padding: 12px 16px; }
     .tui-dock-btn {
       background: rgba(14, 165, 233, 0.12);
       border: 1px solid var(--tui-sky);
       color: var(--tui-ink-100);
-      font-family: var(--tui-font-display);
-      font-size: 12px;
-      font-weight: 400;
-      letter-spacing: 1px;
+      font-family: var(--tui-font-ui);
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.4px;
       padding: 11px 18px;
       cursor: pointer;
       display: flex;
@@ -567,8 +573,8 @@
     #tui-footer-log { color: var(--tui-cyan); }
 
     @media (max-width: 700px) {
-      #tui-shell { inset: 12px; grid-template-rows: 84px 1fr 46px; }
-      .tui-dock { flex-direction: column; }
+      #tui-shell { inset: 12px; grid-template-rows: 84px 1fr auto 18px; }
+      .tui-dock-btn { padding: 10px 12px; font-size: 11px; }
       .tui-header-right { display: none; }
     }
 
@@ -581,7 +587,7 @@
     .tui-auth-prompt { display: flex; align-items: center; gap: 18px; }
     .tui-auth-text { text-align: right; }
     .tui-auth-text .tui-label { font-size: 17px; color: var(--tui-ink-100); letter-spacing: 1.5px; text-shadow: 0 0 8px rgba(255, 180, 84, 0.4); }
-    .tui-auth-text .tui-auth-msg { font-family: var(--tui-font-display); font-size: 15px; color: var(--tui-ink-600); max-width: 230px; line-height: 1.35; letter-spacing: 0.2px; margin-top: 6px; }
+    .tui-auth-text .tui-auth-msg { font-family: var(--tui-font-ui); font-size: 15px; color: var(--tui-ink-600); max-width: 230px; line-height: 1.35; letter-spacing: 0.2px; margin-top: 6px; }
     .tui-auth-btn {
       display: flex; align-items: center; gap: 8px;
       background: rgba(255, 180, 84, 0.12); border: 1px solid var(--tui-amber); color: var(--tui-amber);
@@ -600,8 +606,8 @@
     #tui-header.authenticated .tui-auth-prompt { display: none; }
 
     /* ---- Центральный док кнопок — скрыт до авторизации ---- */
-    #tui-dock { display: none; }
-    #tui-dock.visible { display: flex; }
+    #tui-dock { visibility: hidden; }
+    #tui-dock.visible { visibility: visible; }
 
     /* ---- Баннер тревоги модуля — поверх всего интерфейса, п.6 ТЗ ---- */
     #tui-alert-banner {
@@ -707,12 +713,11 @@
     /* ---- Лог разработчика — сворачиваемая панель внизу, п.11 ТЗ ---- */
     #tui-devlog-toggle {
       position: fixed; bottom: 12px; right: 12px; z-index: 65;
-      font-family: var(--tui-font-display); font-size: 9.5px; letter-spacing: 1.5px;
-      background: var(--tui-panel-deep); border: 1px solid var(--tui-edge); color: var(--tui-ink-400);
-      padding: 7px 12px; cursor: pointer;
-      clip-path: polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px);
+      font-family: var(--tui-font-mono); font-size: 7px; line-height: 1; letter-spacing: 1px;
+      background: transparent; border: none; color: var(--tui-ink-600);
+      padding: 3px 4px; cursor: pointer; opacity: 0.12; transition: opacity 0.2s ease;
     }
-    #tui-devlog-toggle:hover { color: var(--tui-cyan); border-color: var(--tui-cyan); }
+    #tui-devlog-toggle:hover { opacity: 0.9; color: var(--tui-cyan); }
     #tui-devlog {
       position: fixed; bottom: 0; left: 0; right: 0; max-height: 0; overflow: hidden;
       background: rgba(2, 6, 14, 0.94); border-top: 1px solid var(--tui-edge); font-size: 10px; color: var(--tui-ink-400);
@@ -773,11 +778,11 @@
     <!-- ======= ХЕДЕР ======= -->
     <header id="tui-header" class="tui-panel tui-shape-header">
       <svg class="tui-header-bar-bg" viewBox="0 0 1200 92" preserveAspectRatio="none" aria-hidden="true">
-        <path class="ln" d="M230,20 L300,20 L325,32 L875,32 L900,20 L970,20"/>
-        <path class="ln" d="M260,82 L940,82" stroke-width="1"/>
+        <path class="ln" d="M230,20 L300,20 L330,76 L870,76 L900,20 L970,20"/>
+        <path class="ln" d="M260,87 L940,87" stroke-width="1"/>
         <g class="ln">
-          <path d="M350,82 h10 M370,82 h10 M390,82 h10 M410,82 h10"/>
-          <path d="M790,82 h10 M810,82 h10 M830,82 h10 M850,82 h10"/>
+          <path d="M350,87 h10 M370,87 h10 M390,87 h10 M410,87 h10"/>
+          <path d="M790,87 h10 M810,87 h10 M830,87 h10 M850,87 h10"/>
         </g>
       </svg>
       <div class="tui-header-clock" id="tui-header-clock">
@@ -804,7 +809,7 @@
         </div>
         <div class="tui-char-block" id="tui-char-block">
           <div class="tui-char-info">
-            <span class="tui-char-label">Персонаж</span>
+            <span class="tui-char-label">Колонист</span>
             <span class="tui-char-name" id="tui-char-name">—</span>
             <span class="tui-char-id" id="tui-char-id-badge">—</span>
           </div>
@@ -1093,9 +1098,7 @@
         <path class="ln" d="M260,26 L940,26"/>
         <path class="ln" d="M300,34 L370,34 M830,34 L900,34" stroke-width="1"/>
       </svg>
-      <span id="tui-footer-left">SYS_VER: 2.0.4-MVP · SUPABASE REALTIME · ENCRYPTION: NONE (TRUST MODE)</span>
-      <span id="tui-footer-log">LOG: —</span>
-    </footer>
+          </footer>
 
   </div>
 </div>
@@ -1161,7 +1164,7 @@
 </div>
 
 <!-- ======= ЛОГ РАЗРАБОТЧИКА ======= -->
-<button id="tui-devlog-toggle" data-action="toggleDevLog">ЛОГ ▲</button>
+<button id="tui-devlog-toggle" data-action="toggleDevLog" title="Лог">log</button>
 <div id="tui-devlog"><div id="tui-devlog-inner"></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
