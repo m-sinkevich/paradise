@@ -1,0 +1,61 @@
+# «Будильник» для бесплатного проекта Supabase.
+# Бесплатный проект ставится на паузу после ~7 дней без запросов.
+# Этот сценарий раз в 3 дня делает маленький запрос к базе (читает одну строку из modules),
+# а если в репозитории давно не было коммитов — обновляет файл-отметку, чтобы GitHub
+# не отключил расписание (GitHub отключает scheduled-сценарии в публичных репозиториях
+# после 60 дней без активности).
+
+name: Supabase keepalive
+
+on:
+  schedule:
+    - cron: "17 5 */3 * *"   # в 05:17 UTC (09:17 по Тбилиси) каждые 3 дня
+  workflow_dispatch:          # кнопка «Run workflow» для ручного запуска
+
+permissions:
+  contents: write
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    env:
+      # Те же публичные значения, что вшиты в terminal.html. Если смените ключ в Supabase —
+      # поменяйте и здесь (или заведите секреты SUPABASE_URL / SUPABASE_KEY в Settings → Secrets).
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://yfogwbxxomuzbezgpqjm.supabase.co' }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY || 'sb_publishable_TflOx6ZH1UM3wQPg_rEe4A_b6oxzSmd' }}
+    steps:
+      - name: Запрос к базе
+        run: |
+          set -e
+          for attempt in 1 2 3; do
+            code=$(curl -s -o response.json -w "%{http_code}" \
+              -H "apikey: $SUPABASE_KEY" \
+              "$SUPABASE_URL/rest/v1/modules?select=id&limit=1" || echo "000")
+            echo "Попытка $attempt: HTTP $code"
+            if [ "$code" = "200" ]; then
+              echo "База на связи: $(cat response.json)"
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "::error::Supabase не ответил (HTTP $code). Возможно, проект уже на паузе — откройте панель Supabase и нажмите Restore project."
+          cat response.json || true
+          exit 1
+
+      - name: Отметка активности репозитория (раз в ~50 дней)
+        uses: actions/checkout@v4
+
+      - name: Обновить отметку, если коммитов давно не было
+        run: |
+          last=$(git log -1 --format=%ct)
+          now=$(date +%s)
+          days=$(( (now - last) / 86400 ))
+          echo "Дней с последнего коммита: $days"
+          if [ "$days" -ge 50 ]; then
+            date -u +"%Y-%m-%dT%H:%M:%SZ" > .github/keepalive.txt
+            git config user.name "github-actions[bot]"
+            git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+            git add .github/keepalive.txt
+            git commit -m "keepalive: отметка активности"
+            git push
+          fi
