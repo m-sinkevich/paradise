@@ -59,6 +59,11 @@
   </style>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, monospace; }
+    /* Внутри плашек и кнопок шрифт наследуется от плашки (правило выше раньше назначало
+       системный шрифт каждой вложенной строке — из-за этого шрифт плашек не применялся).
+       :where() даёт нулевую специфичность, поэтому классы с собственным шрифтом
+       (цифровые счётчики, тех-ID и т.п.) продолжают работать. */
+    :where(.tui-panel, .tui-dock-btn, .tui-auth-text) * { font-family: inherit; }
     
     body {
       background-color: #030712;
@@ -535,6 +540,31 @@
     .tui-char-label { font-size: 9px; color: var(--tui-ink-600); letter-spacing: 1.5px; font-family: var(--tui-font-display); }
     .tui-char-name { font-family: var(--tui-font-display); font-size: 15px; color: var(--tui-ink-100); font-weight: 400; }
     .tui-char-id { font-family: var(--tui-font-digital); font-size: 11px; color: var(--tui-ink-400); }
+    .tui-char-id:empty { display: none; }
+
+    /* ---- Кольцо таймера бездействия (справа в шапке) ---- */
+    .tui-idle { display: none; position: relative; width: 44px; height: 44px; flex-shrink: 0; }
+    .tui-idle.active { display: block; }
+    .tui-idle svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .tui-idle .trk { fill: none; stroke: rgba(56, 189, 248, 0.15); stroke-width: 3; }
+    .tui-idle .arc { fill: none; stroke: var(--tui-cyan); stroke-width: 3; stroke-linecap: round;
+      stroke-dasharray: 100 100; stroke-dashoffset: 0; transition: stroke-dashoffset 1s linear, stroke 0.4s ease;
+      filter: drop-shadow(0 0 3px var(--tui-cyan)); }
+    .tui-idle.warn .arc { stroke: var(--tui-amber); filter: drop-shadow(0 0 3px var(--tui-amber)); }
+    .tui-idle.crit .arc { stroke: var(--tui-red); filter: drop-shadow(0 0 4px var(--tui-red)); }
+    .tui-idle.crit { animation: tui-pulse-op 1s ease-in-out infinite; }
+    .tui-idle-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      font-family: var(--tui-font-digital); font-size: 9px; color: var(--tui-ink-400); letter-spacing: 0.5px; }
+
+    /* ---- Голосовая запись в журнал ---- */
+    .tui-voice-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .tui-voice-row .tui-modal-btn.ghost { padding: 9px 12px; font-size: 10px; }
+    .tui-voice-btn.recording { border-color: var(--tui-red) !important; color: var(--tui-red) !important; animation: tui-pulse-op 1.2s ease-in-out infinite; }
+    .tui-voice-timer { font-family: var(--tui-font-digital); font-size: 13px; color: var(--tui-red); letter-spacing: 1px; }
+    .tui-voice-preview { display: none; flex-direction: column; gap: 8px; border: 1px dashed var(--tui-edge); padding: 10px; }
+    .tui-voice-preview.visible { display: flex; }
+    .tui-voice-preview audio, .tui-journal-entry audio { width: 100%; height: 34px; margin-top: 4px; }
+    .tui-voice-preview .tui-voice-row .tui-modal-btn { padding: 9px 12px; font-size: 10px; }
 
     .tui-timer-badge { display: flex; flex-direction: column; align-items: center; gap: 3px; background: rgba(255, 180, 84, 0.12); border: 1px solid var(--tui-amber); padding: 6px 16px; min-width: 64px; flex-shrink: 0; }
     .tui-timer-badge .tui-label { font-size: 7.5px; color: var(--tui-amber); white-space: nowrap; }
@@ -809,13 +839,20 @@
         </div>
         <div class="tui-char-block" id="tui-char-block">
           <div class="tui-char-info">
-            <span class="tui-char-label">Колонист</span>
+            <span class="tui-char-label">Оператор</span>
             <span class="tui-char-name" id="tui-char-name">—</span>
-            <span class="tui-char-id" id="tui-char-id-badge">—</span>
+            <span class="tui-char-id" id="tui-char-id-badge"></span>
           </div>
           <div class="tui-timer-badge">
             <span class="tui-label">Сеанс</span>
             <span id="tui-session-timer">—:—</span>
+          </div>
+          <div class="tui-idle" id="tui-idle" title="До автоматического выхода при бездействии">
+            <svg viewBox="0 0 40 40" aria-hidden="true">
+              <circle class="trk" cx="20" cy="20" r="16"/>
+              <circle class="arc" id="tui-idle-arc" cx="20" cy="20" r="16" pathLength="100"/>
+            </svg>
+            <span class="tui-idle-text" id="tui-idle-text">—</span>
           </div>
         </div>
       </div>
@@ -1140,6 +1177,22 @@
       <textarea class="tui-textarea" id="journalInput" rows="3" placeholder="Введите текст записи..."></textarea>
     </div>
     <button class="tui-modal-btn" data-action="saveJournalEntry">Записать в журнал</button>
+    <div class="tui-divider">или голосом</div>
+    <div class="tui-voice-row">
+      <button class="tui-modal-btn ghost tui-voice-btn" id="voiceRecBtn" data-action="toggleVoiceRecord">● Голосовая запись</button>
+      <button class="tui-modal-btn ghost" data-action="pickAudioFile">⇪ Аудиофайл</button>
+      <span class="tui-voice-timer" id="voiceTimer"></span>
+      <input type="file" id="journalAudioFile" accept="audio/*" style="display:none">
+    </div>
+    <div class="tui-voice-preview" id="voicePreview">
+      <span class="tui-status-line" id="voicePreviewLabel">Прослушайте запись перед отправкой. Текст из поля выше станет подписью.</span>
+      <audio controls id="voicePreviewAudio"></audio>
+      <div class="tui-voice-row">
+        <button class="tui-modal-btn" data-action="sendVoiceEntry">Отправить в журнал</button>
+        <button class="tui-modal-btn ghost" data-action="discardVoice">Удалить</button>
+      </div>
+    </div>
+    <div class="tui-error-line" id="journalError"></div>
     <div class="tui-divider">записи модуля</div>
     <div class="tui-journal-list" id="journalList"></div>
   </div>
@@ -1841,6 +1894,7 @@
   const SUPABASE_URL = "https://yfogwbxxomuzbezgpqjm.supabase.co";
   const SUPABASE_KEY = "sb_publishable_TflOx6ZH1UM3wQPg_rEe4A_b6oxzSmd";
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const MEDIA_BUCKET = 'content-media'; // Storage: медиа контента и голосовые записи журнала (папка journal/)
 
   // Код модуля берётся из адреса: terminal.html?module=КОД
   // Без параметра — последний код, сохранённый на этом компьютере.
@@ -1916,10 +1970,11 @@
       const { error } = await sb.from('journal_entries').insert({
         module_id: this.moduleRow.id,
         character_id: entry.characterId,
-        type: 'text',
-        text_content: entry.text
+        type: entry.type || 'text',
+        text_content: entry.text || null,
+        media_path: entry.mediaPath || null
       });
-      if (error) console.error(error);
+      if (error) { console.error(error); throw error; }
       await sb.from('modules').update({ last_journal_entry_at: nowIso }).eq('id', this.moduleRow.id);
       // локальный кэш модуля тоже обновляем — иначе виджет «тишина в эфире»
       // продолжает читать старое значение, полученное один раз при DB.init()
@@ -1934,9 +1989,23 @@
       if (error) { console.error(error); return []; }
       return data.map(e => ({
         authorName: e.characters ? e.characters.name : '—',
+        type: e.type,
         text: e.text_content,
+        mediaUrl: e.media_path
+          ? (/^https?:/.test(e.media_path) ? e.media_path : sb.storage.from(MEDIA_BUCKET).getPublicUrl(e.media_path).data.publicUrl)
+          : null,
         createdAt: e.created_at
       }));
+    },
+
+    /* ---------- Загрузка аудиозаписи журнала в Supabase Storage ---------- */
+    async uploadJournalAudio(blob, ext, characterId) {
+      const path = `journal/${this.moduleRow.id}/${Date.now()}-${String(characterId).slice(0, 8)}.${ext}`;
+      const { error } = await sb.storage.from(MEDIA_BUCKET).upload(path, blob, {
+        contentType: blob.type || 'audio/webm', upsert: false
+      });
+      if (error) throw error;
+      return path;
     },
 
     async addLog(entry) {
@@ -2131,7 +2200,8 @@
       await this.log('auth', { code, result: 'ok' });
 
       document.getElementById('tui-char-name').textContent = character.name.toUpperCase();
-      document.getElementById('tui-char-id-badge').textContent = character.qr_code || '';
+      // вместо кода входа (его можно подсмотреть и войти чужим персонажем) — только номер бейджа, если он есть
+      document.getElementById('tui-char-id-badge').textContent = character.badge_id || '';
       document.getElementById('tui-header').classList.add('authenticated');
       document.getElementById('tui-dock').classList.add('visible');
 
@@ -2161,14 +2231,34 @@
         ['click', 'keydown', 'touchstart'].forEach(evt =>
           document.addEventListener(evt, this.inactivityHandlerBound));
         this.resetInactivityTimer();
+        document.getElementById('tui-idle').classList.add('active');
+        this.updateIdleRing();
+        this.idleRingInterval = setInterval(() => this.updateIdleRing(), 1000);
       }
+    },
+
+    /* ---------- Кольцо бездействия: доля оставшегося времени до автовыхода ---------- */
+    updateIdleRing() {
+      if (!this.inactivityDeadline || !this.inactivityMinutes) return;
+      const total = this.inactivityMinutes * 60000;
+      const left = Math.max(0, this.inactivityDeadline - Date.now());
+      const frac = left / total;
+      document.getElementById('tui-idle-arc').style.strokeDashoffset = String(100 * (1 - frac));
+      const sec = Math.ceil(left / 1000);
+      document.getElementById('tui-idle-text').textContent =
+        sec >= 60 ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}` : String(sec);
+      const ring = document.getElementById('tui-idle');
+      ring.classList.toggle('warn', frac <= 0.5 && frac > 0.2);
+      ring.classList.toggle('crit', frac <= 0.2);
     },
 
     resetInactivityTimer() {
       if (this.inactivityTimeoutId) clearTimeout(this.inactivityTimeoutId);
+      this.inactivityDeadline = Date.now() + this.inactivityMinutes * 60000;
       this.inactivityTimeoutId = setTimeout(() => {
         this.endSession('inactivity');
       }, this.inactivityMinutes * 60000);
+      this.updateIdleRing();
     },
 
     updateSessionTimerDisplay() {
@@ -2185,6 +2275,12 @@
       this.sessionEndsAt = null;
       if (this.inactivityTimeoutId) clearTimeout(this.inactivityTimeoutId);
       this.inactivityTimeoutId = null;
+      if (this.idleRingInterval) clearInterval(this.idleRingInterval);
+      this.idleRingInterval = null;
+      this.inactivityDeadline = null;
+      this.inactivityMinutes = null;
+      const ring = document.getElementById('tui-idle');
+      ring.classList.remove('active', 'warn', 'crit');
       if (this.inactivityHandlerBound) {
         ['click', 'keydown', 'touchstart'].forEach(evt =>
           document.removeEventListener(evt, this.inactivityHandlerBound));
@@ -2209,7 +2305,163 @@
       document.getElementById('journalModal').classList.add('open');
     },
     closeJournalModal() {
+      this.stopVoiceRecording(true);
+      this.discardVoice();
+      document.getElementById('journalError').textContent = '';
       document.getElementById('journalModal').classList.remove('open');
+    },
+
+    /* ---------- Голосовая запись (MediaRecorder) и загрузка аудиофайла ---------- */
+    voiceRecorder: null,
+    voiceStream: null,
+    voiceChunks: [],
+    voiceTimerInterval: null,
+    voiceStartedAt: 0,
+    pendingAudio: null,       // { blob, ext, source: 'mic' | 'file', url }
+
+    pickVoiceMime() {
+      const variants = [
+        ['audio/webm;codecs=opus', 'webm'], ['audio/webm', 'webm'],
+        ['audio/ogg;codecs=opus', 'ogg'], ['audio/mp4', 'm4a']
+      ];
+      if (window.MediaRecorder && MediaRecorder.isTypeSupported) {
+        for (const [m, ext] of variants) if (MediaRecorder.isTypeSupported(m)) return { mime: m, ext };
+      }
+      return { mime: '', ext: 'webm' };
+    },
+
+    async toggleVoiceRecord() {
+      if (this.voiceRecorder && this.voiceRecorder.state === 'recording') {
+        this.stopVoiceRecording(false);
+        return;
+      }
+      const errEl = document.getElementById('journalError');
+      errEl.textContent = '';
+      if (!window.MediaRecorder || !navigator.mediaDevices) {
+        errEl.textContent = 'Этот браузер не умеет записывать звук. Используйте кнопку «Аудиофайл».';
+        return;
+      }
+      this.discardVoice();
+      try {
+        this.voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (e) {
+        errEl.textContent = 'Нет доступа к микрофону: ' + e.message;
+        return;
+      }
+      const { mime, ext } = this.pickVoiceMime();
+      this.voiceRecorder = new MediaRecorder(this.voiceStream, mime ? { mimeType: mime } : undefined);
+      this.voiceChunks = [];
+      this.voiceRecorder.ondataavailable = e => { if (e.data && e.data.size) this.voiceChunks.push(e.data); };
+      this.voiceRecorder.onstop = () => {
+        const discard = this.voiceDiscardOnStop;
+        this.voiceDiscardOnStop = false;
+        if (this.voiceStream) this.voiceStream.getTracks().forEach(t => t.stop());
+        this.voiceStream = null;
+        if (discard || !this.voiceChunks.length) return;
+        const blob = new Blob(this.voiceChunks, { type: this.voiceRecorder.mimeType || mime || 'audio/webm' });
+        this.showVoicePreview(blob, ext, 'mic');
+      };
+      this.voiceRecorder.start(1000);
+      this.voiceStartedAt = Date.now();
+      const btn = document.getElementById('voiceRecBtn');
+      btn.classList.add('recording');
+      btn.textContent = '■ Остановить';
+      const MAX_SEC = 180;
+      const timerEl = document.getElementById('voiceTimer');
+      const tick = () => {
+        const sec = Math.floor((Date.now() - this.voiceStartedAt) / 1000);
+        timerEl.textContent = `● ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')} / 3:00`;
+        // запись голосом — это активность, не даём таймеру бездействия разлогинить игрока
+        if (this.inactivityMinutes) this.resetInactivityTimer();
+        if (sec >= MAX_SEC) this.stopVoiceRecording(false);
+      };
+      tick();
+      this.voiceTimerInterval = setInterval(tick, 500);
+      await this.log('journal_voice_start', {});
+    },
+
+    stopVoiceRecording(discard) {
+      if (this.voiceTimerInterval) clearInterval(this.voiceTimerInterval);
+      this.voiceTimerInterval = null;
+      document.getElementById('voiceTimer').textContent = '';
+      const btn = document.getElementById('voiceRecBtn');
+      btn.classList.remove('recording');
+      btn.textContent = '● Голосовая запись';
+      if (this.voiceRecorder && this.voiceRecorder.state === 'recording') {
+        this.voiceDiscardOnStop = !!discard;
+        this.voiceRecorder.stop();
+      } else if (this.voiceStream) {
+        this.voiceStream.getTracks().forEach(t => t.stop());
+        this.voiceStream = null;
+      }
+    },
+
+    pickAudioFile() {
+      if (this.voiceRecorder && this.voiceRecorder.state === 'recording') this.stopVoiceRecording(true);
+      const input = document.getElementById('journalAudioFile');
+      input.value = '';
+      input.click();
+    },
+
+    onAudioFilePicked(file) {
+      const errEl = document.getElementById('journalError');
+      errEl.textContent = '';
+      if (!file) return;
+      if (!/^audio\//.test(file.type) && !/\.(mp3|m4a|wav|ogg|oga|webm|aac|flac)$/i.test(file.name)) {
+        errEl.textContent = 'Это не аудиофайл.';
+        return;
+      }
+      if (file.size > 20 * 1024 * 1024) {
+        errEl.textContent = 'Файл больше 20 МБ — выберите запись покороче.';
+        return;
+      }
+      const ext = (file.name.split('.').pop() || 'mp3').toLowerCase();
+      this.showVoicePreview(file, ext, 'file');
+    },
+
+    showVoicePreview(blob, ext, source) {
+      this.discardVoice();
+      const url = URL.createObjectURL(blob);
+      this.pendingAudio = { blob, ext, source, url };
+      document.getElementById('voicePreviewAudio').src = url;
+      document.getElementById('voicePreviewLabel').textContent = source === 'file'
+        ? `Файл «${blob.name}». Текст из поля выше станет подписью.`
+        : 'Прослушайте запись перед отправкой. Текст из поля выше станет подписью.';
+      document.getElementById('voicePreview').classList.add('visible');
+    },
+
+    discardVoice() {
+      if (this.pendingAudio && this.pendingAudio.url) URL.revokeObjectURL(this.pendingAudio.url);
+      this.pendingAudio = null;
+      const a = document.getElementById('voicePreviewAudio');
+      a.pause(); a.removeAttribute('src');
+      document.getElementById('voicePreview').classList.remove('visible');
+    },
+
+    async sendVoiceEntry() {
+      if (!this.pendingAudio || !this.currentCharacter || this.voiceSending) return;
+      const errEl = document.getElementById('journalError');
+      errEl.textContent = 'Отправка записи…';
+      this.voiceSending = true;
+      try {
+        const textEl = document.getElementById('journalInput');
+        const caption = textEl.value.trim();
+        const path = await DB.uploadJournalAudio(this.pendingAudio.blob, this.pendingAudio.ext, this.currentCharacter.id);
+        await DB.addJournalEntry({ characterId: this.currentCharacter.id, type: 'audio', text: caption, mediaPath: path });
+        await this.log('journal_entry', { type: 'audio', source: this.pendingAudio.source, mediaPath: path, text: caption });
+        textEl.value = '';
+        this.discardVoice();
+        errEl.textContent = '';
+        await this.renderJournalList();
+        await this.refreshJournalWidget();
+        SilenceWatcher.lastFiredFor = null;
+      } catch (e) {
+        console.error(e);
+        errEl.textContent = 'Не удалось сохранить запись: ' + (e.message || e) +
+          '. Проверьте, что в Supabase создан bucket «content-media» с правом загрузки.';
+      } finally {
+        this.voiceSending = false;
+      }
     },
 
     async renderJournalList() {
@@ -2228,7 +2480,15 @@
         meta.className = 'meta';
         meta.textContent = `${entry.authorName} · ${t}`;
         div.appendChild(meta);
-        div.appendChild(document.createTextNode(entry.text || ''));
+        if (entry.type === 'audio') meta.textContent += ' · 🎙 голосовая запись';
+        if (entry.text) div.appendChild(document.createTextNode(entry.text));
+        if (entry.mediaUrl) {
+          const audio = document.createElement('audio');
+          audio.controls = true;
+          audio.preload = 'none';
+          audio.src = entry.mediaUrl;
+          div.appendChild(audio);
+        }
         el.appendChild(div);
       });
     },
@@ -2237,7 +2497,12 @@
       const textEl = document.getElementById('journalInput');
       const text = textEl.value.trim();
       if (!text || !this.currentCharacter) return;
-      await DB.addJournalEntry({ characterId: this.currentCharacter.id, text });
+      try {
+        await DB.addJournalEntry({ characterId: this.currentCharacter.id, text });
+      } catch (e) {
+        document.getElementById('journalError').textContent = 'Не удалось сохранить запись: ' + (e.message || e);
+        return;
+      }
       await this.log('journal_entry', { text });
       textEl.value = "";
       await this.renderJournalList();
@@ -2665,6 +2930,10 @@
      реагирует (hover), но клик ничего не делает. addEventListener этому
      не подвержен.
      ========================================================================= */
+  document.addEventListener('change', (e) => {
+    if (e.target && e.target.id === 'journalAudioFile') App.onAudioFilePicked(e.target.files && e.target.files[0]);
+  });
+
   document.addEventListener('click', (e) => {
     const el = e.target.closest('[data-action]');
     if (!el) return;
@@ -2678,6 +2947,10 @@
       case 'submitModalManual': App.submitModalManual(); break;
       case 'closeJournalModal': App.closeJournalModal(); break;
       case 'saveJournalEntry': App.saveJournalEntry(); break;
+      case 'toggleVoiceRecord': App.toggleVoiceRecord(); break;
+      case 'pickAudioFile': App.pickAudioFile(); break;
+      case 'sendVoiceEntry': App.sendVoiceEntry(); break;
+      case 'discardVoice': App.discardVoice(); break;
       case 'closeContentModal': App.closeContentModal(); break;
       case 'goBackContent': App.goBackContent(); break;
       case 'toggleDevLog': App.toggleDevLog(); break;
