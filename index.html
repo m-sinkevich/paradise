@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Терминалы колонии</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  @font-face {
+    font-family: 'Robtronika';
+    src: url('fonts/Robtronika-4Bq8p.woff') format('woff'),
+         url('https://fonts.cdnfonts.com/s/71343/Robtronika-4Bq8p.woff') format('woff');
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'Y224';
+    src: url('fonts/Y224-pgj1O.woff') format('woff'),
+         url('https://fonts.cdnfonts.com/s/122590/Y224-pgj1O.woff') format('woff');
+    font-display: swap;
+  }
+  :root{
+    --void:#030712; --panel:rgba(7,19,36,.68); --edge:rgba(56,189,248,.30);
+    --cyan:#5EEAD4; --sky:#38BDF8; --amber:#FFB454; --red:#FF6B6B;
+    --ink-100:#EAF6FF; --ink-400:#7FA6C9; --ink-600:#3E5872;
+    --display:'Robtronika','IBM Plex Mono',sans-serif; --digital:'Y224','IBM Plex Mono',monospace; --mono:'IBM Plex Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{min-height:100%}
+  body{
+    background:var(--void);
+    background-image:radial-gradient(ellipse at 20% 0%,rgba(94,234,212,.07),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(255,180,84,.05),transparent 55%);
+    color:var(--ink-100); font-family:var(--mono); padding:28px 16px 60px;
+  }
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(to bottom,rgba(148,197,253,.03) 0 1px,transparent 1px 3px)}
+  .wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+  .panel{position:relative;background:var(--panel);border:1px solid var(--edge);backdrop-filter:blur(8px);
+    clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px))}
+  .panel::before,.panel::after{content:"";position:absolute;width:12px;height:12px}
+  .panel::before{top:0;left:0;border-top:2px solid var(--cyan);border-left:2px solid var(--cyan)}
+  .panel::after{bottom:0;right:0;border-bottom:2px solid var(--cyan);border-right:2px solid var(--cyan)}
+
+  header.panel{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:20px 26px;flex-wrap:wrap}
+  .title{display:flex;align-items:center;gap:14px}
+  .pulse{width:10px;height:10px;border-radius:50%;background:var(--ink-600);flex-shrink:0;transition:background .3s}
+  .pulse.ok{background:var(--cyan);box-shadow:0 0 10px var(--cyan);animation:op 1.7s ease-in-out infinite}
+  .pulse.err{background:var(--red);box-shadow:0 0 10px var(--red)}
+  @keyframes op{50%{opacity:.35}}
+  h1{font-family:var(--display);font-weight:400;font-size:24px;letter-spacing:.5px;text-shadow:0 0 10px rgba(56,189,248,.5)}
+  .sub{font-family:var(--digital);font-size:11px;color:var(--ink-400);letter-spacing:1px;margin-top:5px}
+  .clock{font-family:var(--digital);font-size:22px;color:var(--cyan);letter-spacing:2px;text-shadow:0 0 10px rgba(94,234,212,.5)}
+
+  .head{display:flex;justify-content:space-between;align-items:center;padding:14px 20px 10px;border-bottom:1px dashed rgba(56,189,248,.26);gap:12px}
+  .head h2{font-family:var(--display);font-weight:400;font-size:15px;color:var(--cyan);letter-spacing:.5px}
+  .tech{font-family:var(--digital);font-size:10.5px;color:var(--ink-600);letter-spacing:1px}
+  .body{padding:16px 20px 20px}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+  .card{border:1px solid rgba(56,189,248,.18);background:rgba(255,255,255,.015);padding:14px;display:flex;gap:14px;align-items:flex-start}
+  .card.master{border-color:rgba(255,180,84,.35)}
+  .qr{background:#fff;padding:6px;flex-shrink:0;width:92px;height:92px;display:flex;align-items:center;justify-content:center;cursor:zoom-in}
+  .qr img,.qr canvas{display:block;width:80px!important;height:80px!important}
+  .info{min-width:0;flex:1;display:flex;flex-direction:column;gap:6px}
+  .name{font-family:var(--display);font-size:14px;line-height:1.3;word-break:break-word}
+  .meta{font-size:10.5px;color:var(--ink-400);letter-spacing:.3px}
+  .code{font-family:var(--digital);color:var(--cyan);letter-spacing:1.5px}
+  .pill{display:inline-block;font-size:9.5px;padding:2px 7px;border:1px solid var(--cyan);color:var(--cyan);background:rgba(94,234,212,.08);letter-spacing:.5px}
+  .pill.off{border-color:var(--ink-600);color:var(--ink-600);background:transparent}
+  .pill.amber{border-color:var(--amber);color:var(--amber);background:rgba(255,180,84,.08)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+
+  .btn{font-family:var(--display);font-size:11px;letter-spacing:1px;text-transform:uppercase;text-decoration:none;
+    background:rgba(94,234,212,.1);border:1px solid var(--cyan);color:var(--cyan);padding:8px 12px;cursor:pointer;
+    clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);transition:all .15s}
+  .btn:hover{background:var(--cyan);color:#052018}
+  .btn.ghost{background:transparent;border-color:var(--ink-600);color:var(--ink-400)}
+  .btn.ghost:hover{border-color:var(--ink-400);color:var(--ink-100);background:transparent}
+
+  .manual{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .input{flex:1;min-width:180px;background:rgba(2,8,16,.7);border:1px solid var(--edge);color:var(--ink-100);
+    font-family:var(--mono);font-size:14px;padding:10px 12px;outline:none;text-transform:uppercase;letter-spacing:2px}
+  .input:focus{border-color:var(--cyan)}
+  .note{font-size:11px;color:var(--ink-600);line-height:1.6;margin-top:10px}
+  .note code{color:var(--ink-400)}
+  .empty{font-size:12px;color:var(--ink-400);padding:6px 0}
+  .error{color:var(--red)}
+  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#062a24;border:1px solid var(--cyan);
+    color:var(--cyan);padding:8px 16px;font-size:12px;opacity:0;transition:opacity .2s;pointer-events:none}
+  .toast.show{opacity:1}
+
+  .zoom{position:fixed;inset:0;background:#fff;display:none;flex-direction:column;align-items:center;justify-content:center;gap:20px;cursor:pointer;z-index:10;padding:16px}
+  .zoom.open{display:flex}
+  .zoom .cap{font-family:var(--mono);color:#111;font-size:15px;letter-spacing:1px;text-align:center;word-break:break-all}
+  @media (max-width:520px){ h1{font-size:19px} .card{flex-direction:column} }
+  @media (prefers-reduced-motion:reduce){ .pulse.ok{animation:none} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="panel">
+    <div class="title">
+      <span class="pulse" id="pulse"></span>
+      <div>
+        <h1>Терминалы колонии</h1>
+        <div class="sub" id="dbStatus">ПОДКЛЮЧЕНИЕ К БАЗЕ…</div>
+      </div>
+    </div>
+    <div class="clock" id="clock">--:--:--</div>
+  </header>
+
+  <section class="panel">
+    <div class="head"><h2>Модули</h2><span class="tech" id="count">MODULES: —</span></div>
+    <div class="body">
+      <div class="grid" id="list"><div class="empty">Загрузка списка модулей…</div></div>
+      <p class="note">
+        Нажмите «Открыть терминал» на компьютере модуля, затем добавьте страницу в закладки.
+        Если на планшете или телефоне неудобно вводить адрес, отсканируйте QR камерой устройства. Чтобы увеличить код, нажмите на него.
+        «В сети» означает, что терминал этого модуля открыт и отвечал базе последние 2 минуты.
+      </p>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="head"><h2>Открыть по коду</h2><span class="tech">MANUAL</span></div>
+    <div class="body">
+      <form class="manual" id="manualForm">
+        <input class="input" id="manualCode" placeholder="КОД МОДУЛЯ" autocomplete="off">
+        <button class="btn" type="submit">Открыть терминал</button>
+      </form>
+      <p class="note">Код модуля — поле «Код доступа» в панели мастера (вкладка «Модули»).</p>
+    </div>
+  </section>
+
+</div>
+
+<div class="zoom" id="zoom"><div id="zoomQr"></div><div class="cap" id="zoomCap"></div><div class="cap" style="font-size:12px;color:#555">нажмите, чтобы закрыть</div></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
+<script>
+(function () {
+  const SUPABASE_URL = "https://yfogwbxxomuzbezgpqjm.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_TflOx6ZH1UM3wQPg_rEe4A_b6oxzSmd";
+
+  const listEl = document.getElementById('list');
+  const statusEl = document.getElementById('dbStatus');
+  const pulseEl = document.getElementById('pulse');
+
+  // Часы — как в терминале: реальное время, год колонии +172
+  const pad = n => String(n).padStart(2, '0');
+  function tick() {
+    const d = new Date();
+    document.getElementById('clock').textContent =
+      `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())} · ${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear() + 172}`;
+  }
+  tick(); setInterval(tick, 1000);
+
+  // Ссылка на терминал строится относительно этой страницы — работает и в корне сайта, и в подпапке
+  function terminalUrl(code) {
+    return new URL('terminal.html?module=' + encodeURIComponent(code), location.href).href;
+  }
+
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 1800);
+  }
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+
+  function timeAgo(iso) {
+    const min = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+    if (min < 1) return 'только что';
+    if (min < 60) return min + ' мин назад';
+    if (min < 1440) return Math.floor(min / 60) + ' ч назад';
+    return Math.floor(min / 1440) + ' дн назад';
+  }
+
+  function drawQr(el, text, size) {
+    el.innerHTML = '';
+    if (!window.QRCode) { el.textContent = 'QR недоступен'; return; }
+    new QRCode(el, { text, width: size, height: size, colorDark: '#000', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.M });
+  }
+
+  function render(modules) {
+    document.getElementById('count').textContent = 'MODULES: ' + modules.length;
+    if (!modules.length) {
+      listEl.innerHTML = '<div class="empty">В базе пока нет модулей. Создайте их в панели мастера, вкладка «Модули».</div>';
+      return;
+    }
+    listEl.innerHTML = '';
+    modules.forEach(m => {
+      const code = (m.access_code || '').toUpperCase();
+      if (!code) return;
+      const url = terminalUrl(code);
+      const online = m.last_seen_at && (Date.now() - new Date(m.last_seen_at).getTime()) < 2 * 60000;
+      const card = document.createElement('div');
+      card.className = 'card' + (m.is_master_terminal ? ' master' : '');
+      card.innerHTML = `
+        <div class="qr" title="Увеличить QR"></div>
+        <div class="info">
+          <div class="name">${esc(m.name || 'Без имени')}</div>
+          <div class="meta">КОД: <span class="code">${esc(code)}</span></div>
+          <div class="meta">
+            <span class="pill ${online ? '' : 'off'}">${online ? 'В СЕТИ' : 'НЕ В СЕТИ'}</span>
+            ${m.is_master_terminal ? '<span class="pill amber">МАСТЕР</span>' : ''}
+            ${m.last_seen_at ? ' · ' + timeAgo(m.last_seen_at) : ''}
+          </div>
+          <div class="row">
+            <a class="btn" href="${esc(url)}">Открыть терминал</a>
+            <button class="btn ghost" type="button" data-copy="${esc(url)}">Копировать ссылку</button>
+          </div>
+        </div>`;
+      const qrEl = card.querySelector('.qr');
+      drawQr(qrEl, url, 160);
+      qrEl.addEventListener('click', () => {
+        drawQr(document.getElementById('zoomQr'), url, Math.min(420, window.innerWidth - 60));
+        document.getElementById('zoomCap').textContent = `${m.name || ''} — ${url}`;
+        document.getElementById('zoom').classList.add('open');
+      });
+      listEl.appendChild(card);
+    });
+  }
+
+  document.getElementById('zoom').addEventListener('click', e => e.currentTarget.classList.remove('open'));
+
+  document.addEventListener('click', async e => {
+    const b = e.target.closest('[data-copy]');
+    if (!b) return;
+    try { await navigator.clipboard.writeText(b.dataset.copy); toast('Ссылка скопирована'); }
+    catch (err) { prompt('Скопируйте ссылку:', b.dataset.copy); }
+  });
+
+  document.getElementById('manualForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const code = document.getElementById('manualCode').value.trim().toUpperCase();
+    if (code) location.href = terminalUrl(code);
+  });
+
+  if (typeof supabase === 'undefined') {
+    statusEl.textContent = 'БИБЛИОТЕКА SUPABASE НЕ ЗАГРУЗИЛАСЬ — ИСПОЛЬЗУЙТЕ «ОТКРЫТЬ ПО КОДУ»';
+    pulseEl.className = 'pulse err';
+    listEl.innerHTML = '<div class="empty error">Список модулей недоступен: проверьте интернет или отключите блокировщик рекламы для этого сайта.</div>';
+    return;
+  }
+
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  async function load() {
+    const { data, error } = await sb.from('modules')
+      .select('name, access_code, last_seen_at, is_master_terminal')
+      .order('name');
+    if (error) {
+      statusEl.textContent = 'БАЗА НЕДОСТУПНА: ' + error.message.toUpperCase();
+      pulseEl.className = 'pulse err';
+      listEl.innerHTML = '<div class="empty error">Не удалось получить список модулей. Если проект Supabase «уснул», зайдите в его панель и нажмите Restore project.</div>';
+      return;
+    }
+    statusEl.textContent = 'SUPABASE · БАЗА НА СВЯЗИ';
+    pulseEl.className = 'pulse ok';
+    render(data || []);
+  }
+
+  load();
+  setInterval(load, 30000);
+})();
+</script>
+</body>
+</html>

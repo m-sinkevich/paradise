@@ -1,0 +1,130 @@
+# Терминал колониста — сайт на GitHub Pages
+
+Адрес сайта: **https://m-sinkevich.github.io/**
+
+## Ссылки
+
+| Что | Адрес | Где лежит |
+|---|---|---|
+| Стартовая страница — список всех модулей со ссылками и QR | https://m-sinkevich.github.io/ | `index.html` |
+| Терминал модуля | `https://m-sinkevich.github.io/terminal.html?module=<КОД>` | `terminal.html` |
+| Пример: модуль PARADISE | https://m-sinkevich.github.io/terminal.html?module=PARADISE | |
+| Панель мастера | `http://localhost:8000/admin.html` — **только локально**, на ноутбуке мастера | папка `master-local`, **не в репозитории** |
+| Будильник базы (журнал запусков) | https://github.com/m-sinkevich/m-sinkevich.github.io/actions | `.github/workflows/supabase-keepalive.yml` |
+| Панель Supabase | https://supabase.com/dashboard/project/yfogwbxxomuzbezgpqjm | |
+
+Стартовая страница берёт список модулей прямо из базы. Новый модуль, созданный в панели мастера, появится на ней сам, редактировать сайт не нужно. Код модуля — поле «Код доступа» во вкладке «Модули» панели мастера. Там же теперь показывается готовая ссылка на терминал этого модуля.
+
+## Состав репозитория
+
+```
+m-sinkevich.github.io/                ← имя репозитория должно быть именно таким
+├── index.html                        ← стартовая страница со списком модулей
+├── terminal.html                     ← терминал (бывший terminal_full_paradise.html)
+├── fonts/
+│   ├── Robtronika-4Bq8p.woff         ← положить свои файлы, имена — с точным регистром букв
+│   └── Y224-pgj1O.woff
+├── media/                            ← по желанию: картинки и аудио для контента
+├── .nojekyll
+├── .github/workflows/supabase-keepalive.yml
+└── README.md
+```
+
+Что изменено в терминале по сравнению с `terminal_full_paradise.html`:
+- модуль задаётся адресом `?module=КОД` и запоминается на этом компьютере. Без кода терминал пишет «МОДУЛЬ НЕ ВЫБРАН»;
+- на планшетах и телефонах включается задняя камера (если её нет — любая доступная);
+- текст записей журнала больше не интерпретируется как HTML;
+- версия библиотеки Supabase зафиксирована (2.117.3), чтобы обновление не сломало терминал в игровой день.
+
+## Публикация (один раз)
+
+1. На github.com: **New repository** → имя **`m-sinkevich.github.io`** → **Public** → **Create repository**.
+   Именно такое имя даёт адрес без подпапки. При любом другом имени, например `colonist`, сайт будет по адресу `https://m-sinkevich.github.io/colonist/`. Всё продолжит работать, потому что ссылки на странице относительные, но адреса в этой инструкции и в панели мастера придётся поправить.
+2. **Add file → Upload files** → перетащите всё содержимое папки `site`, включая папки `fonts` и `.github` → **Commit changes**.
+   Если браузер не увидел скрытые `.github` и `.nojekyll` (на macOS файлы с точкой скрыты в Finder), создайте их вручную: **Add file → Create new file**, в поле имени введите путь `.github/workflows/supabase-keepalive.yml` и вставьте содержимое файла.
+3. **Settings → Pages** → Source: **Deploy from a branch** → Branch **main**, папка **/ (root)** → **Save**.
+4. **Settings → Actions → General** → *Workflow permissions* → **Read and write permissions** → **Save**. Без этого будильник не сможет обновлять файл-отметку (см. ниже).
+5. Через 1–3 минуты откройте https://m-sinkevich.github.io/.
+
+## Подготовка базы (один раз, SQL Editor в Supabase)
+
+```sql
+alter table content_items drop constraint if exists content_items_type_check;
+alter table content_items add constraint content_items_type_check
+  check (type in ('text','image','audio','video','event'));
+
+alter table alerts add column if not exists excluded_module_ids uuid[] default '{}';
+
+insert into storage.buckets (id, name, public)
+values ('content-media', 'content-media', true)
+on conflict (id) do update set public = true;
+
+create policy "anon read content-media"   on storage.objects for select to anon using (bucket_id = 'content-media');
+create policy "anon insert content-media" on storage.objects for insert to anon with check (bucket_id = 'content-media');
+create policy "anon update content-media" on storage.objects for update to anon using (bucket_id = 'content-media');
+```
+
+Затем откройте **Database → Publications → supabase_realtime** и включите таблицы `alerts`, `modules`, `journal_entries`, `events`.
+
+## Чтобы база не засыпала
+
+Бесплатный проект Supabase ставится на паузу примерно после 7 дней без запросов. После этого и сайт, и терминалы пишут «база недоступна», пока проект не восстановят вручную.
+
+### Автоматически: будильник в GitHub Actions
+
+Файл `.github/workflows/supabase-keepalive.yml` уже в репозитории. Он:
+- **каждые 3 дня** (в 09:17 по Тбилиси) делает маленький запрос к базе — читает одну строку из `modules`. Этого достаточно, чтобы проект считался активным;
+- при ошибке повторяет запрос 3 раза. Если база так и не ответила, запуск помечается красным, и GitHub присылает письмо на почту аккаунта;
+- раз в ~50 дней без коммитов сам обновляет файл `.github/keepalive.txt`. Иначе GitHub отключает расписание в публичных репозиториях после 60 дней без активности.
+
+**Проверка после публикации:** вкладка **Actions** → *Supabase keepalive* → **Run workflow**. Через полминуты должна появиться зелёная галочка, а в логе — строка «База на связи».
+
+**Включить письма о сбоях:** аватар → **Settings → Notifications → Actions** → отметьте *Email* и *Only notify for failed workflows*.
+
+### Если проект всё-таки уснул
+
+1. Откройте https://supabase.com/dashboard/project/yfogwbxxomuzbezgpqjm → кнопка **Restore project**. Восстановление занимает несколько минут.
+2. В GitHub: **Actions** → *Supabase keepalive* → **Run workflow**, чтобы убедиться, что база снова отвечает.
+3. Если в Actions висит жёлтая плашка о том, что сценарий отключён из-за неактивности, нажмите **Enable workflow**.
+
+Бесплатный проект, простоявший на паузе очень долго (обычно больше 90 дней), может уже нельзя будет восстановить из панели. Поэтому перед длинным перерывом между играми делайте выгрузку таблиц в CSV.
+
+### Вручную перед игрой
+
+Накануне игрового дня откройте стартовую страницу. Если в шапке горит «SUPABASE · БАЗА НА СВЯЗИ», всё в порядке.
+
+## Панель мастера (локально)
+
+Папка `master-local` не загружается на GitHub: в публичном доступе любой человек получил бы управление игрой.
+
+На ноутбуке мастера:
+- **Windows:** дважды щёлкнуть `start_admin.bat`;
+- **macOS / Linux:** в терминале выполнить `sh start_admin.sh`.
+
+Откроется `http://localhost:8000/admin.html`. Нужен установленный Python 3. На Windows при установке поставьте галочку *Add Python to PATH*.
+
+## Настройка терминала на компьютере модуля
+
+1. Откройте https://m-sinkevich.github.io/ → у нужного модуля нажмите **Открыть терминал**. На планшете можно отсканировать QR со стартовой страницы, открытой на другом экране.
+2. Нажмите «Авторизация» и разрешите камеру. Браузер запомнит разрешение.
+3. Добавьте страницу в закладки. Полный экран — `F11`. Режим киоска:
+   `chrome --kiosk "https://m-sinkevich.github.io/terminal.html?module=PARADISE"`
+4. Отключите сон и заставку экрана.
+
+## Проверка перед игрой
+
+- [ ] На стартовой странице: «БАЗА НА СВЯЗИ», видны все модули.
+- [ ] Все терминалы открыты, на стартовой странице у модулей стоит «В СЕТИ».
+- [ ] В шапке каждого терминала — название модуля, а не «МОДУЛЬ НЕ НАЙДЕН / НЕ ВЫБРАН».
+- [ ] Заголовки набраны техно-шрифтом. Если нет — проверьте имена файлов в `fonts/`.
+- [ ] Тестовая тревога из панели мастера видна на всех терминалах.
+- [ ] Вход тестовым персонажем, скан объекта, запись в журнал.
+- [ ] Сделана выгрузка таблиц в CSV.
+
+## Обновление
+
+Загрузите изменённый файл через **Upload files** (он заменит старый). Через 1–3 минуты новая версия появится на сайте. На терминалах нажмите **Ctrl+Shift+R**. Во время игры сайт лучше не трогать: контент, персонажи и тревоги меняются через базу.
+
+## ⚠ Безопасность
+
+Ключ Supabase виден в коде страницы, а база разрешает анонимному пользователю всё. Любой человек, открывший сайт, технически может прочитать пароли персонажей и сюжет, а также изменить данные. Для LARP «на честность» этого достаточно, если не раздавать адрес за пределы игры. Перед каждой игрой делайте резервную выгрузку. Настоящая защита (вход мастера, ограничительные RLS-политики) — следующий этап, см. ТЗ v3, §15.
