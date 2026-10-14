@@ -1,0 +1,2740 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <script>
+    /* =========================================================================
+       ГЛОБАЛЬНАЯ СЕТКА БЕЗОПАСНОСТИ: ни одна ошибка больше не должна
+       проходить незамеченной. Ставится первым же скриптом на странице —
+       до любых CDN-библиотек и до 3D-сцены — чтобы ловить вообще всё.
+       ========================================================================= */
+    function tuiShowErrorToast(msg) {
+      try {
+        let toast = document.getElementById('tui-error-toast');
+        if (!toast) {
+          toast = document.createElement('div');
+          toast.id = 'tui-error-toast';
+          toast.style.cssText = 'position:fixed;bottom:16px;left:16px;right:16px;z-index:999999;'
+            + 'background:#2a0505;color:#FFD9D9;padding:12px 16px;font-family:monospace;font-size:12px;'
+            + 'line-height:1.5;border:1px solid #FF6B6B;max-width:640px;margin:0 auto;white-space:pre-wrap;'
+            + 'box-shadow:0 4px 20px rgba(0,0,0,.5);';
+          (document.body || document.documentElement).appendChild(toast);
+        }
+        toast.textContent = '⚠ Ошибка в скрипте: ' + msg;
+        clearTimeout(toast._hideTimer);
+        toast._hideTimer = setTimeout(() => toast.remove(), 12000);
+      } catch (e) { /* если и тост не смог показаться — молчим, дальше некуда */ }
+    }
+    window.addEventListener('error', (e) => {
+      tuiShowErrorToast((e.message || 'неизвестная ошибка') + (e.filename ? `\n${e.filename.split('/').pop()}:${e.lineno}` : ''));
+    });
+    window.addEventListener('unhandledrejection', (e) => {
+      const reason = e.reason && e.reason.message ? e.reason.message : String(e.reason);
+      tuiShowErrorToast('Необработанный promise: ' + reason);
+    });
+  </script>
+
+  <meta charset="UTF-8">
+  <title>Sci-Fi Geodesic Dome HUD Interface</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Локальные техно-шрифты с кириллицей. ВАЖНО: папка fonts/ (с файлами Robtronika-4Bq8p.woff
+       и Y224-pgj1O.woff внутри) должна лежать РЯДОМ с ЭТИМ html-файлом на сервере — если открываете
+       terminal_full_5_1.html из другого места, скопируйте fonts/ и туда же.
+       Внутри одного @font-face два источника: сперва пробуется локальный файл, и только если
+       он не найден — CDN-копия (cdnfonts.com; может быть заблокирован рекламным блокировщиком). -->
+  <style>
+    @font-face {
+      font-family: 'Robtronika';
+      src: url('fonts/Robtronika-4Bq8p.woff') format('woff'),
+           url('https://fonts.cdnfonts.com/s/71343/Robtronika-4Bq8p.woff') format('woff');
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Y224';
+      src: url('fonts/Y224-pgj1O.woff') format('woff'),
+           url('https://fonts.cdnfonts.com/s/122590/Y224-pgj1O.woff') format('woff');
+      font-display: swap;
+    }
+  </style>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, monospace; }
+    
+    body {
+      background-color: #030712;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      user-select: none;
+    }
+
+    #canvas-container {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    /* Sci-Fi Popup */
+    #hud-popup {
+      position: absolute;
+      pointer-events: none;
+      width: 260px;
+      padding: 12px 16px;
+      background: rgba(4, 16, 30, 0.92);
+      border: 1px solid #38BDF8;
+      border-left: 4px solid #5EEAD4;
+      clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 15px 100%, 0 calc(100% - 15px));
+      box-shadow: 0 0 25px rgba(56, 189, 248, 0.35), inset 0 0 15px rgba(94, 234, 212, 0.15);
+      color: #38BDF8;
+      backdrop-filter: blur(8px);
+      z-index: 10;
+      
+      opacity: 0;
+      transform: scale(0.8) translateY(15px);
+      transform-origin: top left;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    #hud-popup.visible {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+
+    .hud-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(56, 189, 248, 0.35);
+      padding-bottom: 6px;
+      margin-bottom: 8px;
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    .hud-title { text-transform: uppercase; color: #FFF; }
+    .hud-status { color: #5EEAD4; font-size: 10px; background: rgba(94, 234, 212, 0.18); padding: 2px 6px; }
+
+    .hud-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      margin: 4px 0;
+      color: #93C5FD;
+    }
+
+    .hud-bar-container {
+      width: 100%;
+      height: 5px;
+      background: rgba(56, 189, 248, 0.15);
+      margin: 6px 0 8px 0;
+      overflow: hidden;
+    }
+
+    .hud-bar-fill {
+      height: 100%;
+      background: #38BDF8;
+      box-shadow: 0 0 8px #38BDF8;
+      width: 75%;
+      transition: width 0.4s ease;
+    }
+
+    .hud-tech-lines {
+      display: flex;
+      gap: 3px;
+      margin-top: 6px;
+    }
+    .hud-line-unit { height: 3px; flex: 1; background: rgba(56, 189, 248, 0.2); }
+    .hud-line-unit.active { background: #5EEAD4; box-shadow: 0 0 4px #5EEAD4; }
+
+    /* ==========================================================
+       ГЛАВНОЕ МЕНЮ — ПОСТОЯННАЯ HUD-ОБОЛОЧКА ПОВЕРХ КУПОЛА
+       Купол виден всегда в открытом центре. Всё новое — слой
+       #terminal-ui поверх #canvas-container; ни один селектор
+       из блоков выше не переопределяется.
+       ========================================================== */
+
+    :root {
+      --tui-panel: rgba(7, 19, 36, 0.62);
+      --tui-panel-deep: rgba(4, 11, 22, 0.88);
+      --tui-edge: rgba(56, 189, 248, 0.30);
+      --tui-cyan: #5EEAD4;
+      --tui-sky: #38BDF8;
+      --tui-amber: #FFB454;
+      --tui-red: #FF6B6B;
+      --tui-ink-100: #EAF6FF;
+      --tui-ink-400: #7FA6C9;
+      --tui-ink-600: #3E5872;
+      --tui-font-display: 'Robtronika', sans-serif;
+      --tui-font-digital: 'Y224', monospace;
+      --tui-font-mono: 'IBM Plex Mono', monospace;
+      --tui-frame-color: var(--tui-sky);
+      /* коэффициент плотности плашек: 1 = полный размер, JS уменьшает его
+         при инициализации/ресайзе, если контент колонки не помещается по
+         высоте — так все 4 плашки в колонке гарантированно влезают без
+         скролла на любом разумном разрешении */
+      --tui-density: 1;
+    }
+
+    #terminal-ui {
+      position: absolute;
+      inset: 0;
+      z-index: 6;
+      pointer-events: none;
+      font-family: var(--tui-font-mono);
+      color: var(--tui-ink-100);
+    }
+
+    #terminal-ui .tui-label {
+      font-family: var(--tui-font-display);
+      letter-spacing: 1.6px;
+      text-transform: uppercase;
+    }
+
+    /* Виньетка по краям — усиливает читаемость панелей, но не трогает
+       центр экрана, где должен читаться купол */
+    #tui-vignette {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(ellipse at 50% 44%, transparent 32%, rgba(3, 7, 18, 0.5) 76%, rgba(3, 7, 18, 0.72) 100%);
+    }
+
+    /* Сканлайны — фирменный элемент интерфейса по ТЗ п.12 */
+    #tui-scanlines {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: repeating-linear-gradient(to bottom, rgba(148, 197, 253, 0.03) 0px, rgba(148, 197, 253, 0.03) 1px, transparent 1px, transparent 3px);
+      mix-blend-mode: screen;
+      opacity: 0.4;
+    }
+
+    /* ---------- Каркас: хедер / левая / центр / правая / футер ---------- */
+    #tui-shell {
+      position: absolute;
+      inset: 22px;
+      display: grid;
+      grid-template-rows: 92px 1fr 52px;
+      grid-template-columns: 460px 1fr 460px;
+      grid-template-areas:
+        "header header header"
+        "left   center right"
+        "footer footer footer";
+      gap: 16px;
+    }
+
+    #tui-col-left, #tui-col-right {
+      grid-row: 2;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: calc(14px * var(--tui-density));
+      min-height: 0;
+      /* overflow НЕ обрезаем: у первой/последней плашки в колонке отрицательный
+         margin намеренно выводит их шире самой колонки (эффект «наплыва» на
+         купол) — overflow:hidden здесь резал именно этот выступ (заголовки
+         и значения с той стороны). Защита от вертикального переполнения —
+         только через --tui-density (см. скрипт автоподгонки внизу файла),
+         который реально измеряет высоту и ужимает контент, а не через клип. */
+    }
+    #tui-col-left { grid-column: 1; grid-area: left; }
+    #tui-col-right { grid-column: 3; grid-area: right; }
+    /* панели высотой ровно по содержимому — не растягиваются искусственно;
+       свободное место в колонке уходит в зазор между ними (gap + space-between) */
+    #tui-col-left > .tui-panel, #tui-col-right > .tui-panel {
+      flex: 0 0 auto;
+    }
+    /* верхняя панель колонки шире на треть, нижняя — на четверть; растут в сторону купола */
+    #tui-col-left > .tui-panel:first-child  { width: 612px; margin-right: -152px; }
+    #tui-col-left > .tui-panel:last-child   { width: 575px; margin-right: -115px; }
+    #tui-col-right > .tui-panel:first-child { width: 612px; margin-left: -152px; }
+    #tui-col-right > .tui-panel:last-child  { width: 575px; margin-left: -115px; }
+
+    #tui-center {
+      grid-area: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: center;
+      padding-bottom: 6px;
+    }
+
+    @media (max-width: 1160px) {
+      #tui-shell { grid-template-columns: 1fr; grid-template-areas: "header" "center" "footer"; }
+      #tui-col-left, #tui-col-right { display: none; }
+    }
+
+    /* ---------- Базовая стеклянная панель ---------- */
+    .tui-panel {
+      position: relative;
+      pointer-events: auto;
+      background-color: var(--tui-panel);
+      border: 1px solid color-mix(in srgb, var(--tui-frame-color) 55%, transparent);
+      backdrop-filter: blur(9px);
+      box-shadow: inset 0 0 18px rgba(56, 189, 248, 0.06), 0 10px 28px rgba(0, 0, 0, 0.35);
+      opacity: 0;
+      animation: tui-resolve-in 0.6s ease forwards,
+                 tui-panel-breathe 5.5s ease-in-out 0.6s infinite;
+      transition: border-color 0.4s ease;
+    }
+    /* тревожная подсветка панели — переключается атрибутом data-state в разметке/JS,
+       по умолчанию цвет всегда единый (голубой); ничего никуда не бежит */
+    .tui-panel[data-state="warn"] { --tui-frame-color: var(--tui-amber); }
+    .tui-panel[data-state="crit"] { --tui-frame-color: var(--tui-red); }
+    @keyframes tui-resolve-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    /* неподвижное «дыхание» свечения — ничего не двигается, только яркость колышется */
+    @keyframes tui-panel-breathe {
+      0%, 100% { box-shadow: inset 0 0 18px rgba(56,189,248,0.06), 0 10px 28px rgba(0,0,0,0.35), 0 0 8px color-mix(in srgb, var(--tui-frame-color) 25%, transparent); }
+      50%      { box-shadow: inset 0 0 22px rgba(56,189,248,0.10), 0 10px 28px rgba(0,0,0,0.35), 0 0 16px color-mix(in srgb, var(--tui-frame-color) 45%, transparent); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .tui-panel { animation: none; opacity: 1; }
+    }
+
+    /* Три силуэта среза углов — чтобы стопка панелей не читалась
+       одинаковыми блоками, вторит гранёности самого купола */
+    .tui-shape-a { clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px)); }
+    .tui-shape-b { clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px); }
+    .tui-shape-c { clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px), 0 10px); }
+    .tui-shape-header { clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 22px) 100%, 22px 100%, 0 calc(100% - 14px)); }
+    .tui-shape-footer { clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 100%, 0 100%); }
+
+    /* уголки убраны с ::before/::after — теперь это настоящие SVG-скобки .tui-corner,
+       вставленные в разметку каждой панели (4 шт., как в frame_prototype.html) */
+    .tui-corner { position: absolute; width: 30px; height: 30px; pointer-events: none; }
+    .tui-corner.tl { top: -1px; left: -1px; }
+    .tui-corner.tr { top: -1px; right: -1px; transform: scaleX(-1); }
+    .tui-corner.bl { bottom: -1px; left: -1px; transform: scaleY(-1); }
+    .tui-corner.br { bottom: -1px; right: -1px; transform: scale(-1, -1); }
+    .tui-corner path, .tui-corner circle { fill: none; stroke: var(--tui-frame-color); stroke-width: 1.6; transition: stroke 0.4s ease; }
+    .tui-corner circle.node { fill: var(--tui-panel); }
+    .tui-corner path {
+      stroke-dasharray: 100; stroke-dashoffset: 100;
+      animation: tui-corner-draw 0.9s cubic-bezier(.2,.7,.3,1) forwards;
+      filter: drop-shadow(0 0 3px var(--tui-frame-color));
+    }
+    .tui-corner.tr path { animation-delay: 0.08s; }
+    .tui-corner.bl path { animation-delay: 0.16s; }
+    .tui-corner.br path { animation-delay: 0.24s; }
+    @keyframes tui-corner-draw { to { stroke-dashoffset: 0; } }
+    .tui-corner circle.node {
+      opacity: 0; animation: tui-node-in 0.3s ease forwards, tui-node-pulse 2.6s ease-in-out 1.1s infinite;
+      animation-delay: 0.7s; filter: drop-shadow(0 0 3px var(--tui-frame-color));
+    }
+    @keyframes tui-node-in { to { opacity: 1; } }
+    @keyframes tui-node-pulse { 0%, 100% { r: 2.2; opacity: .9; } 50% { r: 3.2; opacity: .4; } }
+    .tui-corner.tr circle.node { animation-delay: 0.78s; }
+    .tui-corner.bl circle.node { animation-delay: 0.86s; }
+    .tui-corner.br circle.node { animation-delay: 0.94s; }
+    @media (prefers-reduced-motion: reduce) {
+      .tui-corner path { animation: none; stroke-dashoffset: 0; }
+      .tui-corner circle.node { animation: none; opacity: .9; }
+    }
+
+    /* тяжёлый вариант — для тревожных панелей (Био-опасность): скобка толще + двойной штрих + hazard-лента */
+    .tui-corner--heavy path { stroke-width: 2.2; }
+    .tui-corner--heavy circle.node { r: 3.2; }
+    .tui-hazard-tab {
+      position: absolute; top: 0; left: 0; width: 56px; height: 11px;
+      background: repeating-linear-gradient(45deg, var(--tui-amber) 0, var(--tui-amber) 4px, #1a0f00 4px, #1a0f00 8px);
+      clip-path: polygon(0 0, 100% 0, calc(100% - 11px) 100%, 0 100%);
+      opacity: 0.9; pointer-events: none;
+    }
+
+    .tui-panel--danger { border-color: rgba(255, 107, 107, 0.4); background: linear-gradient(135deg, rgba(255, 107, 107, 0.06), rgba(7, 19, 36, 0.7)); --tui-frame-color: var(--tui-red); }
+
+    /* ---------- Заголовок панели: иконка + тех.ID + мини-дайл ---------- */
+    .tui-panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 18px 12px;
+      border-bottom: 1px dashed rgba(56, 189, 248, 0.26);
+    }
+    .tui-panel-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1 1 auto;
+      font-family: var(--tui-font-display);
+      font-size: 17px;
+      letter-spacing: 0.5px;
+      color: var(--tui-cyan);
+    }
+    .tui-panel--danger .tui-panel-title { color: var(--tui-red); }
+    .tui-panel-title svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.6; flex-shrink: 0; }
+
+    .tui-tech-id { display: flex; align-items: center; gap: 5px; font-family: var(--tui-font-digital); font-size: 12px; color: var(--tui-ink-600); letter-spacing: 1px; }
+    .tui-dial { width: 17px; height: 17px; opacity: 0.7; }
+    .tui-dial svg { width: 100%; height: 100%; animation: tui-spin 7s linear infinite; }
+    @keyframes tui-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .tui-dial svg { animation: none; } }
+
+    /* уплотнено под 4 плашки в колонке вместо 3 (п. редизайна): меньше паддинги/шрифт,
+       без потери читаемости — плотность сохраняет фирменный HUD-стиль */
+    .tui-panel-body { font-family: var(--tui-font-display); padding: calc(9px * var(--tui-density)) calc(15px * var(--tui-density)) calc(11px * var(--tui-density)); font-size: calc(13.5px * var(--tui-density)); }
+
+    .tui-row { display: flex; justify-content: space-between; align-items: baseline; margin: calc(3.5px * var(--tui-density)) 0; color: var(--tui-ink-400); gap: 12px; }
+    .tui-row .val { color: var(--tui-ink-100); }
+    .tui-row .val.cyan { color: var(--tui-cyan); }
+    .tui-row .val.amber { color: var(--tui-amber); }
+    .tui-row .val.red { color: var(--tui-red); }
+
+    /* padding-top/right увеличен относительно первой версии: у shape-a/b срез
+       уголка «съедает» верхние 16px у правого края (у shape-c — 10px), и при
+       слишком плотном заголовке текст tech-id (и длинные заголовки типа
+       «BIO-SENS #88») попадал точно в эту зону и обрезался по диагонали.
+       Запас 14px сверху / 24px справа держит контент чисто за пределами среза
+       при любой плотности. */
+    .tui-panel-head { padding: calc(14px * var(--tui-density)) calc(24px * var(--tui-density)) calc(7px * var(--tui-density)) calc(15px * var(--tui-density)); }
+    .tui-panel-title { font-size: calc(14.5px * var(--tui-density)); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tui-panel-title svg { width: calc(17px * var(--tui-density)); height: calc(17px * var(--tui-density)); }
+    .tui-tech-id { font-size: calc(10.5px * var(--tui-density)); flex: 0 0 auto; }
+
+    .tui-pill { font-size: 12px; padding: 3px 9px; border: 1px solid var(--tui-cyan); color: var(--tui-cyan); background: rgba(94, 234, 212, 0.08); letter-spacing: 0.5px; white-space: nowrap; }
+    .tui-pill.warn { border-color: var(--tui-red); color: var(--tui-red); background: rgba(255, 107, 107, 0.14); animation: tui-pulse-op 1.6s ease-in-out infinite; }
+    @keyframes tui-pulse-op { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+    .tui-bar-track { height: calc(5px * var(--tui-density)); background: rgba(56, 189, 248, 0.12); border: 1px solid var(--tui-edge); margin: calc(3px * var(--tui-density)) 0; overflow: hidden; }
+    .tui-bar-fill { height: 100%; background: linear-gradient(90deg, var(--tui-sky), var(--tui-cyan)); box-shadow: 0 0 8px var(--tui-sky); transition: width 0.6s ease; }
+    /* тонкий вариант бара — для второстепенных линейных индикаторов (токсичность и т.п.) */
+    .tui-bar-track--thin { height: 3px; margin: calc(2px * var(--tui-density)) 0 calc(5px * var(--tui-density)); }
+
+    /* ---------- Гистограмма активности (используется в мини-эквалайзерах) ---------- */
+    .tui-histo { display: flex; align-items: flex-end; gap: 3px; height: 56px; margin-top: 8px; }
+    .tui-histo-bar { flex: 1; background: rgba(56, 189, 248, 0.18); border-top: 2px solid var(--tui-cyan); transition: height 0.5s ease; }
+
+    /* ---------- Счётчик журнала ---------- */
+    .tui-counter { font-family: var(--tui-font-digital); font-size: calc(24px * var(--tui-density)); font-weight: 400; color: var(--tui-cyan); text-shadow: 0 0 14px rgba(94, 234, 212, 0.5); line-height: 1; transition: opacity .25s ease; }
+    .tui-counter-row { display: flex; justify-content: space-between; align-items: flex-end; }
+    .tui-counter-sub { font-size: 8.5px; color: var(--tui-ink-600); margin-bottom: 3px; }
+
+    /* =====================================================================
+       ПЕРЕИСПОЛЬЗУЕМАЯ БИБЛИОТЕКА DYNAMIC-ЭФФЕКТОВ ДЛЯ ПЛАШЕК
+       5 базовых паттернов, под которые подобраны все ~20 эффектов из ТЗ:
+       спарклайн / мини-эквалайзер / кольцевая диаграмма / капля / LED-пульс
+       ===================================================================== */
+
+    /* --- 1. Спарклайн (осциллограф / тренд / сейсмограф / график трафика) --- */
+    .tui-spark-wrap { margin: calc(2px * var(--tui-density)) 0 calc(4px * var(--tui-density)); height: calc(20px * var(--tui-density)); }
+    .tui-spark-wrap svg { width: 100%; height: 100%; display: block; overflow: visible; }
+    .tui-spark-line { fill: none; stroke: var(--tui-cyan); stroke-width: 1.6; filter: drop-shadow(0 0 3px var(--tui-cyan)); }
+    .tui-spark-line--wide { stroke-width: 2; }
+    .tui-spark-line--amber { stroke: var(--tui-amber); filter: drop-shadow(0 0 3px var(--tui-amber)); }
+    .tui-spark-line--red { stroke: var(--tui-red); filter: drop-shadow(0 0 3px var(--tui-red)); }
+
+    /* --- 2. Мини-эквалайзер (пинг / спектрометр нагрузки / импульсные всплески) --- */
+    .tui-eq { display: flex; align-items: flex-end; gap: 2.5px; height: calc(16px * var(--tui-density)); margin: calc(2px * var(--tui-density)) 0 calc(4px * var(--tui-density)); }
+    .tui-eq-bar { flex: 1; min-width: 3px; background: linear-gradient(180deg, var(--tui-sky), var(--tui-cyan)); box-shadow: 0 0 5px rgba(56,189,248,.5); transition: height .35s ease; border-radius: 1px 1px 0 0; }
+    .tui-eq--amber .tui-eq-bar { background: linear-gradient(180deg, var(--tui-amber), #ffcf8c); box-shadow: 0 0 5px rgba(255,180,84,.5); }
+
+    /* --- 3. Кольцевая диаграмма состава атмосферы --- */
+    .tui-ring-wrap { display: flex; align-items: center; gap: 9px; margin: calc(3px * var(--tui-density)) 0 calc(2px * var(--tui-density)); }
+    .tui-ring-wrap svg { width: calc(36px * var(--tui-density)); height: calc(36px * var(--tui-density)); flex-shrink: 0; }
+    .tui-ring-track { fill: none; stroke: rgba(56,189,248,.14); stroke-width: 3.4; }
+    .tui-ring-seg { fill: none; stroke-width: 3.4; stroke-linecap: round; transform-origin: center; animation: tui-ring-spin 14s linear infinite; }
+    @keyframes tui-ring-spin { to { transform: rotate(360deg); } }
+    .tui-ring-legend { display: flex; flex-direction: column; gap: 1.5px; font-size: 10px; color: var(--tui-ink-400); }
+    .tui-ring-legend b { color: var(--tui-ink-100); font-weight: 400; }
+    .tui-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; }
+
+    /* --- 4. Капельный индикатор влажности --- */
+    .tui-drop-wrap { display: flex; align-items: center; gap: 7px; margin: calc(2px * var(--tui-density)) 0 1px; }
+    .tui-drop-wrap svg { width: calc(15px * var(--tui-density)); height: calc(20px * var(--tui-density)); flex-shrink: 0; }
+    .tui-drop-fill { transition: transform 1s ease; }
+
+    /* --- 5. LED-индикатор (мигание при передаче / ошибке синхронизации) --- */
+    .tui-led { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; background: var(--tui-cyan); box-shadow: 0 0 6px var(--tui-cyan); animation: tui-led-blink 1.8s ease-in-out infinite; vertical-align: middle; }
+    .tui-led--amber { background: var(--tui-amber); box-shadow: 0 0 6px var(--tui-amber); }
+    .tui-led--red { background: var(--tui-red); box-shadow: 0 0 6px var(--tui-red); animation-duration: .7s; }
+    @keyframes tui-led-blink { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+
+    /* --- Точечная подсветка повреждений (микро-пробои) --- */
+    .tui-dents { display: flex; gap: 4px; margin: calc(2px * var(--tui-density)) 0 1px; }
+    .tui-dent-pt { width: 6px; height: 6px; border-radius: 50%; background: rgba(56,189,248,.14); border: 1px solid var(--tui-edge); transition: background .3s ease, box-shadow .3s ease; }
+    .tui-dent-pt.hit { background: var(--tui-amber); box-shadow: 0 0 6px var(--tui-amber); border-color: var(--tui-amber); }
+
+    /* --- Мерцание при внешнем трении / скачки при разгерметизации --- */
+    .tui-flicker { animation: tui-flicker 3.4s ease-in-out infinite; }
+    @keyframes tui-flicker { 0%, 100% { opacity: 1; } 42% { opacity: 1; } 44% { opacity: .55; } 46% { opacity: 1; } 74% { opacity: 1; } 75% { opacity: .6; } 76% { opacity: 1; } }
+    .tui-spike { transition: color .15s ease, text-shadow .15s ease; }
+    .tui-spike.hit { color: var(--tui-red); text-shadow: 0 0 8px var(--tui-red); }
+
+    /* --- Роза ветров --- */
+    .tui-windrose { width: 26px; height: 26px; flex-shrink: 0; }
+    .tui-windrose .ring { fill: none; stroke: var(--tui-edge); stroke-width: 1; }
+    .tui-windrose .needle { transform-origin: 13px 13px; animation: tui-wind-turn 9s ease-in-out infinite; }
+    @keyframes tui-wind-turn { 0% { transform: rotate(0deg); } 25% { transform: rotate(70deg); } 50% { transform: rotate(-40deg); } 75% { transform: rotate(150deg); } 100% { transform: rotate(360deg); } }
+    .tui-row--windrose { align-items: center; }
+
+    /* --- Пульсирующая рамка при опасности (шторм и т.п.) --- */
+    .tui-panel--alert-pulse { animation: tui-resolve-in 0.6s ease forwards, tui-frame-alert-pulse 1.4s ease-in-out infinite !important; }
+    @keyframes tui-frame-alert-pulse {
+      0%, 100% { box-shadow: inset 0 0 18px rgba(255,107,107,0.08), 0 10px 28px rgba(0,0,0,.35), 0 0 10px rgba(255,107,107,.35); }
+      50%      { box-shadow: inset 0 0 24px rgba(255,107,107,0.14), 0 10px 28px rgba(0,0,0,.35), 0 0 24px rgba(255,107,107,.75); }
+    }
+
+    /* --- Бегущая волна питания по контуру (генерация реактора) --- */
+    .tui-flow-track { height: 5px; margin: 5px 0 8px; border: 1px solid var(--tui-edge); overflow: hidden; background: rgba(56,189,248,.08); }
+    .tui-flow-fill { height: 100%; width: 100%; background: repeating-linear-gradient(90deg, var(--tui-cyan) 0 10px, transparent 10px 20px); background-size: 40px 100%; animation: tui-flow-run 1s linear infinite; opacity: .85; }
+    @keyframes tui-flow-run { to { background-position: -40px 0; } }
+
+    /* --- Батарея накопителей --- */
+    .tui-batt-wrap { display: flex; align-items: center; gap: 8px; }
+    .tui-batt-wrap svg { width: 26px; height: 15px; flex-shrink: 0; }
+    .tui-batt-fill { animation: tui-batt-pulse 2.4s ease-in-out infinite; }
+    @keyframes tui-batt-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .6; } }
+
+    /* --- Пульсирующая alert-иконка в заголовке био-плашки (цвет теперь как у всех — только пульсация) --- */
+    .tui-icon-pulse { animation: tui-icon-pulse-anim 1.6s ease-in-out infinite; transform-origin: center; }
+    @keyframes tui-icon-pulse-anim { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .55; transform: scale(1.12); } }
+
+    /* --- Сдвиг цвета текста при тревоге (патогенный индекс) --- */
+    .tui-shiftcolor { transition: color .5s ease, text-shadow .5s ease; }
+    .tui-shiftcolor.alert { color: var(--tui-red); text-shadow: 0 0 8px var(--tui-red); }
+
+    /* ---------- Заголовок (хедер) ---------- */
+    #tui-header { grid-area: header; position: relative; display: flex; align-items: center; justify-content: space-between; padding: 0 46px; }
+    /* декоративная статичная HUD-полоса — узкая, строго в пустом промежутке между левым и правым
+       блоком, не заходит под текст (иначе линии перечёркивают надписи) */
+    .tui-header-bar-bg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; color: var(--tui-frame-color); opacity: 0.35; }
+    .tui-header-bar-bg .ln { fill: none; stroke: currentColor; stroke-width: 1.6; }
+    .tui-header-bar-bg .fillbar { fill: currentColor; opacity: 0.7; }
+    .tui-header-left, .tui-header-right { position: relative; z-index: 2; }
+    .tui-header-clock {
+      position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%);
+      z-index: 2; text-align: center; pointer-events: none;
+    }
+    .tui-clock-time {
+      display: block; font-family: var(--tui-font-digital); font-size: 26px; font-weight: 400;
+      color: var(--tui-cyan); letter-spacing: 2px; text-shadow: 0 0 10px rgba(94, 234, 212, 0.55);
+    }
+    .tui-clock-date {
+      display: block; font-family: var(--tui-font-digital); font-size: 13px; color: var(--tui-ink-400);
+      letter-spacing: 1.5px; margin-top: 12px; text-transform: uppercase;
+    }
+    .tui-header-left { display: flex; align-items: center; gap: 14px; }
+    .tui-status-pulse { width: 10px; height: 10px; border-radius: 50%; background: var(--tui-cyan); box-shadow: 0 0 10px var(--tui-cyan); animation: tui-pulse-op 1.7s ease-in-out infinite; flex-shrink: 0; }
+    .tui-module-title { font-family: var(--tui-font-display); font-size: 24px; font-weight: 400; letter-spacing: 0.5px; color: #FFF; text-shadow: 0 0 10px rgba(56, 189, 248, 0.5); }
+    .tui-module-sub { font-family: var(--tui-font-digital); font-size: 11px; color: var(--tui-ink-400); letter-spacing: 1px; margin-top: 4px; }
+
+    .tui-header-right { display: flex; align-items: center; gap: 26px; }
+    .tui-char-info { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.6; }
+    .tui-char-label { font-size: 9px; color: var(--tui-ink-600); letter-spacing: 1.5px; font-family: var(--tui-font-display); }
+    .tui-char-name { font-family: var(--tui-font-display); font-size: 15px; color: var(--tui-ink-100); font-weight: 400; }
+    .tui-char-id { font-family: var(--tui-font-digital); font-size: 11px; color: var(--tui-ink-400); }
+
+    .tui-timer-badge { display: flex; flex-direction: column; align-items: center; gap: 3px; background: rgba(255, 180, 84, 0.12); border: 1px solid var(--tui-amber); padding: 6px 16px; min-width: 64px; flex-shrink: 0; }
+    .tui-timer-badge .tui-label { font-size: 7.5px; color: var(--tui-amber); white-space: nowrap; }
+    .tui-timer-badge span#tui-session-timer { font-family: var(--tui-font-digital); font-size: 16px; font-weight: 400; color: var(--tui-amber); letter-spacing: 1px; white-space: nowrap; }
+
+    /* ---------- Центральный док с кнопками действий ---------- */
+    .tui-dock { display: flex; gap: 12px; padding: 12px 16px; }
+    .tui-dock-btn {
+      background: rgba(14, 165, 233, 0.12);
+      border: 1px solid var(--tui-sky);
+      color: var(--tui-ink-100);
+      font-family: var(--tui-font-display);
+      font-size: 12px;
+      font-weight: 400;
+      letter-spacing: 1px;
+      padding: 11px 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+      transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease, color 0.2s ease;
+    }
+    .tui-dock-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.6; }
+    .tui-dock-btn:hover { background: var(--tui-sky); color: #041018; box-shadow: 0 0 18px rgba(56, 189, 248, 0.5); transform: translateY(-2px); }
+    .tui-dock-btn:active { transform: translateY(0); }
+    .tui-dock-btn.tui-danger { border-color: var(--tui-amber); color: var(--tui-amber); }
+    .tui-dock-btn.tui-danger:hover { background: var(--tui-amber); color: #241300; box-shadow: 0 0 18px rgba(255, 180, 84, 0.5); }
+
+    /* ---------- Футер ---------- */
+    #tui-footer { grid-area: footer; position: relative; display: flex; align-items: center; justify-content: space-between; padding: 0 30px; font-family: var(--tui-font-digital); font-size: 11px; color: var(--tui-ink-400); background: var(--tui-panel-deep); letter-spacing: 0.5px; }
+    .tui-footer-bar-bg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; color: var(--tui-frame-color); opacity: 0.3; }
+    .tui-footer-bar-bg .ln { fill: none; stroke: currentColor; stroke-width: 1.4; }
+    #tui-footer-left, #tui-footer-log { position: relative; z-index: 2; }
+    #tui-footer-log { color: var(--tui-cyan); }
+
+    @media (max-width: 700px) {
+      #tui-shell { inset: 12px; grid-template-rows: 84px 1fr 46px; }
+      .tui-dock { flex-direction: column; }
+      .tui-header-right { display: none; }
+    }
+
+    /* ==========================================================
+       ИНТЕГРАЦИЯ С РАБОЧИМ MVP (Supabase): авторизация, дек,
+       модалки сканера/журнала/контента, тревога, дев-лог.
+       ========================================================== */
+
+    /* ---- Хедер: приглашение к авторизации vs данные персонажа ---- */
+    .tui-auth-prompt { display: flex; align-items: center; gap: 18px; }
+    .tui-auth-text { text-align: right; }
+    .tui-auth-text .tui-label { font-size: 17px; color: var(--tui-ink-100); letter-spacing: 1.5px; text-shadow: 0 0 8px rgba(255, 180, 84, 0.4); }
+    .tui-auth-text .tui-auth-msg { font-family: var(--tui-font-display); font-size: 15px; color: var(--tui-ink-600); max-width: 230px; line-height: 1.35; letter-spacing: 0.2px; margin-top: 6px; }
+    .tui-auth-btn {
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(255, 180, 84, 0.12); border: 1px solid var(--tui-amber); color: var(--tui-amber);
+      font-family: var(--tui-font-display); font-size: 14px; font-weight: 400; letter-spacing: 1.5px;
+      padding: 12px 20px; cursor: pointer; text-transform: uppercase;
+      clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+      transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease, color 0.2s ease;
+      flex-shrink: 0;
+    }
+    .tui-auth-btn svg { width: 19px; height: 19px; stroke: currentColor; fill: none; stroke-width: 1.6; }
+    .tui-auth-btn:hover { background: var(--tui-amber); color: #241300; box-shadow: 0 0 16px rgba(255, 180, 84, 0.5); transform: translateY(-2px); }
+    .tui-auth-btn:active { transform: translateY(0); }
+
+    .tui-char-block { display: none; align-items: center; gap: 18px; }
+    #tui-header.authenticated .tui-char-block { display: flex; }
+    #tui-header.authenticated .tui-auth-prompt { display: none; }
+
+    /* ---- Центральный док кнопок — скрыт до авторизации ---- */
+    #tui-dock { display: none; }
+    #tui-dock.visible { display: flex; }
+
+    /* ---- Баннер тревоги модуля — поверх всего интерфейса, п.6 ТЗ ---- */
+    #tui-alert-banner {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      z-index: 40;
+      display: none;
+      padding: 10px 20px;
+      text-align: center;
+      font-family: var(--tui-font-display);
+      font-size: 12px;
+      letter-spacing: 2px;
+      color: #FFD9D9;
+      background: repeating-linear-gradient(45deg, #4a1010, #4a1010 10px, #5a1414 10px, #5a1414 20px);
+      border-bottom: 1px solid var(--tui-red);
+      animation: tui-alert-pulse 1.5s ease-in-out infinite;
+    }
+    #tui-alert-banner.active { display: block; }
+    @keyframes tui-alert-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.65; } }
+    @media (prefers-reduced-motion: reduce) { #tui-alert-banner { animation: none; } }
+
+    /* ---- Модальные окна: сканер / журнал / контент — общая база ---- */
+    .tui-modal-veil {
+      position: fixed; inset: 0;
+      background: rgba(2, 6, 14, 0.82);
+      display: flex; align-items: center; justify-content: center;
+      padding: 24px;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.25s ease;
+      z-index: 60;
+    }
+    .tui-modal-veil.open { opacity: 1; pointer-events: all; }
+    .tui-modal-box {
+      width: 100%; max-width: 440px; max-height: 86vh; overflow-y: auto;
+      background: var(--tui-panel-deep);
+      border: 1px solid var(--tui-cyan);
+      box-shadow: 0 0 40px rgba(94, 234, 212, 0.22), inset 0 0 20px rgba(56, 189, 248, 0.08);
+      clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
+      padding: 20px 22px;
+      display: flex; flex-direction: column; gap: 14px;
+      transform: scale(0.85) translateY(14px);
+      transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+      backdrop-filter: blur(10px);
+    }
+    .tui-modal-veil.open .tui-modal-box { transform: scale(1) translateY(0); }
+    .tui-modal-veil.success .tui-modal-box { border-color: var(--tui-cyan); box-shadow: 0 0 46px rgba(94, 234, 212, 0.5); }
+    .tui-modal-head { display: flex; justify-content: space-between; align-items: center; }
+    .tui-modal-title { font-family: var(--tui-font-display); font-size: 12px; letter-spacing: 2px; color: var(--tui-cyan); text-transform: uppercase; }
+    .tui-modal-close {
+      background: transparent; border: 1px solid var(--tui-edge); color: var(--tui-ink-400);
+      width: 26px; height: 26px; cursor: pointer; font-size: 13px; line-height: 1;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .tui-modal-close:hover { color: var(--tui-ink-100); border-color: var(--tui-cyan); }
+
+    .tui-scan-box { position: relative; border: 1px solid var(--tui-edge); background: #000; aspect-ratio: 4/3; overflow: hidden; }
+    .tui-scan-box video { width: 100%; height: 100%; object-fit: cover; }
+    .tui-scan-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    .tui-scan-readout {
+      position: absolute; bottom: 8px; left: 8px; right: 8px;
+      font-size: 10.5px; color: var(--tui-cyan); background: rgba(0, 0, 0, 0.68);
+      padding: 5px 8px; text-align: center; letter-spacing: 0.5px; opacity: 0;
+      transition: opacity 0.2s ease; word-break: break-all;
+    }
+    .tui-scan-readout.visible { opacity: 1; }
+
+    .tui-divider { display: flex; align-items: center; gap: 10px; color: var(--tui-ink-600); font-size: 9.5px; letter-spacing: 1px; text-transform: uppercase; }
+    .tui-divider::before, .tui-divider::after { content: ""; flex: 1; height: 1px; background: var(--tui-edge); }
+
+    .tui-field { display: flex; flex-direction: column; gap: 6px; }
+    .tui-field label { font-size: 9.5px; letter-spacing: 1px; color: var(--tui-ink-600); text-transform: uppercase; }
+    .tui-input, .tui-textarea {
+      width: 100%; background: rgba(2, 8, 16, 0.7); border: 1px solid var(--tui-edge); color: var(--tui-ink-100);
+      font-family: var(--tui-font-mono); font-size: 13px; padding: 10px 12px; outline: none;
+    }
+    .tui-input:focus, .tui-textarea:focus { border-color: var(--tui-cyan); }
+
+    .tui-modal-btn {
+      font-family: var(--tui-font-display); font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+      background: rgba(94, 234, 212, 0.1); border: 1px solid var(--tui-cyan); color: var(--tui-cyan);
+      padding: 12px 16px; cursor: pointer; transition: all 0.15s ease; text-align: center;
+    }
+    .tui-modal-btn:hover { background: var(--tui-cyan); color: #052018; box-shadow: 0 0 16px rgba(94, 234, 212, 0.4); }
+    .tui-modal-btn.ghost { background: transparent; border-color: var(--tui-edge); color: var(--tui-ink-400); padding: 7px 12px; font-size: 10px; }
+    .tui-modal-btn.ghost:hover { background: transparent; border-color: var(--tui-ink-400); color: var(--tui-ink-100); box-shadow: none; }
+    .tui-content-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .tui-content-step { font-size: 8.5px; color: var(--tui-ink-600); letter-spacing: 1px; }
+    .tui-gate-box { border: 1px solid var(--tui-amber); background: rgba(255, 180, 84, 0.06); padding: 16px; font-size: 12.5px; line-height: 1.6; color: var(--tui-ink-100); }
+    .tui-content-image { width: 100%; border: 1px solid var(--tui-edge); display: block; }
+    .tui-error-line { font-size: 11px; color: var(--tui-red); min-height: 14px; }
+    .tui-status-line { font-size: 10.5px; color: var(--tui-ink-600); }
+
+    .tui-journal-list { display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto; }
+    .tui-journal-entry { border-left: 2px solid var(--tui-sky); padding: 8px 12px; background: rgba(255, 255, 255, 0.02); font-size: 11.5px; color: var(--tui-ink-100); }
+    .tui-journal-entry .meta { color: var(--tui-ink-600); font-size: 9.5px; margin-bottom: 4px; letter-spacing: 0.5px; }
+
+    .tui-content-tag { align-self: flex-start; font-size: 9.5px; letter-spacing: 1px; padding: 3px 8px; border: 1px solid var(--tui-edge); color: var(--tui-ink-400); text-transform: uppercase; }
+    .tui-content-body { border: 1px solid var(--tui-edge); background: rgba(2, 8, 16, 0.6); padding: 16px; font-size: 13px; line-height: 1.75; color: var(--tui-ink-100); min-height: 90px; white-space: pre-wrap; }
+    .tui-content-body.typing::after { content: "▌"; animation: tui-blink 1s step-end infinite; color: var(--tui-cyan); }
+    @keyframes tui-blink { 50% { opacity: 0; } }
+    .tui-choice-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    /* ---- Лог разработчика — сворачиваемая панель внизу, п.11 ТЗ ---- */
+    #tui-devlog-toggle {
+      position: fixed; bottom: 12px; right: 12px; z-index: 65;
+      font-family: var(--tui-font-display); font-size: 9.5px; letter-spacing: 1.5px;
+      background: var(--tui-panel-deep); border: 1px solid var(--tui-edge); color: var(--tui-ink-400);
+      padding: 7px 12px; cursor: pointer;
+      clip-path: polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px);
+    }
+    #tui-devlog-toggle:hover { color: var(--tui-cyan); border-color: var(--tui-cyan); }
+    #tui-devlog {
+      position: fixed; bottom: 0; left: 0; right: 0; max-height: 0; overflow: hidden;
+      background: rgba(2, 6, 14, 0.94); border-top: 1px solid var(--tui-edge); font-size: 10px; color: var(--tui-ink-400);
+      transition: max-height 0.2s ease; z-index: 64; backdrop-filter: blur(6px);
+      font-family: var(--tui-font-mono);
+    }
+    #tui-devlog.open { max-height: 180px; overflow-y: auto; }
+    #tui-devlog-inner { padding: 10px 16px; }
+    #tui-devlog-inner div { padding: 3px 0; border-bottom: 1px dashed rgba(56, 189, 248, 0.12); }
+
+    @media (max-width: 700px) {
+      .tui-auth-text { display: none; }
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+<div id="canvas-container">
+  <div id="hud-popup">
+    <div class="hud-header">
+      <span class="hud-title" id="pop-sector">SECTOR #04-A</span>
+      <span class="hud-status">ONLINE</span>
+    </div>
+    <div class="hud-row">
+      <span>INTEGRITY:</span>
+      <span id="pop-integrity">98.4%</span>
+    </div>
+    <div class="hud-bar-container">
+      <div class="hud-bar-fill" id="pop-bar"></div>
+    </div>
+    <div class="hud-row">
+      <span>SHIELD TEMP:</span>
+      <span id="pop-temp">24.2 °C</span>
+    </div>
+    <div class="hud-row">
+      <span>PRESSURE:</span>
+      <span>1.01 ATM</span>
+    </div>
+    <div class="hud-tech-lines">
+      <div class="hud-line-unit active"></div>
+      <div class="hud-line-unit active"></div>
+      <div class="hud-line-unit active"></div>
+      <div class="hud-line-unit active"></div>
+      <div class="hud-line-unit"></div>
+      <div class="hud-line-unit"></div>
+    </div>
+  </div>
+</div>
+
+<div id="terminal-ui">
+  <div id="tui-alert-banner"></div>
+  <div id="tui-vignette"></div>
+  <div id="tui-scanlines"></div>
+
+  <div id="tui-shell">
+
+    <!-- ======= ХЕДЕР ======= -->
+    <header id="tui-header" class="tui-panel tui-shape-header">
+      <svg class="tui-header-bar-bg" viewBox="0 0 1200 92" preserveAspectRatio="none" aria-hidden="true">
+        <path class="ln" d="M230,20 L300,20 L325,32 L875,32 L900,20 L970,20"/>
+        <path class="ln" d="M260,82 L940,82" stroke-width="1"/>
+        <g class="ln">
+          <path d="M350,82 h10 M370,82 h10 M390,82 h10 M410,82 h10"/>
+          <path d="M790,82 h10 M810,82 h10 M830,82 h10 M850,82 h10"/>
+        </g>
+      </svg>
+      <div class="tui-header-clock" id="tui-header-clock">
+        <span class="tui-clock-time" id="tui-clock-time">--:--:--</span>
+        <span class="tui-clock-date" id="tui-clock-date">— ——— ————</span>
+      </div>
+      <div class="tui-header-left">
+        <span class="tui-status-pulse" id="tui-status-pulse"></span>
+        <div>
+          <div class="tui-module-title" id="tui-module-title">МОДУЛЬ — ПОДКЛЮЧЕНИЕ...</div>
+          <div class="tui-module-sub" id="tui-module-sub">SUPABASE REALTIME</div>
+        </div>
+      </div>
+      <div class="tui-header-right">
+        <div class="tui-auth-prompt" id="tui-auth-prompt">
+          <div class="tui-auth-text">
+            <div class="tui-label">Доступ закрыт</div>
+            <div class="tui-auth-msg">Отсканируйте ваш ключ для начала работы</div>
+          </div>
+          <button class="tui-auth-btn" id="tui-auth-btn" data-action="goAuth">
+            <svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12 20 3M16 5l3 3M13 8l2 2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Авторизация</span>
+          </button>
+        </div>
+        <div class="tui-char-block" id="tui-char-block">
+          <div class="tui-char-info">
+            <span class="tui-char-label">Персонаж</span>
+            <span class="tui-char-name" id="tui-char-name">—</span>
+            <span class="tui-char-id" id="tui-char-id-badge">—</span>
+          </div>
+          <div class="tui-timer-badge">
+            <span class="tui-label">Сеанс</span>
+            <span id="tui-session-timer">—:—</span>
+          </div>
+        </div>
+      </div>
+    </header>
+    <script>
+      // Независимые часы в хедере: реальное время, но год смещён в будущее под сеттинг колонии.
+      // Логика полностью отдельна от App/DB — ничего в остальном интерфейсе не трогает.
+      (function () {
+        var timeEl = document.getElementById('tui-clock-time');
+        var dateEl = document.getElementById('tui-clock-date');
+        var YEAR_OFFSET = 172; // «фантастический» сдвиг года колонии
+        function pad(n) { return n < 10 ? '0' + n : '' + n; }
+        function tick() {
+          var now = new Date();
+          if (timeEl) {
+            timeEl.textContent = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+          }
+          if (dateEl) {
+            dateEl.textContent = pad(now.getDate()) + '.' + pad(now.getMonth() + 1) + '.' + (now.getFullYear() + YEAR_OFFSET);
+          }
+        }
+        tick();
+        setInterval(tick, 1000);
+      })();
+    </script>
+
+    <!-- ======= ЛЕВАЯ КОЛОНКА ======= -->
+    <aside id="tui-col-left">
+
+      <section class="tui-panel tui-shape-a">
+        <svg class="tui-corner tl" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <svg class="tui-corner tr" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <svg class="tui-corner bl" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <svg class="tui-corner br" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <div class="tui-panel-head">
+          <div class="tui-panel-title">
+            <svg class="tui-icon-pulse" viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3z" stroke-linejoin="round"/><line x1="12" y1="9" x2="12" y2="14"/><circle cx="12" cy="17" r="0.6" fill="currentColor" stroke="none"/></svg>
+            <span>Био-опасность</span>
+          </div>
+          <div class="tui-tech-id">
+            <span class="tui-dial"><svg viewBox="0 0 24 24" stroke="#5EEAD4" stroke-width="1.4" fill="none"><circle cx="12" cy="12" r="9" stroke-dasharray="2 3"/><circle cx="12" cy="12" r="2"/></svg></span>
+            BIO-SENS #88
+          </div>
+        </div>
+        <div class="tui-panel-body">
+          <div class="tui-row"><span>Контаминация:</span><span class="tui-pill" id="tui-bio-contam">0.04 PPM</span></div>
+          <div class="tui-row"><span>Радиационный фон:</span><span class="val cyan" id="tui-rad-val">0.12 µSv/h</span></div>
+          <div class="tui-spark-wrap"><svg viewBox="0 0 200 26" preserveAspectRatio="none"><polyline class="tui-spark-line" id="tui-rad-spark" points=""/></svg></div>
+          <div class="tui-row"><span>Патогенный индекс:</span><span class="val tui-shiftcolor" id="tui-pathogen">0.001% [ОЧИЩЕНО]</span></div>
+          <div class="tui-row"><span>Токсичность почвы:</span><span class="val cyan" id="tui-toxicity">0.00 PPM [SAFE]</span></div>
+          <div class="tui-bar-track tui-bar-track--thin"><div class="tui-bar-fill" id="tui-toxicity-bar" style="width:1%"></div></div>
+        </div>
+      </section>
+
+      <section class="tui-panel tui-shape-b">
+        <svg class="tui-corner tl" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <svg class="tui-corner tr" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <svg class="tui-corner bl" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <svg class="tui-corner br" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <div class="tui-panel-head">
+          <div class="tui-panel-title">
+            <svg viewBox="0 0 24 24"><path d="M12 2 20 5V11C20 16 16.5 20 12 22 7.5 20 4 16 4 11V5Z" stroke-linejoin="round"/></svg>
+            <span>Целостность модуля</span>
+          </div>
+          <div class="tui-tech-id">
+            <span class="tui-dial"><svg viewBox="0 0 24 24" stroke="#5EEAD4" stroke-width="1.4" fill="none"><circle cx="12" cy="12" r="9" stroke-dasharray="2 3"/><circle cx="12" cy="12" r="2"/></svg></span>
+            HULL-STABILITY
+          </div>
+        </div>
+        <div class="tui-panel-body">
+          <div class="tui-row"><span>Прочность купола:</span><span class="val cyan" id="tui-hull-val">94.2%</span></div>
+          <div class="tui-bar-track"><div class="tui-bar-fill" id="tui-hull-bar" style="width:94.2%"></div></div>
+          <div class="tui-row"><span>Давление внутри:</span><span class="val tui-spike" id="tui-pressure">1.01 ATM</span></div>
+          <div class="tui-row"><span>Нагрев щита:</span><span class="val amber tui-flicker">24.2 °C</span></div>
+          <div class="tui-row"><span>Микро-пробои:</span><span class="val cyan" id="tui-dent-val">0 DENT DETECTED</span></div>
+          <div class="tui-dents" id="tui-dents"></div>
+        </div>
+      </section>
+
+      <section class="tui-panel tui-shape-c">
+        <svg class="tui-corner tl" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <svg class="tui-corner tr" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <svg class="tui-corner bl" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <svg class="tui-corner br" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <div class="tui-panel-head">
+          <div class="tui-panel-title">
+            <svg viewBox="0 0 24 24"><path d="M3 8c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2" stroke-linecap="round"/><path d="M3 14c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2" stroke-linecap="round"/></svg>
+            <span>Атмосфера модуля</span>
+          </div>
+          <div class="tui-tech-id">
+            <span class="tui-dial"><svg viewBox="0 0 24 24" stroke="#5EEAD4" stroke-width="1.4" fill="none"><circle cx="12" cy="12" r="9" stroke-dasharray="2 3"/><circle cx="12" cy="12" r="2"/></svg></span>
+            LIFE_SUPP_v4
+          </div>
+        </div>
+        <div class="tui-panel-body">
+          <div class="tui-ring-wrap">
+            <svg viewBox="0 0 44 44">
+              <circle class="tui-ring-track" cx="22" cy="22" r="18"/>
+              <circle class="tui-ring-seg" cx="22" cy="22" r="18" stroke="#5EEAD4" stroke-dasharray="88.4 113.1" stroke-dashoffset="0"/>
+              <circle class="tui-ring-seg" cx="22" cy="22" r="18" stroke="#38BDF8" stroke-dasharray="24.6 176.9" stroke-dashoffset="-88.4"/>
+              <circle class="tui-ring-seg" cx="22" cy="22" r="18" stroke="#FFB454" stroke-dasharray="1.5 199.9" stroke-dashoffset="-113"/>
+            </svg>
+            <div class="tui-ring-legend">
+              <span><span class="tui-dot" style="background:#5EEAD4"></span>O₂ <b id="tui-o2">20.9%</b></span>
+              <span><span class="tui-dot" style="background:#38BDF8"></span>N₂ <b>78.1%</b></span>
+              <span><span class="tui-dot" style="background:#FFB454"></span>CO₂ <b id="tui-co2">0.04%</b></span>
+            </div>
+          </div>
+          <div class="tui-row"><span>Влажность:</span><span class="val cyan" id="tui-humidity">45.0% (OPTIMAL)</span></div>
+          <div class="tui-drop-wrap">
+            <svg viewBox="0 0 20 26"><path d="M10 1 C10 1 2 11.5 2 17.5 C2 22.2 5.6 25 10 25 C14.4 25 18 22.2 18 17.5 C18 11.5 10 1 10 1 Z" fill="none" stroke="var(--tui-cyan)" stroke-width="1.3"/><clipPath id="tui-drop-clip"><path d="M10 1 C10 1 2 11.5 2 17.5 C2 22.2 5.6 25 10 25 C14.4 25 18 22.2 18 17.5 C18 11.5 10 1 10 1 Z"/></clipPath><rect class="tui-drop-fill" id="tui-drop-fill" x="0" y="6.5" width="20" height="19.5" fill="#5EEAD4" opacity="0.55" clip-path="url(#tui-drop-clip)"/></svg>
+            <span style="font-size:9px;color:var(--tui-ink-600);">капельный индикатор насыщенности</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="tui-panel tui-shape-c" id="tui-panel-power">
+        <svg class="tui-corner tl" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <svg class="tui-corner tr" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <svg class="tui-corner bl" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <svg class="tui-corner br" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <div class="tui-panel-head">
+          <div class="tui-panel-title">
+            <svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" stroke-linejoin="round"/></svg>
+            <span>Энергосистема</span>
+          </div>
+          <div class="tui-tech-id">
+            <span class="tui-dial"><svg viewBox="0 0 24 24" stroke="#5EEAD4" stroke-width="1.4" fill="none"><circle cx="12" cy="12" r="9" stroke-dasharray="2 3"/><circle cx="12" cy="12" r="2"/></svg></span>
+            PWR_GRID
+          </div>
+        </div>
+        <div class="tui-panel-body">
+          <div class="tui-row"><span>Потребление модуля:</span><span class="val cyan" id="tui-power-load">42.8 kW</span></div>
+          <div class="tui-eq tui-eq--amber" id="tui-power-eq"></div>
+          <div class="tui-row"><span>Заряд накопителей:</span>
+            <span class="val" style="display:flex;align-items:center;gap:8px;">
+              <svg viewBox="0 0 26 15"><rect x="1" y="1.5" width="21" height="12" rx="1.5" fill="none" stroke="var(--tui-cyan)" stroke-width="1.3"/><rect x="23" y="5" width="2.2" height="5" fill="var(--tui-cyan)"/><rect class="tui-batt-fill" id="tui-batt-fill" x="3" y="3.5" width="17" height="8" fill="var(--tui-cyan)"/></svg>
+              <span id="tui-batt-val">98%</span>
+            </span>
+          </div>
+          <div class="tui-row"><span>Генерация реактора:</span><span class="val cyan" id="tui-reactor-val">100% (ОПТИМАЛЬНО)</span></div>
+          <div class="tui-flow-track"><div class="tui-flow-fill"></div></div>
+        </div>
+      </section>
+
+    </aside>
+
+    <!-- ======= ЦЕНТР (открыт для купола) ======= -->
+    <section id="tui-center">
+      <nav class="tui-panel tui-shape-c tui-dock" id="tui-dock">
+        <button class="tui-dock-btn" id="tui-btn-scan" data-action="goScanContent">
+          <svg viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 0 1 1-1h3M20 8V5a1 1 0 0 1-1-1h-3M4 16v3a1 1 0 0 0 1 1h3M20 16v3a1 1 0 0 0-1 1h-3" stroke-linecap="round" stroke-linejoin="round"/><line x1="4" y1="12" x2="20" y2="12" stroke-dasharray="2 2"/></svg>
+          <span>Скан инвентаря / QR</span>
+        </button>
+        <button class="tui-dock-btn" id="tui-btn-journal" data-action="goJournal">
+          <svg viewBox="0 0 24 24"><path d="M4 5.5C4 4.7 4.7 4 5.5 4H11v16H5.5C4.7 20 4 19.3 4 18.5Z" stroke-linejoin="round"/><path d="M20 5.5C20 4.7 19.3 4 18.5 4H13v16h5.5c.8 0 1.5-.7 1.5-1.5Z" stroke-linejoin="round"/></svg>
+          <span>Бортовой журнал</span>
+        </button>
+        <button class="tui-dock-btn tui-danger" id="tui-btn-end" data-action="endSession">
+          <svg viewBox="0 0 24 24"><path d="M12 3v9" stroke-linecap="round"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0" stroke-linecap="round"/></svg>
+          <span>Завершить сеанс</span>
+        </button>
+      </nav>
+    </section>
+
+    <!-- ======= ПРАВАЯ КОЛОНКА ======= -->
+    <aside id="tui-col-right">
+
+      <section class="tui-panel tui-shape-b" id="tui-panel-seismo">
+        <svg class="tui-corner tl" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <svg class="tui-corner tr" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <svg class="tui-corner bl" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <svg class="tui-corner br" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <div class="tui-panel-head">
+          <div class="tui-panel-title">
+            <svg viewBox="0 0 24 24"><path d="M2 13h3l2.2 6L11 4l3 15 2-7h6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Сейсмо-скан</span>
+          </div>
+          <div class="tui-tech-id">
+            <span class="tui-dial"><svg viewBox="0 0 24 24" stroke="#5EEAD4" stroke-width="1.4" fill="none"><circle cx="12" cy="12" r="9" stroke-dasharray="2 3"/><circle cx="12" cy="12" r="2"/></svg></span>
+            SEISMO_SCAN
+          </div>
+        </div>
+        <div class="tui-panel-body">
+          <div class="tui-row"><span>Магнитуда толчков:</span><span class="val cyan" id="tui-seismo-mag">0.4 M</span></div>
+          <div class="tui-spark-wrap"><svg viewBox="0 0 200 26" preserveAspectRatio="none"><polyline class="tui-spark-line tui-spark-line--wide" id="tui-seismo-spark" points=""/></svg></div>
+          <div class="tui-row"><span>Тектонический шум:</span><span class="val" id="tui-tect-noise">-12 dB (LOW)</span></div>
+          <div class="tui-eq" id="tui-tect-eq"></div>
+          <div class="tui-row"><span>Статус платформы:</span><span class="val cyan" id="tui-platform-status">СТАБИЛЬНО</span></div>
+        </div>
+      </section>
+
+      <section class="tui-panel tui-shape-a">
+        <svg class="tui-corner tl" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <svg class="tui-corner tr" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <svg class="tui-corner bl" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <svg class="tui-corner br" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <div class="tui-panel-head">
+          <div class="tui-panel-title">
+            <svg viewBox="0 0 24 24"><path d="M4 5.5C4 4.7 4.7 4 5.5 4H11v16H5.5C4.7 20 4 19.3 4 18.5Z" stroke-linejoin="round"/><path d="M20 5.5C20 4.7 19.3 4 18.5 4H13v16h5.5c.8 0 1.5-.7 1.5-1.5Z" stroke-linejoin="round"/></svg>
+            <span>Бортовой журнал</span>
+          </div>
+          <div class="tui-tech-id">
+            <span class="tui-dial"><svg viewBox="0 0 24 24" stroke="#5EEAD4" stroke-width="1.4" fill="none"><circle cx="12" cy="12" r="9" stroke-dasharray="2 3"/><circle cx="12" cy="12" r="2"/></svg></span>
+            LOG_DB
+          </div>
+        </div>
+        <div class="tui-panel-body">
+          <div class="tui-counter-row">
+            <div>
+              <div class="tui-counter-sub">Всего записей</div>
+              <div class="tui-counter" id="tui-log-count">142</div>
+            </div>
+            <div style="text-align:right;">
+              <div class="tui-counter-sub" style="color:var(--tui-amber);">Тишина в эфире</div>
+              <div style="font-size:13px;font-weight:400;" id="tui-log-silence">12 мин назад</div>
+            </div>
+          </div>
+          <div class="tui-row" style="margin-top:8px;"><span>Статус синхронизации:</span><span class="val cyan"><span class="tui-led" id="tui-sync-led"></span><span id="tui-sync-status">СИНХРОНИЗИРОВАНО</span></span></div>
+        </div>
+      </section>
+
+      <section class="tui-panel tui-shape-c">
+        <svg class="tui-corner tl" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <svg class="tui-corner tr" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <svg class="tui-corner bl" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <svg class="tui-corner br" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <div class="tui-panel-head">
+          <div class="tui-panel-title">
+            <svg viewBox="0 0 24 24"><path d="M12 20v-3M8 20a8 8 0 0 1 8 0M5 15.5a12 12 0 0 1 14 0M2.5 11a16 16 0 0 1 19 0" stroke-linecap="round"/></svg>
+            <span>Связь</span>
+          </div>
+          <div class="tui-tech-id">
+            <span class="tui-dial"><svg viewBox="0 0 24 24" stroke="#5EEAD4" stroke-width="1.4" fill="none"><circle cx="12" cy="12" r="9" stroke-dasharray="2 3"/><circle cx="12" cy="12" r="2"/></svg></span>
+            SUPABASE_RT
+          </div>
+        </div>
+        <div class="tui-panel-body">
+          <div class="tui-row"><span>Канал данных:</span><span class="val cyan" id="tui-conn-status">ПОДКЛЮЧЕНИЕ...</span></div>
+          <div class="tui-row"><span>Задержка пакета:</span><span class="val" id="tui-latency">14 ms</span></div>
+          <div class="tui-eq" id="tui-latency-eq"></div>
+          <div class="tui-row"><span>Потеря пакетов:</span><span class="val cyan" id="tui-loss">0.00% LOSS</span></div>
+          <div class="tui-spark-wrap"><svg viewBox="0 0 200 26" preserveAspectRatio="none"><polyline class="tui-spark-line tui-spark-line--amber" id="tui-loss-spark" points=""/></svg></div>
+        </div>
+      </section>
+
+      <section class="tui-panel tui-shape-b" id="tui-panel-meteo">
+        <svg class="tui-corner tl" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <svg class="tui-corner tr" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <svg class="tui-corner bl" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <svg class="tui-corner br" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
+        <div class="tui-panel-head">
+          <div class="tui-panel-title">
+            <svg viewBox="0 0 24 24"><path d="M6 15a4 4 0 1 1 1.2-7.8A5 5 0 0 1 17 9a3.5 3.5 0 0 1-.5 7H6Z" stroke-linejoin="round"/></svg>
+            <span>Внешняя метеорология</span>
+          </div>
+          <div class="tui-tech-id">
+            <span class="tui-dial"><svg viewBox="0 0 24 24" stroke="#5EEAD4" stroke-width="1.4" fill="none"><circle cx="12" cy="12" r="9" stroke-dasharray="2 3"/><circle cx="12" cy="12" r="2"/></svg></span>
+            METEO_EXT
+          </div>
+        </div>
+        <div class="tui-panel-body">
+          <div class="tui-row"><span>Температура снаружи:</span><span class="val cyan" id="tui-temp-out">-62.4 °C</span></div>
+          <div class="tui-spark-wrap"><svg viewBox="0 0 200 26" preserveAspectRatio="none"><polyline class="tui-spark-line" id="tui-temp-spark" points=""/></svg></div>
+          <div class="tui-row tui-row--windrose"><span>Скорость ветра:</span>
+            <span class="val" style="display:flex;align-items:center;gap:8px;">
+              <svg class="tui-windrose" viewBox="0 0 26 26"><circle class="ring" cx="13" cy="13" r="11"/><circle class="ring" cx="13" cy="13" r="11" stroke-dasharray="1 6"/><g class="needle"><line x1="13" y1="3" x2="13" y2="13" stroke="var(--tui-red)" stroke-width="1.6"/><line x1="13" y1="13" x2="13" y2="23" stroke="var(--tui-ink-400)" stroke-width="1.6"/></g></svg>
+              <span id="tui-wind-val">14.2 m/s</span>
+            </span>
+          </div>
+          <div class="tui-row"><span>Штормовое предупреждение:</span><span class="val" id="tui-storm-val">ШТИЛЬ</span></div>
+        </div>
+      </section>
+
+    </aside>
+
+    <!-- ======= ФУТЕР ======= -->
+    <footer id="tui-footer">
+      <svg class="tui-footer-bar-bg" viewBox="0 0 1200 52" preserveAspectRatio="none" aria-hidden="true">
+        <path class="ln" d="M260,26 L940,26"/>
+        <path class="ln" d="M300,34 L370,34 M830,34 L900,34" stroke-width="1"/>
+      </svg>
+      <span id="tui-footer-left">SYS_VER: 2.0.4-MVP · SUPABASE REALTIME · ENCRYPTION: NONE (TRUST MODE)</span>
+      <span id="tui-footer-log">LOG: —</span>
+    </footer>
+
+  </div>
+</div>
+
+<!-- ======= МОДАЛЬНОЕ ОКНО СКАНЕРА — общее для авторизации и сканирования объектов ======= -->
+<div class="tui-modal-veil" id="scannerModal">
+  <div class="tui-modal-box">
+    <div class="tui-modal-head">
+      <span class="tui-modal-title" id="scannerModalTitle">СКАНИРОВАНИЕ</span>
+      <button class="tui-modal-close" data-action="closeScannerModal">✕</button>
+    </div>
+    <div class="tui-scan-box">
+      <video id="modalVideo" autoplay playsinline muted></video>
+      <canvas id="modalOverlay" class="tui-scan-overlay"></canvas>
+      <div class="tui-scan-readout" id="modalReadout"></div>
+    </div>
+    <div class="tui-field" id="modalPasswordField" style="display:none;">
+      <label>Пароль (если требуется)</label>
+      <input type="password" class="tui-input" id="authPasswordInput" placeholder="необязательно">
+    </div>
+    <div class="tui-divider">или вручную</div>
+    <div class="tui-field">
+      <input type="text" class="tui-input" id="modalManualInput" placeholder="Введите код вручную">
+    </div>
+    <button class="tui-modal-btn" data-action="submitModalManual">Подтвердить код</button>
+    <div class="tui-error-line" id="scannerModalError"></div>
+  </div>
+</div>
+
+<!-- ======= МОДАЛЬНОЕ ОКНО БОРТОВОГО ЖУРНАЛА ======= -->
+<div class="tui-modal-veil" id="journalModal">
+  <div class="tui-modal-box">
+    <div class="tui-modal-head">
+      <span class="tui-modal-title">БОРТОВОЙ ЖУРНАЛ</span>
+      <button class="tui-modal-close" data-action="closeJournalModal">✕</button>
+    </div>
+    <div class="tui-field">
+      <label>Новая запись</label>
+      <textarea class="tui-textarea" id="journalInput" rows="3" placeholder="Введите текст записи..."></textarea>
+    </div>
+    <button class="tui-modal-btn" data-action="saveJournalEntry">Записать в журнал</button>
+    <div class="tui-divider">записи модуля</div>
+    <div class="tui-journal-list" id="journalList"></div>
+  </div>
+</div>
+
+<!-- ======= МОДАЛЬНОЕ ОКНО ПРОСМОТРА КОНТЕНТА ======= -->
+<div class="tui-modal-veil" id="contentModal">
+  <div class="tui-modal-box">
+    <div class="tui-modal-head">
+      <span class="tui-modal-title" id="contentTitle">ДАННЫЕ ОБЪЕКТА</span>
+      <button class="tui-modal-close" data-action="closeContentModal">✕</button>
+    </div>
+    <div class="tui-content-nav" id="contentNavRow" style="display:none;">
+      <button class="tui-modal-btn ghost" id="contentBackBtn" data-action="goBackContent">‹ Назад</button>
+      <span class="tui-content-step" id="contentStepLabel"></span>
+    </div>
+    <span class="tui-content-tag" id="contentTypeTag"></span>
+    <div id="contentMediaArea"></div>
+    <div class="tui-content-body" id="contentBody"></div>
+    <div class="tui-choice-row" id="choiceArea"></div>
+  </div>
+</div>
+
+<!-- ======= ЛОГ РАЗРАБОТЧИКА ======= -->
+<button id="tui-devlog-toggle" data-action="toggleDevLog">ЛОГ ▲</button>
+<div id="tui-devlog"><div id="tui-devlog-inner"></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+  // ==================== 1. СЦЕНА И КАМЕРА ====================
+  const container = document.getElementById('canvas-container');
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x030712);
+
+  const camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera.position.set(0, 4.2, 11.5);
+  camera.lookAt(0, 1.1, 0);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  container.appendChild(renderer.domElement);
+
+  // ==================== 2. СТРOГАЯ ГЕОДЕЗИЧЕСКАЯ ПОЛУСФЕРА ====================
+  const domeRadius = 3;
+  const rawIcosa = new THREE.IcosahedronGeometry(domeRadius, 2);
+  const baseIcosa = rawIcosa.toNonIndexed();
+  const rawPos = baseIcosa.attributes.position;
+  
+  const filteredVertices = [];
+  const baseCirclePoints = [];
+  const baseMap = new Set();
+
+  for (let i = 0; i < rawPos.count; i += 3) {
+    const y1 = rawPos.getY(i);
+    const y2 = rawPos.getY(i + 1);
+    const y3 = rawPos.getY(i + 2);
+
+    if (y1 >= -0.001 || y2 >= -0.001 || y3 >= -0.001) {
+      filteredVertices.push(
+        rawPos.getX(i), Math.max(0, y1), rawPos.getZ(i),
+        rawPos.getX(i+1), Math.max(0, y2), rawPos.getZ(i+1),
+        rawPos.getX(i+2), Math.max(0, y3), rawPos.getZ(i+2)
+      );
+
+      [i, i+1, i+2].forEach(idx => {
+        const y = rawPos.getY(idx);
+        if (Math.abs(y) < 0.05) {
+          const x = rawPos.getX(idx);
+          const z = rawPos.getZ(idx);
+          const key = `${x.toFixed(2)},${z.toFixed(2)}`;
+          if (!baseMap.has(key)) {
+            baseMap.add(key);
+            baseCirclePoints.push({ x, z, angle: Math.atan2(z, x) });
+          }
+        }
+      });
+    }
+  }
+
+  const domeGeo = new THREE.BufferGeometry();
+  domeGeo.setAttribute('position', new THREE.Float32BufferAttribute(filteredVertices, 3));
+  domeGeo.computeVertexNormals();
+
+  // Occluder (Записывает глубинную сферу, предотвращая просвечивание задних объектов)
+  const occluderMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: true });
+  const occluderMesh = new THREE.Mesh(domeGeo, occluderMat);
+  occluderMesh.renderOrder = 1;
+  scene.add(occluderMesh);
+
+  // Полупрозрачные грани
+  const facetMat = new THREE.MeshBasicMaterial({
+    color: 0x0EA5E9,
+    transparent: true,
+    opacity: 0.16,
+    side: THREE.FrontSide,
+    depthWrite: false
+  });
+  const domeMesh = new THREE.Mesh(domeGeo, facetMat);
+  domeMesh.renderOrder = 2;
+  scene.add(domeMesh);
+
+  // Wireframe
+  const wireGeo = new THREE.WireframeGeometry(domeGeo);
+  const wireMat = new THREE.LineBasicMaterial({ color: 0x38BDF8, transparent: true, opacity: 0.65 });
+  const domeWire = new THREE.LineSegments(wireGeo, wireMat);
+  domeWire.renderOrder = 3;
+  scene.add(domeWire);
+
+  // Замыкающее кольцо
+  baseCirclePoints.sort((a, b) => a.angle - b.angle);
+  const baseLoopPositions = [];
+  baseCirclePoints.forEach(p => baseLoopPositions.push(p.x, 0, p.z));
+  const baseLoopGeo = new THREE.BufferGeometry();
+  baseLoopGeo.setAttribute('position', new THREE.Float32BufferAttribute(baseLoopPositions, 3));
+  const baseLoop = new THREE.LineLoop(baseLoopGeo, new THREE.LineBasicMaterial({ color: 0x38BDF8, transparent: true, opacity: 0.8 }));
+  baseLoop.renderOrder = 3;
+  scene.add(baseLoop);
+
+  // ==================== 3. СВЕТ ЗА КУПОЛОМ (ШИРОКИЙ) ====================
+  function createGlowTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256; canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
+    grad.addColorStop(0, 'rgba(56, 189, 248, 0.45)');
+    grad.addColorStop(0.35, 'rgba(14, 165, 233, 0.18)');
+    grad.addColorStop(0.75, 'rgba(14, 165, 233, 0.03)');
+    grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 256, 256);
+    return new THREE.CanvasTexture(canvas);
+  }
+
+  const lightGlowMat = new THREE.SpriteMaterial({
+    map: createGlowTexture(),
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+  const lightGlow = new THREE.Sprite(lightGlowMat);
+  lightGlow.position.set(0, 1.6, -0.2);
+  lightGlow.scale.set(13.0, 13.0, 1);
+  lightGlow.renderOrder = 0;
+  scene.add(lightGlow);
+
+  // ==================== 4. ФОТОНЫ (ВЕТЕР) ====================
+  const particleCount = 80;
+  const pGeo = new THREE.BufferGeometry();
+  const pPos = new Float32Array(particleCount * 3);
+  const pData = [];
+
+  for(let i = 0; i < particleCount; i++) {
+    pPos[i*3] = (Math.random() - 0.5) * 11;
+    pPos[i*3+1] = Math.random() * 3.8;
+    pPos[i*3+2] = (Math.random() - 0.5) * 6;
+
+    pData.push({
+      speedBase: 0.012 + Math.random() * 0.015,
+      seedY: Math.random() * 100,
+      seedZ: Math.random() * 100
+    });
+  }
+  pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+  const pMat = new THREE.PointsMaterial({ color: 0x5EEAD4, size: 0.045, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending });
+  const particles = new THREE.Points(pGeo, pMat);
+  particles.renderOrder = 4;
+  scene.add(particles);
+
+  let targetWindDir = 1;
+  let currentWindDir = 1;
+  function scheduleWindChange() {
+    setTimeout(() => {
+      targetWindDir *= -1;
+      scheduleWindChange();
+    }, Math.floor(Math.random() * 40000) + 30000);
+  }
+  scheduleWindChange();
+
+  // ==================== 5. ДАТЧИКИ НА УЗЛАХ ====================
+  function createNodeGlowTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64; canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+    grad.addColorStop(0.25, 'rgba(94, 234, 212, 1)');
+    grad.addColorStop(0.55, 'rgba(56, 189, 248, 0.4)');
+    grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 64, 64);
+    return new THREE.CanvasTexture(canvas);
+  }
+
+  const exactNodes = [];
+  const nodeMap = new Set();
+  const posAttr = domeGeo.attributes.position;
+
+  for (let i = 0; i < posAttr.count; i++) {
+    const x = posAttr.getX(i);
+    const y = posAttr.getY(i);
+    const z = posAttr.getZ(i);
+
+    if (y > 0.05) {
+      const key = `${x.toFixed(3)},${y.toFixed(3)},${z.toFixed(3)}`;
+      if (!nodeMap.has(key)) {
+        nodeMap.add(key);
+        exactNodes.push(new THREE.Vector3(x, y, z));
+      }
+    }
+  }
+
+  const nodeSpriteMat = new THREE.SpriteMaterial({ map: createNodeGlowTexture(), transparent: true, blending: THREE.AdditiveBlending, depthTest: true });
+  const nodeSprites = exactNodes.map((v, idx) => {
+    const sprite = new THREE.Sprite(nodeSpriteMat.clone());
+    sprite.position.copy(v);
+    sprite.scale.set(0.22, 0.22, 1);
+    sprite.visible = false;
+    sprite.renderOrder = 4;
+    sprite.userData = { index: idx, alpha: 0, targetAlpha: 0, fadeSpeed: 0.02 + Math.random() * 0.02 };
+    scene.add(sprite);
+    return sprite;
+  });
+
+  let activeIndices = new Set();
+  function updateActiveNodes() {
+    activeIndices.clear();
+    while (activeIndices.size < 6) {
+      activeIndices.add(Math.floor(Math.random() * nodeSprites.length));
+    }
+    nodeSprites.forEach((s, idx) => {
+      if (activeIndices.has(idx)) {
+        s.visible = true;
+        s.userData.targetAlpha = 0.7 + Math.random() * 0.3;
+      } else {
+        s.userData.targetAlpha = 0;
+      }
+    });
+    setTimeout(updateActiveNodes, 3000);
+  }
+  updateActiveNodes();
+
+  // ==================== 6. ПЛОСКОЕ СЕКЦИОННОЕ КОЛЬЦО И 3D ПИРАМИДКА-МАЯК ====================
+  const hudPlatform = new THREE.Group();
+
+  function createGradientArcTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256; canvas.height = 16;
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createLinearGradient(0, 0, 256, 0);
+    grad.addColorStop(0, 'rgba(94, 234, 212, 1)');
+    grad.addColorStop(0.7, 'rgba(56, 189, 248, 0.6)');
+    grad.addColorStop(1, 'rgba(56, 189, 248, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 256, 16);
+    return new THREE.CanvasTexture(canvas);
+  }
+
+  // 1. КОЛЬЦО-МАЯК: НЕБОЛЬШАЯ 3D ПИРАМИДКА (30 сек)
+  const beaconGroup = new THREE.Group();
+  
+  // Конус с 4 гранями = Тетраэдр/Пирамидка (Радиус: 0.12, Высота: 0.28)
+  const pyramidGeo = new THREE.ConeGeometry(0.12, 0.28, 4);
+  const pyramidMat = new THREE.MeshBasicMaterial({ color: 0x00FFCC, transparent: true, opacity: 0.95 });
+
+  const pyramid1 = new THREE.Mesh(pyramidGeo, pyramidMat);
+  pyramid1.position.set(0, 0.14, -3.58);
+
+  const pyramid2 = new THREE.Mesh(pyramidGeo, pyramidMat);
+  pyramid2.position.set(0, 0.14, 3.58);
+
+  beaconGroup.add(pyramid1);
+  beaconGroup.add(pyramid2);
+
+  // 2. СЕКЦИОННОЕ КОЛЬЦО (ПЛОСКОЕ, ШИРОКИЙ УГОЛ СЕКЦИИ х2 = 0.48, ЦЕНТРОВКА СОХРАНЕНА)
+  const knobRingGroup = new THREE.Group();
+  knobRingGroup.position.y = 0.06;
+
+  // Базовая направляющая линия
+  const ringGeo1 = new THREE.RingGeometry(3.18, 3.24, 64);
+  ringGeo1.rotateX(-Math.PI / 2);
+  const ringMat1 = new THREE.MeshBasicMaterial({ color: 0x38BDF8, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
+  knobRingGroup.add(new THREE.Mesh(ringGeo1, ringMat1));
+
+  // 4 Плоские широкие секции (угол дуги увеличен в 2 раза до 0.48 радиан)
+  for(let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2;
+    const flatKnobGeo = new THREE.RingGeometry(3.12, 3.38, 24, 1, a - 0.24, 0.48); // Угол увеличен в 2 раза!
+    flatKnobGeo.rotateX(-Math.PI / 2);
+    const flatKnobMat = new THREE.MeshBasicMaterial({ color: 0x5EEAD4, transparent: true, opacity: 0.95, side: THREE.DoubleSide });
+    
+    knobRingGroup.add(new THREE.Mesh(flatKnobGeo, flatKnobMat));
+  }
+
+  // 3. ГРАДИЕНТНОЕ КОЛЬЦО (40 сек)
+  const gradArcGroup = new THREE.Group();
+  const arcTex = createGradientArcTexture();
+  const gradArcGeo = new THREE.RingGeometry(3.60, 3.72, 32, 1, 0, Math.PI * 0.65);
+  gradArcGeo.rotateX(-Math.PI / 2);
+  const gradArcMat = new THREE.MeshBasicMaterial({ map: arcTex, transparent: true, side: THREE.DoubleSide });
+  
+  const gradArc1 = new THREE.Mesh(gradArcGeo, gradArcMat);
+  const gradArc2 = new THREE.Mesh(gradArcGeo, gradArcMat);
+  gradArc2.rotation.y = Math.PI;
+
+  gradArcGroup.add(gradArc1);
+  gradArcGroup.add(gradArc2);
+
+  // 4. Пунктирное кольцо
+  const dotRingGroup = new THREE.Group();
+  const dotCount = 60;
+  const dotGeo = new THREE.BufferGeometry();
+  const dotPositions = new Float32Array(dotCount * 3);
+  for(let i=0; i<dotCount; i++) {
+    const a = (i / dotCount) * Math.PI * 2;
+    dotPositions[i*3] = Math.cos(a) * 3.44;
+    dotPositions[i*3+1] = 0;
+    dotPositions[i*3+2] = Math.sin(a) * 3.44;
+  }
+  dotGeo.setAttribute('position', new THREE.BufferAttribute(dotPositions, 3));
+  dotRingGroup.add(new THREE.Points(dotGeo, new THREE.PointsMaterial({ color: 0x38BDF8, size: 0.03, transparent: true, opacity: 0.5 })));
+
+  hudPlatform.add(beaconGroup);
+  hudPlatform.add(knobRingGroup);
+  hudPlatform.add(gradArcGroup);
+  hudPlatform.add(dotRingGroup);
+  
+  hudPlatform.renderOrder = 0;
+  scene.add(hudPlatform);
+
+  // ==================== 7. ИНТЕРАКТИВ И ПОПАП ====================
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+  const popup = document.getElementById('hud-popup');
+
+  const hoverGeo = new THREE.BufferGeometry();
+  hoverGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(9), 3));
+  const hoverMat = new THREE.MeshBasicMaterial({ color: 0x5EEAD4, transparent: true, opacity: 0.45, side: THREE.DoubleSide });
+  const hoverMesh = new THREE.Mesh(hoverGeo, hoverMat);
+  hoverMesh.visible = false;
+  hoverMesh.renderOrder = 5;
+  scene.add(hoverMesh);
+
+  let currentFaceIndex = null;
+  let hoverTimer = null;
+
+  function showPopupForFace(faceIdx) {
+    document.getElementById('pop-sector').innerText = `SECTOR #${(faceIdx % 32 + 1).toString().padStart(2, '0')}`;
+    const rndIntegrity = (94 + Math.random() * 5.9).toFixed(1);
+    document.getElementById('pop-integrity').innerText = `${rndIntegrity}%`;
+    document.getElementById('pop-bar').style.width = `${rndIntegrity}%`;
+    document.getElementById('pop-temp').innerText = `${(21 + Math.random() * 6).toFixed(1)} °C`;
+    popup.classList.add('visible');
+  }
+
+  function hidePopup() {
+    popup.classList.remove('visible');
+    currentFaceIndex = null;
+    if (hoverTimer) {
+      clearTimeout(hoverTimer);
+      hoverTimer = null;
+    }
+  }
+
+  window.addEventListener('pointermove', (e) => {
+    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+    popup.style.left = (e.clientX + 20) + 'px';
+    popup.style.top = (e.clientY - 30) + 'px';
+  });
+
+  window.addEventListener('click', () => {
+    if (currentFaceIndex !== null) {
+      if (hoverTimer) clearTimeout(hoverTimer);
+      showPopupForFace(currentFaceIndex);
+    }
+  });
+
+  // ==================== 8. АНИМАЦИЯ ====================
+  const speed40s = (Math.PI * 2) / 40; 
+  const speed30s = (Math.PI * 2) / 30; 
+  const speed24s = (Math.PI * 2) / 24; 
+
+  let clock = new THREE.Clock();
+
+  function animate() {
+    requestAnimationFrame(animate);
+    const delta = clock.getDelta();
+    const elapsedTime = clock.getElapsedTime();
+
+    // ВРАЩЕНИЕ ЭЛЕМЕНТОВ
+    gradArcGroup.rotation.y += speed40s * delta;  // 40 сек
+    beaconGroup.rotation.y -= speed30s * delta;   // 30 сек
+    knobRingGroup.rotation.y += speed24s * delta;  // 24 сек
+    dotRingGroup.rotation.y -= 0.1 * delta;
+
+    // Ветер
+    currentWindDir += (targetWindDir - currentWindDir) * delta * 0.8;
+    const pArray = particles.geometry.attributes.position.array;
+    for(let i = 0; i < particleCount; i++) {
+      const data = pData[i];
+      pArray[i*3] += data.speedBase * currentWindDir;
+      pArray[i*3 + 1] += Math.sin(elapsedTime * 1.5 + data.seedY) * 0.0015;
+      pArray[i*3 + 2] += Math.cos(elapsedTime * 1.5 + data.seedZ) * 0.0015;
+
+      if (pArray[i*3] > 5.5) pArray[i*3] = -5.5;
+      if (pArray[i*3] < -5.5) pArray[i*3] = 5.5;
+    }
+    particles.geometry.attributes.position.needsUpdate = true;
+
+    // Пульсация
+    lightGlow.material.opacity = 0.75 + Math.sin(elapsedTime * 1.5) * 0.15;
+    nodeSprites.forEach(s => {
+      if (s.visible) {
+        s.userData.alpha += (s.userData.targetAlpha - s.userData.alpha) * s.userData.fadeSpeed;
+        s.material.opacity = s.userData.alpha;
+        const p = Math.sin(elapsedTime * 3 + s.userData.index) * 0.02;
+        s.scale.set(0.22 + p, 0.22 + p, 1);
+        if (s.userData.alpha < 0.01 && s.userData.targetAlpha === 0) s.visible = false;
+      }
+    });
+
+    // RAYCASTING
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObject(domeMesh);
+
+    if (intersects.length > 0) {
+      const hit = intersects[0];
+      const faceIdx = hit.faceIndex;
+
+      const hPos = hoverMesh.geometry.attributes.position;
+      hPos.setXYZ(0, posAttr.getX(hit.face.a), posAttr.getY(hit.face.a), posAttr.getZ(hit.face.a));
+      hPos.setXYZ(1, posAttr.getX(hit.face.b), posAttr.getY(hit.face.b), posAttr.getZ(hit.face.b));
+      hPos.setXYZ(2, posAttr.getX(hit.face.c), posAttr.getY(hit.face.c), posAttr.getZ(hit.face.c));
+      hPos.needsUpdate = true;
+      hoverMesh.visible = true;
+
+      if (currentFaceIndex !== faceIdx) {
+        hidePopup();
+        currentFaceIndex = faceIdx;
+
+        hoverTimer = setTimeout(() => {
+          showPopupForFace(faceIdx);
+        }, 1000);
+      }
+    } else {
+      hoverMesh.visible = false;
+      hidePopup();
+    }
+
+    renderer.render(scene, camera);
+  }
+
+  animate();
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+</script>
+
+<script>
+  // ==================== TERMINAL UI — ИНТЕГРАЦИЯ С SUPABASE (MVP) ====================
+  // Купол и хедер/панели/док — визуальный слой из предыдущих итераций.
+  // DB / AlertManager / App — рабочая логика, перенесённая из
+  // terminal_kolonista_MVP.html и адаптированная под новый HUD:
+  // вместо переключения полноэкранных «screen»-блоков — переключение
+  // состояния хедера (авторизован/нет), появление дока кнопок и
+  // модальные HUD-панели (сканер / журнал / контент) поверх купола.
+
+  /* ---------- Декоративные показатели (без бэкенда — атмосфера) ---------- */
+  // Плашка «Активность жителей» (#tui-histo) заменена «Сейсмо-скан» в разметке —
+  // старый код гистограммы убран вместе с ней (элемента больше нет в DOM).
+
+  function tuiDrift(elId, base, min, max, jitter, format, intervalMs) {
+    const el = document.getElementById(elId);
+    let v = base;
+    setInterval(() => {
+      v = Math.max(min, Math.min(max, v + (Math.random() - 0.5) * jitter));
+      if (el) el.textContent = format(v);
+    }, intervalMs || 2000);
+  }
+
+  // Универсальный спарклайн (осциллограф / тренд / сейсмограф / график трафика) —
+  // рисует бегущую полилинию в закреплённом viewBox 200×26.
+  function tuiSpark(elId, opts) {
+    const line = document.getElementById(elId);
+    if (!line) return;
+    const n = opts.points || 24, w = 200, h = 26;
+    const step = w / (n - 1);
+    let vals = new Array(n).fill(opts.base);
+    let t = 0;
+    function render() {
+      const pts = vals.map((v, i) => {
+        const norm = Math.max(0, Math.min(1, (v - opts.min) / (opts.max - opts.min)));
+        return `${(i * step).toFixed(1)},${(h - norm * h).toFixed(1)}`;
+      }).join(' ');
+      line.setAttribute('points', pts);
+    }
+    render();
+    setInterval(() => {
+      vals.shift();
+      t++;
+      let next = (opts.mode === 'sine')
+        ? opts.base + Math.sin(t / 2) * (opts.jitter * 3) + (Math.random() - 0.5) * opts.jitter
+        : vals[vals.length - 1] + (Math.random() - 0.5) * opts.jitter;
+      vals.push(Math.max(opts.min, Math.min(opts.max, next)));
+      render();
+    }, opts.intervalMs || 1200);
+  }
+
+  // Универсальный мини-эквалайзер (пинг / спектрометр нагрузки / импульсные всплески)
+  function tuiEq(containerId, count, opts) {
+    opts = opts || {};
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    const bars = [];
+    for (let i = 0; i < count; i++) {
+      const b = document.createElement('div');
+      b.className = 'tui-eq-bar';
+      b.style.height = '35%';
+      el.appendChild(b);
+      bars.push(b);
+    }
+    setInterval(() => {
+      bars.forEach(b => { b.style.height = (Math.floor(Math.random() * (opts.spread || 70)) + (opts.floor || 12)) + '%'; });
+    }, opts.intervalMs || 420);
+  }
+
+  // Разовая вспышка класса на элементе — для «скачков»/«всплесков»/тревожного мигания
+  function tuiFlashOnce(elId, className, holdMs) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    el.classList.add(className);
+    setTimeout(() => el.classList.remove(className), holdMs || 500);
+  }
+
+  /* ---- Целостность купола ---- */
+  tuiDrift('tui-hull-val', 94.2, 91, 97, 0.4, v => v.toFixed(1) + '%', 2500);
+  setInterval(() => {
+    const val = parseFloat(document.getElementById('tui-hull-val').textContent);
+    if (!isNaN(val)) document.getElementById('tui-hull-bar').style.width = val + '%';
+  }, 2500);
+  // «Давление внутри» — скачки при разгерметизации: раз в 6-14с лёгкий подскок значения + красная вспышка
+  (function () {
+    const el = document.getElementById('tui-pressure');
+    let v = 1.01;
+    setInterval(() => {
+      const jump = Math.random() < 0.35;
+      v = Math.max(0.94, Math.min(1.04, v + (jump ? (Math.random() - 0.5) * 0.06 : (Math.random() - 0.5) * 0.01)));
+      el.textContent = v.toFixed(2) + ' ATM';
+      if (jump) tuiFlashOnce('tui-pressure', 'hit', 450);
+    }, 3200);
+  })();
+  // «Микро-пробои» — точечная подсветка повреждений: изредка коротко «засвечивает» одну точку
+  (function () {
+    const wrap = document.getElementById('tui-dents');
+    const pts = [];
+    for (let i = 0; i < 8; i++) {
+      const d = document.createElement('div');
+      d.className = 'tui-dent-pt';
+      wrap.appendChild(d);
+      pts.push(d);
+    }
+    setInterval(() => {
+      const i = Math.floor(Math.random() * pts.length);
+      pts[i].classList.add('hit');
+      setTimeout(() => pts[i].classList.remove('hit'), 900);
+    }, 9000);
+  })();
+
+  /* ---- Био-опасность ---- */
+  tuiDrift('tui-rad-val', 0.12, 0.08, 0.19, 0.02, v => v.toFixed(2) + ' µSv/h', 1400);
+  tuiSpark('tui-rad-spark', { base: 0.12, min: 0.05, max: 0.22, jitter: 0.04, intervalMs: 900 });
+  // «Патогенный индекс» — сдвиг цвета при тревоге (демонстрационно, крайне редко)
+  (function () {
+    setInterval(() => {
+      if (Math.random() < 0.12) tuiFlashOnce('tui-pathogen', 'alert', 1600);
+    }, 6000);
+  })();
+  tuiDrift('tui-toxicity', 0, 0, 0.03, 0.01, v => v.toFixed(2) + ' PPM [SAFE]', 3000);
+  setInterval(() => {
+    document.getElementById('tui-toxicity-bar').style.width = (2 + Math.random() * 4).toFixed(0) + '%';
+  }, 3000);
+
+  /* ---- Атмосфера модуля ---- */
+  tuiDrift('tui-o2', 20.9, 20.2, 21.4, 0.12, v => v.toFixed(1) + '%', 2200);
+  tuiDrift('tui-co2', 0.04, 0.02, 0.08, 0.01, v => v.toFixed(2) + '%', 2600);
+  // «Всплеск цвета при превышении нормы CO₂»
+  setInterval(() => {
+    const co2El = document.getElementById('tui-co2');
+    const v = parseFloat(co2El.textContent);
+    co2El.classList.toggle('red', v > 0.06);
+    co2El.classList.toggle('cyan', v <= 0.06);
+  }, 2600);
+  tuiDrift('tui-humidity', 45.0, 42, 48, 0.6, v => v.toFixed(1) + '% (OPTIMAL)', 2800);
+  setInterval(() => {
+    const h = parseFloat(document.getElementById('tui-humidity').textContent);
+    const norm = Math.max(0, Math.min(1, (h - 30) / 40));
+    document.getElementById('tui-drop-fill').style.transform = `translateY(${(1 - norm) * 18}px)`;
+  }, 2800);
+
+  /* ---- Внешняя метеорология ---- */
+  tuiDrift('tui-temp-out', -62.4, -68, -57, 1.2, v => v.toFixed(1) + ' °C', 2600);
+  tuiSpark('tui-temp-spark', { base: -62.4, min: -70, max: -55, jitter: 2, intervalMs: 1300 });
+  tuiDrift('tui-wind-val', 14.2, 6, 22, 2.5, v => v.toFixed(1) + ' m/s', 2000);
+  // Штормовое предупреждение — переключение статуса + пульсирующая рамка плашки при риске
+  (function () {
+    const el = document.getElementById('tui-storm-val');
+    const panel = document.getElementById('tui-panel-meteo');
+    setInterval(() => {
+      const risky = Math.random() < 0.18;
+      el.textContent = risky ? 'РИСК БУРИ' : 'ШТИЛЬ';
+      el.classList.toggle('red', risky);
+      el.classList.toggle('cyan', !risky);
+      panel.classList.toggle('tui-panel--alert-pulse', risky);
+    }, 7000);
+  })();
+
+  /* ---- Сейсмо-скан ---- */
+  tuiDrift('tui-seismo-mag', 0.4, 0.1, 1.4, 0.15, v => v.toFixed(1) + ' M', 2000);
+  tuiSpark('tui-seismo-spark', { base: 0, min: -1.4, max: 1.4, jitter: 0.5, mode: 'sine', intervalMs: 260 });
+  tuiEq('tui-tect-eq', 10, { intervalMs: 500, spread: 60, floor: 8 });
+  (function () {
+    const noiseEl = document.getElementById('tui-tect-noise');
+    const vals = [-14, -12, -11, -9, -13];
+    setInterval(() => {
+      noiseEl.textContent = vals[Math.floor(Math.random() * vals.length)] + ' dB (LOW)';
+    }, 2400);
+  })();
+  // Изменение цвета плашки целиком по статусу платформы — переиспользует существующий data-state
+  (function () {
+    const statusEl = document.getElementById('tui-platform-status');
+    const panel = document.getElementById('tui-panel-seismo');
+    setInterval(() => {
+      const unstable = Math.random() < 0.1;
+      statusEl.textContent = unstable ? 'ВИБРАЦИЯ' : 'СТАБИЛЬНО';
+      statusEl.classList.toggle('amber', unstable);
+      statusEl.classList.toggle('cyan', !unstable);
+      panel.setAttribute('data-state', unstable ? 'warn' : '');
+    }, 8000);
+  })();
+
+  /* ---- Квантовая связь ---- */
+  tuiDrift('tui-latency', 14, 8, 24, 4, v => Math.round(v) + ' ms', 1800);
+  tuiEq('tui-latency-eq', 12, { intervalMs: 350, spread: 75, floor: 10 });
+  tuiDrift('tui-loss', 0, 0, 0.4, 0.15, v => v.toFixed(2) + '% LOSS', 2200);
+  tuiSpark('tui-loss-spark', { base: 0.1, min: 0, max: 0.5, jitter: 0.12, intervalMs: 1000 });
+
+  /* ---- Энергосеть ---- */
+  tuiDrift('tui-power-load', 42.8, 38, 48, 1.5, v => v.toFixed(1) + ' kW', 1600);
+  tuiEq('tui-power-eq', 8, { intervalMs: 380, spread: 65, floor: 15 });
+  tuiDrift('tui-batt-val', 98, 95, 100, 0.6, v => Math.round(v) + '%', 3000);
+  setInterval(() => {
+    const pct = parseFloat(document.getElementById('tui-batt-val').textContent) / 100;
+    document.getElementById('tui-batt-fill').setAttribute('width', (17 * pct).toFixed(1));
+  }, 3000);
+  tuiDrift('tui-reactor-val', 100, 97, 100, 0.5, v => Math.round(v) + '% (ОПТИМАЛЬНО)', 3400);
+
+  /* =========================================================================
+     ЗАЩИТА ОТ «ТИХОГО» ПАДЕНИЯ, ЕСЛИ CDN-БИБЛИОТЕКИ НЕ ЗАГРУЗИЛИСЬ
+     (нет интернета, блокировщик, антивирус, открытие двойным кликом
+     вместо http://localhost). Без этой проверки скрипт падает на первой
+     же строке supabase.createClient(...), объект App не создаётся — и
+     хедер/кнопки молча ничего не делают, без единой подсказки почему.
+     Декоративные показатели выше уже отрисованы и продолжат жить —
+     купол не «умирает» даже если бэкенд недоступен.
+     ========================================================================= */
+  function tuiShowFatalError(message) {
+    const box = document.createElement('div');
+    box.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#2a0505;color:#FFD9D9;'
+      + 'display:flex;align-items:center;justify-content:center;padding:40px;'
+      + 'font-family:"IBM Plex Mono",monospace;font-size:14px;line-height:1.6;text-align:center;';
+    box.innerHTML = `<div style="max-width:520px;">⚠ ОШИБКА ЗАГРУЗКИ<br><br>${message}</div>`;
+    document.body.appendChild(box);
+  }
+
+  if (typeof supabase === 'undefined' || typeof jsQR === 'undefined') {
+    const missing = [];
+    if (typeof supabase === 'undefined') missing.push('Supabase');
+    if (typeof jsQR === 'undefined') missing.push('jsQR');
+    tuiShowFatalError(
+      `Не загрузились библиотеки: ${missing.join(', ')}.<br><br>` +
+      `Проверьте интернет-соединение и что страница открыта через ` +
+      `<b>http://localhost:PORT</b>, а не двойным кликом по файлу.<br><br>` +
+      `Если проблема сохраняется — блокировщик рекламы или антивирус ` +
+      `могли заблокировать cdn.jsdelivr.net.`
+    );
+  } else {
+  (function() {
+
+  /* =========================================================================
+     БЭКЕНД — Supabase (Postgres + Realtime + Storage)
+     Те же данные проекта, что и в terminal_kolonista_MVP.html.
+     ========================================================================= */
+  const SUPABASE_URL = "https://yfogwbxxomuzbezgpqjm.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_TflOx6ZH1UM3wQPg_rEe4A_b6oxzSmd";
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const MODULE_ACCESS_CODE = "PARADISE";
+
+  const DevLog = {
+    print(entry) {
+      const el = document.getElementById('tui-devlog-inner');
+      const div = document.createElement('div');
+      const t = new Date().toLocaleTimeString();
+      const line = `[${t}] ${entry.actionType} — ${JSON.stringify(entry.details || {})}`;
+      div.textContent = line;
+      el.prepend(div);
+
+      const footerLog = document.getElementById('tui-footer-log');
+      if (footerLog) footerLog.textContent = `LOG: ${line}`;
+    }
+  };
+
+  const DB = {
+    moduleRow: null,
+
+    async init() {
+      const { data, error } = await sb.from('modules').select('*').eq('access_code', MODULE_ACCESS_CODE).single();
+      if (error) { console.error('Ошибка загрузки модуля:', error); return; }
+      this.moduleRow = data;
+    },
+
+    /* ---------- «Пульс» модуля: last_seen_at ----------
+       Панель мастера считает модуль «онлайн», если last_seen_at
+       обновлялось менее 2 минут назад (см. Admin.renderModuleTable /
+       renderModuleList). Без этого метода это поле никогда не
+       записывается, и модуль в админке всегда выглядит как «НЕТ СВЯЗИ» —
+       даже если терминал реально работает. */
+    async sendHeartbeat() {
+      if (!this.moduleRow) return;
+      const nowIso = new Date().toISOString();
+      const { error } = await sb.from('modules').update({ last_seen_at: nowIso }).eq('id', this.moduleRow.id);
+      if (error) { console.error('Ошибка обновления last_seen_at:', error); return; }
+      this.moduleRow.last_seen_at = nowIso;
+    },
+
+    async findCharacterByQR(code) {
+      const { data, error } = await sb.from('characters').select('*').eq('qr_code', code).eq('active', true).maybeSingle();
+      if (error) { console.error(error); return null; }
+      return data;
+    },
+
+    async findContentByTrigger(code) {
+      const { data, error } = await sb.from('content_items').select('*').eq('trigger_code', code).maybeSingle();
+      if (error) { console.error(error); return null; }
+      return data;
+    },
+
+    async findContentById(id) {
+      const { data, error } = await sb.from('content_items').select('*').eq('id', id).maybeSingle();
+      if (error) { console.error(error); return null; }
+      return data;
+    },
+
+    async addJournalEntry(entry) {
+      const nowIso = new Date().toISOString();
+      const { error } = await sb.from('journal_entries').insert({
+        module_id: this.moduleRow.id,
+        character_id: entry.characterId,
+        type: 'text',
+        text_content: entry.text
+      });
+      if (error) console.error(error);
+      await sb.from('modules').update({ last_journal_entry_at: nowIso }).eq('id', this.moduleRow.id);
+      // локальный кэш модуля тоже обновляем — иначе виджет «тишина в эфире»
+      // продолжает читать старое значение, полученное один раз при DB.init()
+      this.moduleRow.last_journal_entry_at = nowIso;
+    },
+
+    async getJournalForModule() {
+      const { data, error } = await sb.from('journal_entries')
+        .select('*, characters(name)')
+        .eq('module_id', this.moduleRow.id)
+        .order('created_at', { ascending: false });
+      if (error) { console.error(error); return []; }
+      return data.map(e => ({
+        authorName: e.characters ? e.characters.name : '—',
+        text: e.text_content,
+        createdAt: e.created_at
+      }));
+    },
+
+    async addLog(entry) {
+      await sb.from('logs').insert({
+        module_id: this.moduleRow ? this.moduleRow.id : null,
+        character_id: entry.characterId,
+        action_type: entry.actionType,
+        details: entry.details
+      });
+      DevLog.print(entry);
+    },
+
+    async getProgress(characterId, contentId) {
+      const { data } = await sb.from('character_progress').select('*')
+        .eq('character_id', characterId).eq('content_id', contentId).maybeSingle();
+      return data;
+    },
+
+    async recordProgress(characterId, contentId) {
+      const existing = await this.getProgress(characterId, contentId);
+      const playCount = existing ? existing.play_count + 1 : 1;
+      await sb.from('character_progress').upsert({
+        character_id: characterId,
+        content_id: contentId,
+        play_count: playCount,
+        last_opened_at: new Date().toISOString(),
+        first_opened_at: existing ? existing.first_opened_at : new Date().toISOString()
+      });
+      return { playCount };
+    },
+
+    /* ---------- Условие разблокировки after_timer: фиксируем момент
+       первой попытки открыть именно этот объект (скан или ветка выбора),
+       не увеличивая play_count — это не «открытие», а просто отметка
+       времени, от которой считается таймер. ---------- */
+    async recordFirstAttempt(characterId, contentId) {
+      const existing = await this.getProgress(characterId, contentId);
+      if (existing && existing.first_opened_at) return existing;
+      const nowIso = new Date().toISOString();
+      await sb.from('character_progress').upsert({
+        character_id: characterId,
+        content_id: contentId,
+        play_count: existing ? existing.play_count : 0,
+        first_opened_at: nowIso,
+        last_opened_at: existing ? existing.last_opened_at : nowIso
+      });
+      return { play_count: 0, first_opened_at: nowIso };
+    },
+
+    /* ---------- Контент с unlock_condition.type = silence_timeout:
+       не сканируется, а показывается автоматически при молчании
+       журнала модуля дольше modules.silence_timeout_minutes. ---------- */
+    async findSilenceTimeoutContent(moduleId) {
+      const { data, error } = await sb.from('content_items').select('*')
+        .eq('unlock_condition->>type', 'silence_timeout');
+      if (error) { console.error(error); return []; }
+      return (data || []).filter(item => {
+        const scope = item.module_scope;
+        return !scope || scope.length === 0 || scope.includes(moduleId);
+      });
+    }
+  };
+
+  /* =========================================================================
+     ТРЕВОГА МОДУЛЯ (alerts) — видна независимо от аутентификации, п.6 ТЗ
+     ========================================================================= */
+  const AlertManager = {
+    timer: null,
+    async check() {
+      const nowIso = new Date().toISOString();
+      const { data, error } = await sb.from('alerts').select('*')
+        .eq('active', true)
+        .lte('starts_at', nowIso)
+        .or(`ends_at.is.null,ends_at.gt.${nowIso}`)
+        .order('created_at', { ascending: false });
+      if (error) { console.error(error); return; }
+
+      // Фильтр по модулю — на стороне клиента, а не в запросе: так тревоги
+      // с target_type='all' показываются в любом случае, даже если строка
+      // модуля ещё не резолвилась (не блокируем баннер из-за DB.moduleRow).
+      // excluded_module_ids — модули, для которых мастер снял именно эту
+      // глобальную тревогу через панель модуля, оставив её активной для
+      // остальных (см. Admin.excludeAlertFromModule в terminal_admin_6.html).
+      const moduleId = DB.moduleRow ? DB.moduleRow.id : null;
+      const relevant = (data || []).filter(a => {
+        if (a.target_type === 'all') {
+          const excluded = a.excluded_module_ids || [];
+          return !(moduleId && excluded.includes(moduleId));
+        }
+        return moduleId && a.target_module_id === moduleId;
+      });
+      console.log(`[AlertManager] проверка: получено строк=${(data || []).length}, релевантных=${relevant.length}, moduleId=${moduleId}`);
+      this.render(relevant.length ? relevant[0] : null);
+    },
+    render(alert) {
+      const banner = document.getElementById('tui-alert-banner');
+      if (alert) {
+        banner.textContent = "⚠ " + alert.label;
+        banner.classList.add('active');
+      } else {
+        banner.classList.remove('active');
+      }
+    },
+    start() {
+      this.check();
+      this.timer = setInterval(() => this.check(), 15000);
+      sb.channel('alerts-channel')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'alerts' }, () => this.check())
+        .subscribe();
+    }
+  };
+
+  /* =========================================================================
+     АВТОТРИГГЕР «ТИШИНА В ЭФИРЕ» (unlock_condition.type = silence_timeout)
+     Не связано со сканированием: сам терминал следит за
+     modules.last_journal_entry_at и модулем.silence_timeout_minutes и
+     показывает подходящий контент, когда порог превышен. п.5, п.8 ТЗ.
+     ========================================================================= */
+  const SilenceWatcher = {
+    timer: null,
+    lastFiredFor: null,
+
+    start() {
+      this.timer = setInterval(() => this.check(), 20000);
+      this.check();
+    },
+
+    async check() {
+      if (!DB.moduleRow) return;
+      const minutes = DB.moduleRow.silence_timeout_minutes;
+      const lastEntry = DB.moduleRow.last_journal_entry_at;
+      if (!minutes || !lastEntry) return;
+
+      const elapsedMin = (Date.now() - new Date(lastEntry).getTime()) / 60000;
+      if (elapsedMin < minutes) return;
+      // уже показывали для этого периода тишины — не повторяем на каждый опрос
+      if (this.lastFiredFor === lastEntry) return;
+
+      const items = await DB.findSilenceTimeoutContent(DB.moduleRow.id);
+      if (!items.length) return;
+
+      this.lastFiredFor = lastEntry;
+      await App.presentSystemContent(items[0]);
+    }
+  };
+
+  /* =========================================================================
+     ПРИЛОЖЕНИЕ
+     ========================================================================= */
+  const App = {
+    currentCharacter: null,
+    scannerTarget: null,
+    stream: null,
+    scanRAF: null,
+    sessionCountdownInterval: null,
+    sessionEndsAt: null,
+    inactivityTimeoutId: null,
+    inactivityMinutes: null,
+    inactivityHandlerBound: null,
+    contentHistory: [],
+
+    async log(actionType, details) {
+      await DB.addLog({
+        characterId: this.currentCharacter ? this.currentCharacter.id : null,
+        actionType, details
+      });
+    },
+
+    /* ---------- Хедер: авторизация ---------- */
+    goAuth() {
+      document.getElementById('scannerModalError').textContent = "";
+      document.getElementById('authPasswordInput').value = "";
+      document.getElementById('modalPasswordField').style.display = "flex";
+      this.openScannerModal('auth');
+    },
+
+    async submitAuth(code) {
+      const pass = document.getElementById('authPasswordInput').value.trim();
+      const errEl = document.getElementById('scannerModalError');
+      const character = await DB.findCharacterByQR(code);
+      if (!character) {
+        errEl.textContent = "Код не распознан. Проверьте пропуск.";
+        await this.log('auth', { code, result: 'not_found' });
+        return;
+      }
+      if (character.password && character.password !== pass) {
+        errEl.textContent = "Неверный пароль.";
+        await this.log('auth', { code, result: 'bad_password' });
+        return;
+      }
+      this.currentCharacter = character;
+      await this.log('auth', { code, result: 'ok' });
+
+      document.getElementById('tui-char-name').textContent = character.name.toUpperCase();
+      document.getElementById('tui-char-id-badge').textContent = character.qr_code || '';
+      document.getElementById('tui-header').classList.add('authenticated');
+      document.getElementById('tui-dock').classList.add('visible');
+
+      this.startSessionTimers(character);
+      this.closeScannerModal(true);
+      await this.refreshJournalWidget();
+    },
+
+    /* ---------- Таймеры сессии (жёсткий + по бездействию, п.4 ТЗ) ---------- */
+    startSessionTimers(character) {
+      this.clearSessionTimers();
+
+      if (character.session_timeout_minutes) {
+        this.sessionEndsAt = Date.now() + character.session_timeout_minutes * 60000;
+        this.updateSessionTimerDisplay();
+        this.sessionCountdownInterval = setInterval(() => {
+          this.updateSessionTimerDisplay();
+          if (Date.now() >= this.sessionEndsAt) this.endSession('timeout');
+        }, 1000);
+      } else {
+        document.getElementById('tui-session-timer').textContent = "∞";
+      }
+
+      if (character.inactivity_timeout_minutes) {
+        this.inactivityMinutes = character.inactivity_timeout_minutes;
+        this.inactivityHandlerBound = () => this.resetInactivityTimer();
+        ['click', 'keydown', 'touchstart'].forEach(evt =>
+          document.addEventListener(evt, this.inactivityHandlerBound));
+        this.resetInactivityTimer();
+      }
+    },
+
+    resetInactivityTimer() {
+      if (this.inactivityTimeoutId) clearTimeout(this.inactivityTimeoutId);
+      this.inactivityTimeoutId = setTimeout(() => {
+        this.endSession('inactivity');
+      }, this.inactivityMinutes * 60000);
+    },
+
+    updateSessionTimerDisplay() {
+      if (!this.sessionEndsAt) return;
+      const remainingMs = Math.max(0, this.sessionEndsAt - Date.now());
+      const mm = String(Math.floor(remainingMs / 60000)).padStart(2, '0');
+      const ss = String(Math.floor((remainingMs % 60000) / 1000)).padStart(2, '0');
+      document.getElementById('tui-session-timer').textContent = `${mm}:${ss}`;
+    },
+
+    clearSessionTimers() {
+      if (this.sessionCountdownInterval) clearInterval(this.sessionCountdownInterval);
+      this.sessionCountdownInterval = null;
+      this.sessionEndsAt = null;
+      if (this.inactivityTimeoutId) clearTimeout(this.inactivityTimeoutId);
+      this.inactivityTimeoutId = null;
+      if (this.inactivityHandlerBound) {
+        ['click', 'keydown', 'touchstart'].forEach(evt =>
+          document.removeEventListener(evt, this.inactivityHandlerBound));
+        this.inactivityHandlerBound = null;
+      }
+    },
+
+    async endSession(reason) {
+      await this.log('session_end', { reason });
+      this.clearSessionTimers();
+      this.currentCharacter = null;
+      document.getElementById('tui-header').classList.remove('authenticated');
+      document.getElementById('tui-dock').classList.remove('visible');
+      document.getElementById('tui-session-timer').textContent = "—:—";
+      this.closeJournalModal();
+      this.closeContentModal();
+    },
+
+    /* ---------- Бортовой журнал ---------- */
+    async goJournal() {
+      await this.renderJournalList();
+      document.getElementById('journalModal').classList.add('open');
+    },
+    closeJournalModal() {
+      document.getElementById('journalModal').classList.remove('open');
+    },
+
+    async renderJournalList() {
+      const list = await DB.getJournalForModule();
+      const el = document.getElementById('journalList');
+      el.innerHTML = "";
+      if (list.length === 0) {
+        el.innerHTML = '<p class="tui-status-line">Записей пока нет.</p>';
+        return;
+      }
+      list.forEach(entry => {
+        const div = document.createElement('div');
+        div.className = 'tui-journal-entry';
+        const t = new Date(entry.createdAt).toLocaleString();
+        div.innerHTML = `<div class="meta">${entry.authorName} · ${t}</div>${entry.text}`;
+        el.appendChild(div);
+      });
+    },
+
+    async saveJournalEntry() {
+      const textEl = document.getElementById('journalInput');
+      const text = textEl.value.trim();
+      if (!text || !this.currentCharacter) return;
+      await DB.addJournalEntry({ characterId: this.currentCharacter.id, text });
+      await this.log('journal_entry', { text });
+      textEl.value = "";
+      await this.renderJournalList();
+      await this.refreshJournalWidget();
+      // новая запись — «тишина» прервана, автотриггер может сработать заново
+      // при следующем длительном молчании
+      SilenceWatcher.lastFiredFor = null;
+    },
+
+    /* ---------- Виджет «Бортовой журнал» в правой колонке ---------- */
+    async refreshJournalWidget() {
+      if (!DB.moduleRow) return;
+      const list = await DB.getJournalForModule();
+      // «Плавный счётчик при добавлении логов» — короткая fade-пульсация числа при изменении,
+      // вместо мгновенной подмены textContent.
+      const countEl = document.getElementById('tui-log-count');
+      if (countEl.textContent !== String(list.length)) {
+        countEl.style.opacity = '0.15';
+        setTimeout(() => { countEl.textContent = list.length; countEl.style.opacity = '1'; }, 220);
+      }
+      const silenceEl = document.getElementById('tui-log-silence');
+      window.__tuiLastJournalAt = DB.moduleRow.last_journal_entry_at || null;
+      if (window.__tuiLastJournalAt) {
+        const minutesAgo = Math.max(0, Math.round((Date.now() - new Date(window.__tuiLastJournalAt).getTime()) / 60000));
+        silenceEl.textContent = `${minutesAgo} мин назад`;
+      } else {
+        silenceEl.textContent = "нет записей";
+      }
+    },
+
+    /* ---------- Сканирование объектов ---------- */
+    goScanContent() {
+      document.getElementById('scannerModalError').textContent = "";
+      document.getElementById('modalPasswordField').style.display = "none";
+      this.openScannerModal('content');
+    },
+
+    async resolveContentByCode(code) {
+      const item = await DB.findContentByTrigger(code);
+      const errEl = document.getElementById('scannerModalError');
+      if (!item) {
+        errEl.textContent = "Код не распознан в базе объектов.";
+        await this.log('scan', { code, result: 'not_found' });
+        return;
+      }
+      await this.log('scan', { code, result: 'found', contentId: item.id });
+      this.closeScannerModal(true);
+      this.contentHistory = [];
+      await this.openContent(item.id);
+    },
+
+    /* ---------- Проверка unlock_condition, п.8 ТЗ ----------
+       always        — всегда доступно.
+       player_choice — открывается только через choice_options
+                       предыдущего шага (сама проверка здесь не нужна,
+                       доступ и так только через кнопку выбора).
+       after_timer   — таймер считается от первой попытки открыть
+                       именно этот объект (сканом или веткой выбора).
+       master_event  — отложено: пока полноценная доставка событий на
+                       терминал не реализована, контент с этим условием
+                       остаётся заблокирован явным сообщением, а не
+                       открывается «по умолчанию» — чтобы не спойлерить
+                       контент, который должен приходить по событию.
+       silence_timeout — не открывается сканированием вообще: этот
+                       контент показывается автоматически (см.
+                       SilenceWatcher), а по прямому скану — отказ. ---------- */
+    async checkUnlock(item) {
+      const cond = item.unlock_condition;
+      if (!cond || !cond.type || cond.type === 'always' || cond.type === 'player_choice') {
+        return { unlocked: true };
+      }
+
+      if (cond.type === 'after_timer') {
+        const minutes = Number(cond.timerMinutes) || 0;
+        const attempt = await DB.recordFirstAttempt(this.currentCharacter.id, item.id);
+        const elapsedMin = (Date.now() - new Date(attempt.first_opened_at).getTime()) / 60000;
+        if (elapsedMin < minutes) {
+          const remain = Math.ceil(minutes - elapsedMin);
+          return { unlocked: false, message: `Доступ будет открыт примерно через ${remain} мин. Таймер запущен при первой попытке сканирования этого объекта.` };
+        }
+        return { unlocked: true };
+      }
+
+      if (cond.type === 'master_event') {
+        return { unlocked: false, message: "Этот объект разблокируется событием от мастера. Доставка событий на терминал ещё не реализована в этой версии." };
+      }
+
+      if (cond.type === 'silence_timeout') {
+        return { unlocked: false, message: "Этот контент активируется автоматически при длительном молчании в журнале модуля, не по сканированию." };
+      }
+
+      return { unlocked: true };
+    },
+
+    async openContent(contentId) {
+      const item = await DB.findContentById(contentId);
+      if (!item) return;
+
+      const prog = await DB.getProgress(this.currentCharacter.id, contentId);
+      if (item.playback === 'once' && prog && prog.play_count > 0) {
+        this.renderGate("ДОСТУП ЗАКРЫТ", item.type,
+          "Эта запись уже была воспроизведена ранее и доступна только один раз. Повторный доступ закрыт.");
+        return;
+      }
+
+      const gate = await this.checkUnlock(item);
+      if (!gate.unlocked) {
+        await this.log('content_open', { contentId, type: item.type, result: 'blocked', condition: item.unlock_condition });
+        this.renderGate("ДОСТУП ОГРАНИЧЕН", item.type, gate.message);
+        return;
+      }
+
+      await DB.recordProgress(this.currentCharacter.id, contentId);
+      await this.log('content_open', { contentId, type: item.type });
+
+      this.contentHistory.push(contentId);
+      this.renderContentInModal(item, { withProgress: true });
+    },
+
+    /* ---------- Автоматически показанный контент (silence_timeout) —
+       может не иметь текущего авторизованного персонажа, поэтому не
+       проходит через recordProgress/once-логику по персонажу. ---------- */
+    async presentSystemContent(item) {
+      await DB.addLog({
+        characterId: this.currentCharacter ? this.currentCharacter.id : null,
+        actionType: 'content_open',
+        details: { contentId: item.id, type: item.type, trigger: 'silence_timeout' }
+      });
+      this.contentHistory = [];
+      this.renderContentInModal(item, { withProgress: false });
+    },
+
+    /* ---------- Общий рендер тела модалки: текст/аудио/видео/картинка
+       + ветвление выбором (до 8 уровней, см. contentHistory) ---------- */
+    renderContentInModal(item, opts) {
+      document.getElementById('contentTitle').textContent = "ДАННЫЕ ОБЪЕКТА";
+      document.getElementById('contentTypeTag').textContent = item.type.toUpperCase();
+
+      const navRow = document.getElementById('contentNavRow');
+      const backBtn = document.getElementById('contentBackBtn');
+      const stepLabel = document.getElementById('contentStepLabel');
+      const depth = this.contentHistory.length;
+      if (depth > 1) {
+        navRow.style.display = 'flex';
+        backBtn.style.display = 'inline-block';
+        stepLabel.textContent = `ШАГ ${depth} ИЗ ≤8`;
+      } else if (depth === 1) {
+        navRow.style.display = 'flex';
+        backBtn.style.display = 'none';
+        stepLabel.textContent = `ШАГ 1`;
+      } else {
+        navRow.style.display = 'none';
+      }
+
+      const mediaArea = document.getElementById('contentMediaArea');
+      mediaArea.innerHTML = "";
+      if (item.type === 'video') {
+        mediaArea.innerHTML = item.media_url
+          ? `<video controls autoplay style="width:100%;border:1px solid var(--tui-edge);" src="${item.media_url}"></video>`
+          : `<div class="tui-content-body" style="border-style:dashed;color:var(--tui-ink-600);">[ВИДЕОФАЙЛ — плейсхолдер демо-версии]</div>`;
+      } else if (item.type === 'audio') {
+        mediaArea.innerHTML = item.media_url
+          ? `<audio controls autoplay style="width:100%;" src="${item.media_url}"></audio>`
+          : `<div class="tui-content-body" style="border-style:dashed;color:var(--tui-ink-600);">[АУДИОФАЙЛ — плейсхолдер демо-версии]</div>`;
+      } else if (item.type === 'image') {
+        mediaArea.innerHTML = item.media_url
+          ? `<img class="tui-content-image" src="${item.media_url}" alt="">`
+          : `<div class="tui-content-body" style="border-style:dashed;color:var(--tui-ink-600);">[ИЗОБРАЖЕНИЕ — плейсхолдер демо-версии]</div>`;
+      }
+
+      const bodyEl = document.getElementById('contentBody');
+      bodyEl.textContent = "";
+      this.typeText(bodyEl, item.body || "");
+
+      const choiceArea = document.getElementById('choiceArea');
+      choiceArea.innerHTML = "";
+      if (item.choice_options && item.choice_options.length) {
+        if (this.contentHistory.length >= 8) {
+          const warn = document.createElement('div');
+          warn.className = 'tui-status-line';
+          warn.textContent = "Достигнута максимальная глубина ветвления (8). Дальнейший выбор недоступен.";
+          choiceArea.appendChild(warn);
+        } else {
+          item.choice_options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'tui-modal-btn';
+            btn.textContent = opt.label;
+            btn.onclick = async () => {
+              await this.log('content_choice', { contentId: item.id, optionId: opt.id });
+              await this.openContent(opt.nextContentId);
+            };
+            choiceArea.appendChild(btn);
+          });
+        }
+      }
+
+      document.getElementById('contentModal').classList.add('open');
+    },
+
+    renderGate(title, type, message) {
+      document.getElementById('contentTitle').textContent = title;
+      document.getElementById('contentTypeTag').textContent = (type || '').toUpperCase();
+      document.getElementById('contentNavRow').style.display = 'none';
+      document.getElementById('contentMediaArea').innerHTML = "";
+      document.getElementById('choiceArea').innerHTML = "";
+      const bodyEl = document.getElementById('contentBody');
+      bodyEl.classList.remove('typing');
+      bodyEl.innerHTML = `<div class="tui-gate-box">${message}</div>`;
+      document.getElementById('contentModal').classList.add('open');
+    },
+
+    async goBackContent() {
+      if (this.contentHistory.length < 2) return;
+      this.contentHistory.pop();
+      const prevId = this.contentHistory.pop();
+      // повторное открытие предыдущего шага не должно расходовать «once»
+      // и заново отмечать content_open — просто перерисовываем его
+      const item = await DB.findContentById(prevId);
+      if (!item) return;
+      this.contentHistory.push(prevId);
+      this.renderContentInModal(item, { withProgress: true });
+    },
+
+    closeContentModal() {
+      document.getElementById('contentModal').classList.remove('open');
+      this.contentHistory = [];
+    },
+
+    typeText(el, text) {
+      el.classList.add('typing');
+      let i = 0;
+      const speed = 12;
+      function step() {
+        el.textContent = text.slice(0, i);
+        i++;
+        if (i <= text.length) { setTimeout(step, speed); }
+        else { el.classList.remove('typing'); }
+      }
+      step();
+    },
+
+    /* ---------- Модальное окно сканера (общее для auth и content) ---------- */
+    async openScannerModal(target) {
+      this.scannerTarget = target;
+      document.getElementById('scannerModalTitle').textContent =
+        target === 'auth' ? 'СКАНИРОВАНИЕ ПРОПУСКА' : 'СКАНИРОВАНИЕ ОБЪЕКТА';
+      document.getElementById('scannerModalError').textContent = "";
+
+      const modal = document.getElementById('scannerModal');
+      modal.classList.remove('success');
+      modal.classList.add('open');
+
+      const video = document.getElementById('modalVideo');
+      const readout = document.getElementById('modalReadout');
+      readout.classList.remove('visible');
+      document.getElementById('modalManualInput').value = "";
+
+      if (!this.stream) {
+        try {
+          this.stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        } catch (e) {
+          readout.textContent = "Камера недоступна (" + e.message + "). Введите код вручную.";
+          readout.classList.add('visible');
+          return;
+        }
+      }
+      video.srcObject = this.stream;
+
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      const overlay = document.getElementById('modalOverlay');
+      const octx = overlay.getContext('2d');
+
+      const tick = () => {
+        if (!document.getElementById('scannerModal').classList.contains('open')) return;
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = window.jsQR
+            ? jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "attemptBoth" })
+            : null;
+
+          overlay.width = video.clientWidth;
+          overlay.height = video.clientHeight;
+          octx.clearRect(0, 0, overlay.width, overlay.height);
+
+          if (code && code.data) {
+            const scaleX = overlay.width / canvas.width;
+            const scaleY = overlay.height / canvas.height;
+            const loc = code.location;
+            octx.strokeStyle = "#5EEAD4";
+            octx.lineWidth = 3;
+            octx.beginPath();
+            octx.moveTo(loc.topLeftCorner.x * scaleX, loc.topLeftCorner.y * scaleY);
+            octx.lineTo(loc.topRightCorner.x * scaleX, loc.topRightCorner.y * scaleY);
+            octx.lineTo(loc.bottomRightCorner.x * scaleX, loc.bottomRightCorner.y * scaleY);
+            octx.lineTo(loc.bottomLeftCorner.x * scaleX, loc.bottomLeftCorner.y * scaleY);
+            octx.closePath();
+            octx.stroke();
+
+            readout.textContent = "✓ Считано: " + code.data;
+            readout.classList.add('visible');
+
+            setTimeout(() => this.confirmScan(code.data), 400);
+            return;
+          } else {
+            readout.textContent = "● поиск QR-кода...";
+            readout.classList.add('visible');
+          }
+        }
+        this.scanRAF = requestAnimationFrame(tick);
+      };
+      this.scanRAF = requestAnimationFrame(tick);
+    },
+
+    submitModalManual() {
+      const input = document.getElementById('modalManualInput');
+      const val = input.value.trim();
+      if (!val) return;
+      input.value = "";
+      this.confirmScan(val);
+    },
+
+    async confirmScan(data) {
+      if (this.scannerTarget === 'auth') {
+        await this.submitAuth(data);
+      } else if (this.scannerTarget === 'content') {
+        await this.resolveContentByCode(data);
+      }
+    },
+
+    closeScannerModal(success) {
+      const modal = document.getElementById('scannerModal');
+      if (this.scanRAF) cancelAnimationFrame(this.scanRAF);
+      this.scanRAF = null;
+
+      if (success) {
+        modal.classList.add('success');
+        setTimeout(() => modal.classList.remove('open', 'success'), 350);
+      } else {
+        modal.classList.remove('open', 'success');
+      }
+    },
+
+    toggleDevLog() {
+      document.getElementById('tui-devlog').classList.toggle('open');
+    }
+  };
+
+  DB.init().then(() => {
+    const titleEl = document.getElementById('tui-module-title');
+    const subEl = document.getElementById('tui-module-sub');
+    const pulseEl = document.getElementById('tui-status-pulse');
+    const connEl = document.getElementById('tui-conn-status');
+    if (DB.moduleRow) {
+      titleEl.textContent = DB.moduleRow.name ? DB.moduleRow.name.toUpperCase() : "МОДУЛЬ";
+      subEl.textContent = `TERMINAL · СВЯЗЬ АКТИВНА`;
+      connEl.textContent = "ПОДКЛЮЧЕНО";
+      connEl.classList.remove('tui-flicker');
+    } else {
+      titleEl.textContent = "МОДУЛЬ НЕ НАЙДЕН";
+      subEl.textContent = "ОШИБКА ПОДКЛЮЧЕНИЯ К БАЗЕ";
+      pulseEl.style.background = 'var(--tui-red)';
+      pulseEl.style.boxShadow = '0 0 10px var(--tui-red)';
+      connEl.textContent = "ОШИБКА";
+      connEl.classList.remove('cyan');
+      // «Мигание текста при сбоях» — берём готовую keyframe-анимацию мерцания
+      connEl.classList.add('tui-flicker');
+    }
+    App.refreshJournalWidget();
+    setInterval(() => App.refreshJournalWidget(), 60000);
+    AlertManager.start();
+    SilenceWatcher.start();
+
+    // «Онлайн-таймер обратного отсчёта» — тишина в эфире тикает в реальном
+    // времени между фактическими обновлениями refreshJournalWidget (раз в 60с),
+    // не дожидаясь следующего запроса к БД.
+    setInterval(() => {
+      const silenceEl = document.getElementById('tui-log-silence');
+      if (window.__tuiLastJournalAt) {
+        const minutesAgo = Math.max(0, Math.round((Date.now() - new Date(window.__tuiLastJournalAt).getTime()) / 60000));
+        silenceEl.textContent = `${minutesAgo} мин назад`;
+      }
+    }, 15000);
+
+    // «Мигающий светодиод передачи» статуса синхронизации журнала
+    setInterval(() => {
+      const led = document.getElementById('tui-sync-led');
+      const label = document.getElementById('tui-sync-status');
+      if (!led || !label) return;
+      const ok = !!DB.moduleRow;
+      label.textContent = ok ? 'СИНХРОНИЗИРОВАНО' : 'ОШИБКА СВЯЗИ';
+      led.className = 'tui-led' + (ok ? '' : ' tui-led--red');
+    }, 5000);
+
+    // «Пульс» модуля — держит modules.last_seen_at свежим, чтобы панель
+    // мастера видела этот терминал как «ОНЛАЙН». Раз сразу при старте,
+    // затем каждые 45 сек (с запасом от 2-минутного окна в админке),
+    // и ещё раз сразу, как только вкладка вернулась в фокус — фоновые
+    // вкладки браузер может «придерживать», и таймер там сработает позже.
+    if (DB.moduleRow) {
+      DB.sendHeartbeat();
+      setInterval(() => DB.sendHeartbeat(), 45000);
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') DB.sendHeartbeat();
+      });
+    }
+  });
+
+  window.App = App;
+
+  /* =========================================================================
+     ДЕЛЕГИРОВАНИЕ КЛИКОВ вместо inline onclick="..." — некоторые браузеры
+     и политики безопасности (CSP script-src-attr) тихо блокируют
+     HTML-атрибуты onclick без единой ошибки в консоли: кнопка внешне
+     реагирует (hover), но клик ничего не делает. addEventListener этому
+     не подвержен.
+     ========================================================================= */
+  document.addEventListener('click', (e) => {
+    const el = e.target.closest('[data-action]');
+    if (!el) return;
+    const action = el.dataset.action;
+    switch (action) {
+      case 'goAuth': App.goAuth(); break;
+      case 'goScanContent': App.goScanContent(); break;
+      case 'goJournal': App.goJournal(); break;
+      case 'endSession': App.endSession('manual'); break;
+      case 'closeScannerModal': App.closeScannerModal(false); break;
+      case 'submitModalManual': App.submitModalManual(); break;
+      case 'closeJournalModal': App.closeJournalModal(); break;
+      case 'saveJournalEntry': App.saveJournalEntry(); break;
+      case 'closeContentModal': App.closeContentModal(); break;
+      case 'goBackContent': App.goBackContent(); break;
+      case 'toggleDevLog': App.toggleDevLog(); break;
+      default: tuiShowErrorToast('Неизвестное действие кнопки: ' + action);
+    }
+  });
+
+  })();
+  }
+</script>
+
+<script>
+  /* =========================================================================
+     АВТО-ПОДГОНКА ПЛОТНОСТИ КОЛОНОК (--tui-density)
+     Гарантирует отсутствие скроллов: после первой отрисовки (и на resize)
+     измеряем, помещаются ли все 4 плашки каждой колонки по высоте в
+     отведённое место. Если нет — уменьшаем общий коэффициент плотности
+     (шрифты/паддинги/иконки/мини-виджеты завязаны на --tui-density через
+     calc()), пока контент не уложится. Считаем по САМОЙ тесной колонке,
+     чтобы левая и правая выглядели одинаково плотными.
+     ========================================================================= */
+  (function () {
+    var root = document.documentElement;
+    var colLeft = document.getElementById('tui-col-left');
+    var colRight = document.getElementById('tui-col-right');
+    var MIN_DENSITY = 0.55;
+    var raf = null;
+
+    function measureAt(density) {
+      root.style.setProperty('--tui-density', density);
+      // форсируем синхронный reflow, чтобы scrollHeight/clientHeight
+      // отражали именно этот density, а не предыдущий кадр
+      void colLeft.offsetHeight;
+      void colRight.offsetHeight;
+      return {
+        left: { need: colLeft.scrollHeight, have: colLeft.clientHeight },
+        right: { need: colRight.scrollHeight, have: colRight.clientHeight }
+      };
+    }
+
+    function fit() {
+      if (!colLeft || !colRight) return;
+      // 1) базовый замер при density=1
+      var m = measureAt(1);
+      var ratio = Math.min(
+        m.left.have / Math.max(1, m.left.need),
+        m.right.have / Math.max(1, m.right.need)
+      );
+      var density = Math.max(MIN_DENSITY, Math.min(1, ratio));
+      // 2) применяем расчётную плотность
+      measureAt(density);
+      // 3) т.к. при уменьшении шрифтов может измениться перенос строк
+      //    (высота текста — нелинейная функция), делаем один уточняющий
+      //    проход: если всё ещё не помещается — дожимаем шагами.
+      for (var i = 0; i < 4; i++) {
+        var check = measureAt(density);
+        var stillOverflow = check.left.need > check.left.have || check.right.need > check.right.have;
+        if (!stillOverflow || density <= MIN_DENSITY) break;
+        density = Math.max(MIN_DENSITY, density - 0.04);
+        measureAt(density);
+      }
+    }
+
+    function scheduleFit() {
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(fit);
+    }
+
+    // Первый расчёт — как только шрифты (Robtronika/Y224 и т.п.) готовы,
+    // иначе замер идёт на fallback-шрифте и после подгрузки реальных
+    // шрифтов метрики текста сместятся и подгонка «уедет».
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(scheduleFit).catch(scheduleFit);
+    }
+    window.addEventListener('load', scheduleFit);
+    scheduleFit();
+
+    var resizeTimer = null;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(scheduleFit, 150);
+    });
+  })();
+</script>
+</body>
+</html>
