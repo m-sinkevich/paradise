@@ -427,6 +427,19 @@ footer.admin-footer a{ color:var(--sky); text-decoration:none; }
 .mod-x:hover{ color:#fff; background:var(--red); }
 textarea.input{ resize:vertical; min-height:70px; line-height:1.45; }
 input.input:disabled{ opacity:.4; }
+
+/* ---------- Точки на карте ---------- */
+.map-edit{ display:grid; grid-template-columns: minmax(0,1.6fr) minmax(260px,1fr); gap:16px; margin-bottom:14px; }
+.map-edit-canvas{ border:1px solid var(--edge); background:#030712; aspect-ratio: 1000 / 922; }
+.pt-list{ display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+.pt-row{ display:grid; grid-template-columns: 26px 1fr auto; gap:6px; align-items:center; padding:6px; border:1px solid var(--edge); }
+.pt-row.sel{ border-color: var(--cyan); background: rgba(94,234,212,.06); }
+.pt-row .pt-n{ width:24px; height:24px; display:flex; align-items:center; justify-content:center; font-weight:700; color:#04101c; }
+.pt-row .pt-f{ display:flex; flex-direction:column; gap:5px; min-width:0; }
+.pt-row select, .pt-row input{ padding:6px 8px; font-size:11px; }
+.pt-row .pt-sec{ font-size:9.5px; color:var(--ink-400); letter-spacing:.6px; }
+#thPtType .radio-chip{ padding:6px 9px; font-size:10px; }
+@media (max-width:900px){ .map-edit{ grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
@@ -605,6 +618,20 @@ input.input:disabled{ opacity:.4; }
           <label class="checkbox-chip checked" style="align-self:flex-start;"><input type="checkbox" id="thTimerShow" checked> Показывать таймер до окончания угрозы</label>
           <input type="text" class="input" id="thTimerLabel" placeholder="Подпись таймера" style="margin-top:8px;">
           <div class="status-line" id="thTimerHint"></div>
+        </div>
+      </div>
+
+      <div class="sec-sub">Точки на карте полигона — карта развернётся на терминале при угрозе</div>
+      <div class="map-edit">
+        <div class="map-edit-canvas" id="thMap"></div>
+        <div class="map-edit-side">
+          <div class="field" style="margin-bottom:8px;">
+            <label>Тип новой точки</label>
+            <div class="radio-group" id="thPtType"></div>
+          </div>
+          <div class="status-line">Клик по карте ставит точку (до 6), точку можно перетащить. Без точек карта на терминале не показывается.</div>
+          <div id="thPtList" class="pt-list"></div>
+          <div class="btn-row" style="margin-top:8px;"><button type="button" class="btn ghost" data-th="clearPoints">Убрать все точки</button></div>
         </div>
       </div>
 
@@ -1112,6 +1139,7 @@ input.input:disabled{ opacity:.4; }
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
+<script src="map/polygon-map.js"></script>
 <script>
 /* =========================================================================
    ЗАЩИТА ОТ «ТИХОГО» ПАДЕНИЯ, ЕСЛИ CDN-БИБЛИОТЕКИ НЕ ЗАГРУЗИЛИСЬ
@@ -3457,6 +3485,73 @@ document.addEventListener('click', e => {
     case 'test': A.launchTest(); break;
     case 'excludeHere': A.excludeHere(el.dataset.id, el.dataset.mod); break;
   }
+});
+
+
+/* ---------- точки на карте полигона в настройках угрозы ---------- */
+Object.assign(Admin, {
+  mapEd: null, ptType: 'danger',
+  initMapEditor() {
+    if (!window.PolygonMap) { document.getElementById('thMap').innerHTML = '<div class="empty-line">Не загрузился map/polygon-map.js</div>'; return; }
+    const T = PolygonMap.TYPES;
+    document.getElementById('thPtType').innerHTML = Object.entries(T).map(([k, t]) =>
+      `<label class="radio-chip ${k === this.ptType ? 'checked' : ''}"><input type="radio" name="thPtType" value="${k}" ${k === this.ptType ? 'checked' : ''}> <span style="color:${t.color}">■</span> ${t.name}</label>`).join('');
+    document.querySelectorAll('input[name="thPtType"]').forEach(r => r.addEventListener('change', () => {
+      this.ptType = r.value; this.mapEd && (this.mapEdDefault = r.value);
+      document.querySelectorAll('#thPtType .radio-chip').forEach(c => c.classList.toggle('checked', c.querySelector('input').checked));
+      if (this.mapEd) this.mapEd.setOption('defaultType', r.value);
+    }));
+    const opts = {
+      mode: 'edit', imageUrl: 'map/polygon.jpg', points: [], max: 6, defaultType: this.ptType,
+      onChange: (pts, sel) => { this.th.points = pts; this.ptSel = sel; this.renderPointList(); },
+      onSelect: (sel) => { this.ptSel = sel; this.renderPointList(); },
+      onLimit: () => this.showError('На карте уже 6 точек — удалите одну, чтобы поставить новую.')
+    };
+    this.mapEd = PolygonMap.create(document.getElementById('thMap'), opts);
+    document.getElementById('thPtList').addEventListener('input', e => {
+      const i = +e.target.dataset.i; if (isNaN(i)) return;
+      if (e.target.dataset.f === 'label') this.th.points[i].label = e.target.value;
+      if (e.target.dataset.f === 'type') this.th.points[i].type = e.target.value;
+      this.mapEd.setPoints(this.th.points);
+      if (e.target.dataset.f === 'type') this.renderPointList();
+    });
+  },
+  setPoints(list) {
+    this.th.points = (list || []).map(p => ({ x: p.x, y: p.y, type: p.type || 'danger', label: p.label || '' }));
+    this.ptSel = -1;
+    if (this.mapEd) this.mapEd.setPoints(this.th.points);
+    this.renderPointList();
+  },
+  renderPointList() {
+    const el = document.getElementById('thPtList'); if (!el || !window.PolygonMap) return;
+    const T = PolygonMap.TYPES;
+    if (!this.th.points.length) { el.innerHTML = '<div class="status-line">Точек нет.</div>'; return; }
+    el.innerHTML = this.th.points.map((p, i) => {
+      const t = T[p.type] || T.danger;
+      return `<div class="pt-row ${i === this.ptSel ? 'sel' : ''}">
+        <span class="pt-n" style="background:${t.color}">${i + 1}</span>
+        <div class="pt-f">
+          <select class="input" data-i="${i}" data-f="type">${Object.entries(T).map(([k, x]) => `<option value="${k}" ${k === p.type ? 'selected' : ''}>${x.name}</option>`).join('')}</select>
+          <input class="input" data-i="${i}" data-f="label" value="${this.escape(p.label)}" placeholder="Подпись: ${this.escape(t.name)}">
+          <span class="pt-sec">СЕКТОР ${PolygonMap.sectorOf(p.x, p.y)}</span>
+        </div>
+        <button type="button" class="btn danger" data-th="delPoint" data-i="${i}">✕</button>
+      </div>`;
+    }).join('');
+  }
+});
+// точки — часть настроек угрозы (запуск, свои угрозы, сценарии)
+(function () {
+  const origRead = Admin.readConfig, origFill = Admin.fillForm, origWire = Admin.wireForm, origDefault = Admin.defaultConfig;
+  Admin.defaultConfig = function (pattern) { const c = origDefault.call(this, pattern); c.points = []; return c; };
+  Admin.readConfig = function () { const c = origRead.call(this); c.points = (this.th.points || []).map(p => ({ x: p.x, y: p.y, type: p.type, label: (p.label || '').trim() })); return c; };
+  Admin.fillForm = function (c, keep) { origFill.call(this, c, keep); if (!keep) this.setPoints(c.points || []); };
+  Admin.wireForm = function () { this.th.points = []; this.initMapEditor(); origWire.call(this); };
+})();
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-th]'); if (!el) return;
+  if (el.dataset.th === 'delPoint') { Admin.th.points.splice(+el.dataset.i, 1); Admin.setPoints(Admin.th.points); }
+  if (el.dataset.th === 'clearPoints') Admin.setPoints([]);
 });
 
 MasterGate.ready(() => Admin.init());

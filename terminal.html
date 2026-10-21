@@ -943,6 +943,46 @@
     @media (prefers-reduced-motion: reduce) {
       body.tui-shaking #tui-shell, body.tui-shaking #canvas-container, #terminal-ui.threat-active #tui-threat-fx { animation: none !important; }
     }
+
+    /* ==========================================================
+       КАРТА ПОЛИГОНА ПРИ УГРОЗЕ (map/polygon-map.js)
+       ========================================================== */
+    #tui-map {
+      position: fixed; inset: 22px; z-index: 45; display: none;
+      background: rgba(3, 7, 18, .94); border: 1px solid var(--tui-alert-color);
+      box-shadow: 0 0 40px color-mix(in srgb, var(--tui-alert-color) 30%, transparent);
+      clip-path: polygon(18px 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%, 0 18px);
+      flex-direction: column;
+    }
+    #terminal-ui.alerting ~ #tui-map, body.tui-alerting #tui-map { top: 62px; }
+    #tui-map.open { display: flex; animation: tui-map-in .45s ease; }
+    @keyframes tui-map-in { from { opacity: 0; transform: scale(.97); } }
+    .tm-head { display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-bottom: 1px dashed color-mix(in srgb, var(--tui-alert-color) 50%, transparent); flex-wrap: wrap; }
+    .tm-title { font-family: var(--tui-font-ui); font-size: 18px; letter-spacing: 1.5px; color: var(--tui-alert-color); }
+    .tm-sub { font-family: var(--tui-font-body); font-weight: 600; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; color: var(--tui-ink-100); flex: 1; }
+    .tm-btn { font-family: var(--tui-font-ui); font-size: 12px; letter-spacing: 1.4px; padding: 9px 16px; cursor: pointer;
+      background: color-mix(in srgb, var(--tui-alert-color) 14%, transparent); border: 1px solid var(--tui-alert-color); color: var(--tui-alert-color); }
+    .tm-btn:hover { background: var(--tui-alert-color); color: #041018; }
+    .tm-body { flex: 1; display: grid; grid-template-columns: 1fr 300px; min-height: 0; }
+    .tm-map { min-height: 0; min-width: 0; padding: 8px; }
+    .tm-legend { border-left: 1px dashed color-mix(in srgb, var(--tui-alert-color) 40%, transparent); padding: 14px 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+    .tm-legend h4 { font-family: var(--tui-font-body); font-size: 11px; letter-spacing: 2px; color: var(--tui-ink-400); margin: 4px 0 2px; font-weight: 600; }
+    .tm-pt { display: grid; grid-template-columns: 30px 1fr; gap: 10px; align-items: center; font-family: var(--tui-font-body); font-weight: 600; text-transform: uppercase; }
+    .tm-pt svg { width: 30px; height: 30px; }
+    .tm-pt b { display: block; font-size: 14px; letter-spacing: .8px; }
+    .tm-pt span { font-family: var(--tui-font-digital); font-size: 12px; color: var(--tui-ink-400); letter-spacing: 1px; }
+    .tm-key { display: grid; grid-template-columns: 34px 1fr; gap: 8px; align-items: center; font-family: var(--tui-font-body); font-size: 11.5px; color: var(--tui-ink-400); text-transform: uppercase; letter-spacing: .8px; }
+    .tm-key i { display: block; height: 14px; border: 1px solid; }
+    #tui-map-chip {
+      position: fixed; left: 22px; bottom: 16px; z-index: 44; display: none;
+      font-family: var(--tui-font-ui); font-size: 13px; letter-spacing: 1.4px; padding: 11px 18px; cursor: pointer;
+      background: color-mix(in srgb, var(--tui-alert-color) 18%, rgba(3,7,18,.9)); border: 1px solid var(--tui-alert-color); color: var(--tui-alert-color);
+      box-shadow: 0 0 18px color-mix(in srgb, var(--tui-alert-color) 40%, transparent); animation: tui-chip 1.6s ease-in-out infinite;
+    }
+    #tui-map-chip.show { display: block; }
+    #tui-map.open ~ #tui-map-chip { display: none; }
+    @keyframes tui-chip { 50% { box-shadow: 0 0 30px color-mix(in srgb, var(--tui-alert-color) 75%, transparent); } }
+    @media (max-width: 1100px) { .tm-body { grid-template-columns: 1fr; grid-template-rows: 1fr auto; } .tm-legend { border-left: 0; border-top: 1px dashed var(--tui-edge); flex-direction: row; flex-wrap: wrap; max-height: 140px; } }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -1410,11 +1450,26 @@
   </div>
 </div>
 
+<!-- ======= КАРТА ПОЛИГОНА (при угрозе с точками) ======= -->
+<div id="tui-map" role="dialog" aria-label="Карта полигона">
+  <div class="tm-head">
+    <span class="tm-title">КАРТА ПОЛИГОНА</span>
+    <span class="tm-sub" id="tm-sub"></span>
+    <button class="tm-btn" data-action="collapseMap">СВЕРНУТЬ ▾</button>
+  </div>
+  <div class="tm-body">
+    <div class="tm-map" id="tm-map"></div>
+    <aside class="tm-legend" id="tm-legend"></aside>
+  </div>
+</div>
+<button id="tui-map-chip" data-action="openMap">▣ КАРТА</button>
+
 <!-- ======= ЛОГ РАЗРАБОТЧИКА ======= -->
 <button id="tui-devlog-toggle" data-action="toggleDevLog" title="Лог">log</button>
 <div id="tui-devlog"><div id="tui-devlog-inner"></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="map/polygon-map.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
 <script>
   // ==================== 1. СЦЕНА И КАМЕРА ====================
@@ -2527,6 +2582,56 @@
      ведёт таймер, принимает QR-коды устранения и запись в журнал,
      по окончании запускает следующую угрозу сценария.
      ========================================================================= */
+
+  /* =========================================================================
+     КАРТА ПОЛИГОНА ПРИ УГРОЗЕ: разворачивается, если мастер поставил точки,
+     сворачивается в кнопку «КАРТА» в левом нижнем углу.
+     ========================================================================= */
+  const ThreatMap = {
+    view: null, alertId: null, points: [],
+    show(alert) {
+      const pts = (alert.params && alert.params.points) || [];
+      const chip = document.getElementById('tui-map-chip');
+      if (!pts.length || !window.PolygonMap) { this.hide(); return; }
+      const sameAlert = this.alertId === alert.id;
+      const changed = JSON.stringify(pts) !== JSON.stringify(this.points);
+      this.points = pts;
+      if (!this.view) this.view = PolygonMap.create(document.getElementById('tm-map'), { mode: 'view', points: pts, imageUrl: 'map/polygon.jpg' });
+      else if (changed) this.view.setPoints(pts);
+      document.getElementById('tm-sub').textContent = alert.label || '';
+      this.renderLegend();
+      chip.textContent = `▣ КАРТА · ${pts.length} ${pts.length === 1 ? 'ТОЧКА' : pts.length < 5 ? 'ТОЧКИ' : 'ТОЧЕК'}`;
+      chip.classList.add('show');
+      if (!sameAlert) { this.alertId = alert.id; this.open(); }   // новая угроза — карта разворачивается сама
+    },
+    renderLegend() {
+      const T = PolygonMap.TYPES;
+      const icon = (type) => {
+        const t = T[type] || T.danger, c = t.color;
+        const shapes = { tri: '<path d="M15,4 L27,25 L3,25 Z"/>', square: '<rect x="5" y="5" width="20" height="20"/>', diamond: '<path d="M15,2 L28,15 L15,28 L2,15 Z"/>', hex: '<path d="M15,3 L26,9 L26,21 L15,27 L4,21 L4,9 Z"/>', circle: '<circle cx="15" cy="15" r="11"/>' };
+        return `<svg viewBox="0 0 30 30"><g fill="${c}" stroke="#fff" stroke-width="1.6">${shapes[t.shape]}</g></svg>`;
+      };
+      const esc = s => String(s || '').replace(/[&<>]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
+      document.getElementById('tm-legend').innerHTML = '<h4>ТОЧКИ</h4>' + this.points.map((p, i) => {
+        const t = T[p.type] || T.danger;
+        return `<div class="tm-pt">${icon(p.type)}<div><b style="color:${t.color}">${i + 1}. ${esc(p.label || t.name)}</b><span>СЕКТОР ${PolygonMap.sectorOf(p.x, p.y)}</span></div></div>`;
+      }).join('') + `<h4 style="margin-top:12px">ОБОЗНАЧЕНИЯ</h4>
+        <div class="tm-key"><i style="border-color:#FFB454;border-style:dashed;border-width:3px 0 0 0;height:0"></i>граница полигона</div>
+        <div class="tm-key"><i style="border-color:#F5E6A8;background:repeating-linear-gradient(-35deg,rgba(245,230,168,.5) 0 1px,transparent 1px 6px)"></i>поле, луг</div>
+        <div class="tm-key"><i style="border-color:#B4F0C8;border-style:none;background:radial-gradient(circle,#B4F0C8 1px,transparent 1.5px) 0 0/8px 8px"></i>лес</div>
+        <div class="tm-key"><i style="border-color:#9FF5DD;border-style:dotted"></i>лагерь</div>
+        <div class="tm-key"><i style="border:0;height:4px;background:#fff;box-shadow:0 0 0 2px #04101c"></i>дорожка</div>
+        <div class="tm-key"><i style="width:16px;height:16px;border-radius:50%;background:#fff;border:2px solid #04101c"></i>купол (номер)</div>`;
+    },
+    open() { document.getElementById('tui-map').classList.add('open'); },
+    collapse() { document.getElementById('tui-map').classList.remove('open'); },
+    hide() {
+      this.collapse();
+      document.getElementById('tui-map-chip').classList.remove('show');
+      this.alertId = null; this.points = [];
+    }
+  };
+
   const ThreatEngine = {
     current: null, pattern: null, sev: 1, startedAt: 0,
     loops: [], saved: new Map(), metricState: [], ended: false, progress: new Set(), tickId: null,
@@ -2535,7 +2640,7 @@
 
     apply(alert) {
       if (!alert) { this.stop(); return; }
-      if (this.current && this.current.id === alert.id) { this.current = alert; this.renderCard(); return; }
+      if (this.current && this.current.id === alert.id) { this.current = alert; this.renderCard(); ThreatMap.show(alert); return; }
       this.stop();
       this.current = alert;
       this.ended = false;
@@ -2614,6 +2719,7 @@
       this.tickId = setInterval(() => this.tick(), 1000);
       this.loadProgress();
       this.renderCard();
+      ThreatMap.show(alert);
       App.log('threat_shown', { alertId: alert.id, type: key });
     },
 
@@ -2677,6 +2783,7 @@
       Object.assign(window.TUI_SCENE, { windMul: 1, particles: 80, particleColor: null, particleSize: 0.045, bgColor: null, bgPulse: 0 });
       const card = document.getElementById('tui-threat-card');
       card.classList.remove('has-content');
+      ThreatMap.hide();
       this.current = null; this.pattern = null; this.progress = new Set();
     },
 
@@ -2868,10 +2975,13 @@
         document.getElementById('tui-alert-text').textContent = "⚠ " + alert.label;
         const pc = (THREAT_PATTERNS[alert.threat_type] || {}).color;
         ui.style.setProperty('--tui-alert-color', alert.color || pc || '#FF6B6B');
+        document.documentElement.style.setProperty('--tui-alert-color', alert.color || pc || '#FF6B6B');
         banner.classList.add('active');
+        document.body.classList.add('tui-alerting');
         if (!ui.classList.contains('alerting')) { ui.classList.add('alerting'); setTimeout(() => window.dispatchEvent(new Event('resize')), 350); }
       } else {
         banner.classList.remove('active');
+        document.body.classList.remove('tui-alerting');
         if (ui.classList.contains('alerting')) { ui.classList.remove('alerting'); setTimeout(() => window.dispatchEvent(new Event('resize')), 350); }
       }
       this.updateSound(alert);
@@ -3759,6 +3869,8 @@
       case 'submitModalManual': App.submitModalManual(); break;
       case 'closeJournalModal': App.closeJournalModal(); break;
       case 'saveJournalEntry': App.saveJournalEntry(); break;
+      case 'openMap': ThreatMap.open(); break;
+      case 'collapseMap': ThreatMap.collapse(); break;
       case 'toggleVoiceRecord': App.toggleVoiceRecord(); break;
       case 'pickAudioFile': App.pickAudioFile(); break;
       case 'sendVoiceEntry': App.sendVoiceEntry(); break;
