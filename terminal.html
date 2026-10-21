@@ -835,6 +835,10 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     #tui-col-left > .tui-panel:last-child,
     #tui-col-right > .tui-panel:last-child { width: auto; margin-left: 0; margin-right: 0; }
 
+
+    #tui-header.authenticated ~ * #tui-panel-journal, body.tui-auth #tui-panel-journal { cursor: pointer; }
+    body.tui-auth #tui-panel-journal:hover { box-shadow: 0 0 0 1px var(--tui-cyan), 0 0 18px rgba(94,234,212,.35); }
+    body.tui-auth #tui-panel-journal .tui-panel-title::after { content: '  ✎ ЗАПИСАТЬ'; font-size: .7em; color: var(--tui-amber); letter-spacing: 1px; opacity: .8; }
     /* ==========================================================
        УГРОЗЫ (ThreatEngine): выделенная плашка, карточка с инструкцией
        и таймером, эффекты фона по типу угрозы
@@ -3190,6 +3194,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       // вместо кода входа (его можно подсмотреть и войти чужим персонажем) — только номер бейджа, если он есть
       document.getElementById('tui-char-id-badge').textContent = character.badge_id || '';
       document.getElementById('tui-header').classList.add('authenticated');
+      document.body.classList.add('tui-auth');
       document.getElementById('tui-dock').classList.add('visible');
 
       this.startSessionTimers(character);
@@ -3280,6 +3285,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       this.clearSessionTimers();
       this.currentCharacter = null;
       document.getElementById('tui-header').classList.remove('authenticated');
+      document.body.classList.remove('tui-auth');
       document.getElementById('tui-dock').classList.remove('visible');
       document.getElementById('tui-session-timer').textContent = "—:—";
       this.closeJournalModal();
@@ -3999,6 +4005,10 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     if (AlertManager.soundBlocked) { AlertManager.soundBlocked = false; AlertManager.tryPlay(); }
   }, true));
 
+  // авторизованный оператор: клик по плашке «Бортовой журнал» открывает запись в журнал
+  document.getElementById('tui-panel-journal').addEventListener('click', () => {
+    if (App.currentCharacter) App.goJournal();
+  });
   document.addEventListener('change', (e) => {
     if (e.target && e.target.id === 'journalAudioFile') App.onAudioFilePicked(e.target.files && e.target.files[0]);
   });

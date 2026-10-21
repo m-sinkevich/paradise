@@ -499,6 +499,18 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
 .dur-box{ display:flex; align-items:center; gap:6px; }
 .dur-box input{ width:76px; text-align:center; font-size:15px; font-weight:600; letter-spacing:1px; padding:8px 6px; }
 .dur-box span{ font-size:11px; color:var(--ink-400); text-transform:uppercase; letter-spacing:1px; }
+
+.snd-timer{ font-size:13px; color:var(--red); letter-spacing:1px; font-weight:600; }
+#sndRecBtn.rec{ border-color:var(--red); color:var(--red); animation:pulseOp 1.1s ease-in-out infinite; }
+.snd-lib-head{ display:flex; align-items:center; justify-content:space-between; margin-top:12px; font-size:10px; letter-spacing:1.5px; color:var(--ink-400); text-transform:uppercase; }
+.snd-lib-head .btn{ padding:3px 8px; }
+.snd-lib{ display:flex; flex-direction:column; gap:4px; max-height:190px; overflow-y:auto; margin-top:6px; }
+.snd-item{ display:grid; grid-template-columns:30px 1fr auto; gap:8px; align-items:center; padding:5px 8px; border:1px solid var(--edge); font-size:11px; cursor:pointer; }
+.snd-item:hover{ border-color:var(--cyan); }
+.snd-item.sel{ border-color:var(--amber); background:rgba(255,180,84,.08); }
+.snd-item .pl{ width:26px; height:26px; padding:0; display:flex; align-items:center; justify-content:center; }
+.snd-item .nm{ color:var(--ink-100); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.snd-item .dt{ color:var(--ink-600); font-size:9.5px; }
 </style>
 </head>
 <body>
@@ -724,14 +736,19 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
           <label>Звук</label>
           <div class="radio-group" id="thSoundMode">
             <label class="radio-chip checked"><input type="radio" name="thSound" value="builtin" checked> Встроенный</label>
-            <label class="radio-chip"><input type="radio" name="thSound" value="file"> Свой файл</label>
+            <label class="radio-chip"><input type="radio" name="thSound" value="file"> Свой звук / запись</label>
             <label class="radio-chip"><input type="radio" name="thSound" value="none"> Без звука</label>
           </div>
           <div id="thSoundFileBox" style="display:none; margin-top:8px;">
             <div class="sound-row">
-              <button type="button" class="btn ghost" data-action="pickAlertSound">⇪ Загрузить звук</button>
+              <button type="button" class="btn ghost" data-snd="rec" id="sndRecBtn">● Записать с микрофона</button>
+              <button type="button" class="btn ghost" data-action="pickAlertSound">⇪ Загрузить файл</button>
               <button type="button" class="btn ghost" data-action="previewAlertSound" id="alertSoundPreviewBtn">▶ Прослушать</button>
+              <span class="snd-timer" id="sndRecTimer"></span>
             </div>
+            <input type="text" class="input" id="sndName" placeholder="Название звука для библиотеки (необязательно)" style="margin-top:8px;">
+            <div class="snd-lib-head"><span>Библиотека звуков</span><button type="button" class="btn ghost" data-snd="reload">⟳</button></div>
+            <div class="snd-lib" id="sndLib"><div class="empty-line">Загрузка...</div></div>
             <input type="file" id="alertSoundFile" accept="audio/*" style="display:none;">
             <input type="text" class="input" id="fSoundUrl" placeholder="или вставьте URL звукового файла" style="margin-top:8px;">
             <label class="checkbox-chip checked" style="margin-top:8px; align-self:flex-start;"><input type="checkbox" id="fSoundLoop" checked> Повторять звук, пока угроза активна</label>
@@ -2851,13 +2868,15 @@ const Admin = {
     if (file.size > 15 * 1024 * 1024) { status.textContent = 'Файл больше 15 МБ — возьмите короче или сожмите.'; return; }
     status.textContent = `Загрузка «${file.name}»...`;
     const ext = file.name.includes('.') ? file.name.split('.').pop().toLowerCase() : 'mp3';
-    const path = `alerts/${Date.now()}.${ext}`;
+    const path = `alerts/${Date.now()}${this.soundSlug()}.${ext}`;
     const { error } = await sb.storage.from(MEDIA_BUCKET).upload(path, file, { contentType: file.type || 'audio/mpeg' });
     document.getElementById('alertSoundFile').value = '';
     if (error) { status.textContent = 'Ошибка загрузки: ' + error.message + `. Проверьте bucket «${MEDIA_BUCKET}».`; return; }
     const { data: pub } = sb.storage.from(MEDIA_BUCKET).getPublicUrl(path);
     document.getElementById('fSoundUrl').value = pub.publicUrl;
     status.textContent = `«${file.name}» загружен ✓ — нажмите «Прослушать», чтобы проверить.`;
+    document.getElementById('sndName').value = '';
+    this.loadSoundLibrary(pub.publicUrl);
   },
   previewAlertSound() {
     const btn = document.getElementById('alertSoundPreviewBtn');
@@ -3872,6 +3891,100 @@ document.addEventListener('toggle', e => {
   if (e.target.id === 'moduleLogSection') Admin.loadModuleLog(Admin.editingModuleId);
 }, true);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') Admin.closeViewer(); });
+
+
+/* ---------- звук угрозы: запись с микрофона и библиотека ранее загруженных звуков ---------- */
+Object.assign(Admin, {
+  soundSlug() {
+    const n = (document.getElementById('sndName').value || '').trim();
+    if (!n) return '';
+    // имя хранится в названии файла: латиницей для пути + исходное имя в кодировке URL
+    return '__' + encodeURIComponent(n).replace(/%/g, '~').slice(0, 120);
+  },
+  soundTitle(name) {
+    const m = name.match(/^(\d+)(?:__(.+))?\.\w+$/);
+    if (m && m[2]) { try { return decodeURIComponent(m[2].replace(/~/g, '%')); } catch (e) {} }
+    if (m && /^rec/.test(name)) return 'Запись';
+    return m ? 'Звук ' + new Date(+m[1]).toLocaleString() : name;
+  },
+  async loadSoundLibrary(selectUrl) {
+    const el = document.getElementById('sndLib');
+    const { data, error } = await sb.storage.from(MEDIA_BUCKET).list('alerts', { limit: 200, sortBy: { column: 'created_at', order: 'desc' } });
+    if (error) { el.innerHTML = `<div class="empty-line" style="color:var(--red)">${this.escape(error.message)}</div>`; return; }
+    const files = (data || []).filter(f => f.name && !f.name.startsWith('.'));
+    if (!files.length) { el.innerHTML = '<div class="empty-line">Загруженных звуков пока нет.</div>'; return; }
+    const cur = selectUrl || document.getElementById('fSoundUrl').value;
+    el.innerHTML = files.map(f => {
+      const url = sb.storage.from(MEDIA_BUCKET).getPublicUrl('alerts/' + f.name).data.publicUrl;
+      const ts = parseInt(f.name, 10);
+      return `<div class="snd-item ${url === cur ? 'sel' : ''}" data-snd="pick" data-url="${this.escape(url)}" title="Выбрать этот звук">
+        <button type="button" class="btn ghost pl" data-snd="play" data-url="${this.escape(url)}" title="Прослушать">▶</button>
+        <span class="nm">${this.escape(this.soundTitle(f.name))}</span>
+        <span class="dt">${ts ? new Date(ts).toLocaleDateString() : ''}</span>
+      </div>`;
+    }).join('');
+  },
+  async toggleSoundRecord() {
+    const btn = document.getElementById('sndRecBtn'), status = document.getElementById('alertSoundStatus');
+    if (this.sndRec && this.sndRec.state === 'recording') { this.sndRec.stop(); return; }
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+    catch (e) { status.textContent = 'Нет доступа к микрофону: ' + e.message; return; }
+    const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || '';
+    const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+    const chunks = []; this.sndRec = rec;
+    rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+    rec.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop()); clearInterval(this.sndTimer);
+      btn.classList.remove('rec'); btn.textContent = '● Записать с микрофона';
+      document.getElementById('sndRecTimer').textContent = '';
+      if (!chunks.length) return;
+      const type = rec.mimeType || mime || 'audio/webm';
+      const ext = /mp4/.test(type) ? 'm4a' : /ogg/.test(type) ? 'ogg' : 'webm';
+      const blob = new Blob(chunks, { type });
+      status.textContent = 'Загрузка записи...';
+      const path = `alerts/${Date.now()}${this.soundSlug() || '__' + encodeURIComponent('Запись мастера').replace(/%/g, '~')}.${ext}`;
+      const { error } = await sb.storage.from(MEDIA_BUCKET).upload(path, blob, { contentType: type });
+      if (error) { status.textContent = 'Ошибка загрузки: ' + error.message; return; }
+      const url = sb.storage.from(MEDIA_BUCKET).getPublicUrl(path).data.publicUrl;
+      document.getElementById('fSoundUrl').value = url;
+      document.getElementById('sndName').value = '';
+      status.textContent = 'Запись сохранена и выбрана ✓ — нажмите «Прослушать», чтобы проверить.';
+      this.loadSoundLibrary(url);
+    };
+    rec.start(500);
+    const t0 = Date.now();
+    btn.classList.add('rec'); btn.textContent = '■ Остановить запись';
+    this.sndTimer = setInterval(() => {
+      const sec = Math.floor((Date.now() - t0) / 1000);
+      document.getElementById('sndRecTimer').textContent = `● ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+      if (sec >= 300) rec.stop();
+    }, 300);
+    status.textContent = 'Идёт запись — говорите. Максимум 5 минут.';
+  }
+});
+(function () {
+  const origFill = Admin.fillForm;
+  Admin.fillForm = function (c, keep) { origFill.call(this, c, keep); this.loadSoundLibrary(); };
+})();
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-snd]'); if (!el) return;
+  const A = Admin, act = el.dataset.snd;
+  if (act === 'rec') A.toggleSoundRecord();
+  if (act === 'reload') A.loadSoundLibrary();
+  if (act === 'play') {
+    e.stopPropagation();
+    const same = A.libAudio && A.libAudioUrl === el.dataset.url && !A.libAudio.paused;
+    if (A.libAudio) A.libAudio.pause();
+    if (same) { A.libAudio = null; return; }
+    A.libAudio = new Audio(el.dataset.url); A.libAudioUrl = el.dataset.url; A.libAudio.play().catch(() => {});
+  }
+  if (act === 'pick') {
+    document.getElementById('fSoundUrl').value = el.dataset.url;
+    document.querySelectorAll('.snd-item').forEach(x => x.classList.toggle('sel', x === el));
+    document.getElementById('alertSoundStatus').textContent = 'Звук выбран ✓';
+  }
+});
 
 MasterGate.ready(() => Admin.init());
 
