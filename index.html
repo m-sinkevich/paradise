@@ -95,6 +95,14 @@
   .zoom .cap{font-family:var(--mono);color:#111;font-size:15px;letter-spacing:1px;text-align:center;word-break:break-all}
   @media (max-width:520px){ h1{font-size:19px} .card{flex-direction:column} }
   @media (prefers-reduced-motion:reduce){ .pulse.ok{animation:none} }
+
+/* ---------- полосы прокрутки в стиле интерфейса ---------- */
+* { scrollbar-width: thin; scrollbar-color: rgba(94,234,212,.45) rgba(3,10,22,.6); }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: rgba(3,10,22,.6); border-left: 1px solid rgba(56,189,248,.14); }
+::-webkit-scrollbar-thumb { background: linear-gradient(180deg, rgba(94,234,212,.55), rgba(56,189,248,.4)); border: 2px solid rgba(3,10,22,.9); border-radius: 0; }
+::-webkit-scrollbar-thumb:hover { background: #5EEAD4; }
+::-webkit-scrollbar-corner { background: transparent; }
 </style>
 </head>
 <body>

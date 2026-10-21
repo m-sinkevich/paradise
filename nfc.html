@@ -29,6 +29,16 @@
   #mg-gate .err { min-height: 16px; font-size: 11px; color: #FF6B6B; letter-spacing: .5px; }
   #mg-gate.shake form { animation: mg-shake .35s; }
   @keyframes mg-shake { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+
+/* ---------- полосы прокрутки в стиле интерфейса ---------- */
+* { scrollbar-width: thin; scrollbar-color: rgba(94,234,212,.45) rgba(3,10,22,.6); }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: rgba(3,10,22,.6); border-left: 1px solid rgba(56,189,248,.14); }
+::-webkit-scrollbar-thumb { background: linear-gradient(180deg, rgba(94,234,212,.55), rgba(56,189,248,.4)); border: 2px solid rgba(3,10,22,.9); border-radius: 0; }
+::-webkit-scrollbar-thumb:hover { background: #5EEAD4; }
+::-webkit-scrollbar-corner { background: transparent; }
+input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 </style>
 <script>
 (function () {

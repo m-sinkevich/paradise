@@ -62,6 +62,16 @@
   #mg-gate .err { min-height: 16px; font-size: 11px; color: #FF6B6B; letter-spacing: .5px; }
   #mg-gate.shake form { animation: mg-shake .35s; }
   @keyframes mg-shake { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+
+/* ---------- полосы прокрутки в стиле интерфейса ---------- */
+* { scrollbar-width: thin; scrollbar-color: rgba(94,234,212,.45) rgba(3,10,22,.6); }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: rgba(3,10,22,.6); border-left: 1px solid rgba(56,189,248,.14); }
+::-webkit-scrollbar-thumb { background: linear-gradient(180deg, rgba(94,234,212,.55), rgba(56,189,248,.4)); border: 2px solid rgba(3,10,22,.9); border-radius: 0; }
+::-webkit-scrollbar-thumb:hover { background: #5EEAD4; }
+::-webkit-scrollbar-corner { background: transparent; }
+input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 </style>
 <script>
 (function () {
@@ -483,6 +493,12 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
 .journal-entry .meta span{ font-weight:600; }
 .journal-entry .meta a.dl-ico{ color:var(--ink-600) !important; font-size:12px; text-decoration:none; opacity:.55; padding:0 4px; }
 .journal-entry .meta a.dl-ico:hover{ opacity:1; color:var(--cyan) !important; }
+
+.dur-exact{ display:flex; align-items:center; gap:10px; margin-top:10px; flex-wrap:wrap; }
+.dur-lbl{ font-size:10.5px; color:var(--ink-400); letter-spacing:.5px; }
+.dur-box{ display:flex; align-items:center; gap:6px; }
+.dur-box input{ width:76px; text-align:center; font-size:15px; font-weight:600; letter-spacing:1px; padding:8px 6px; }
+.dur-box span{ font-size:11px; color:var(--ink-400); text-transform:uppercase; letter-spacing:1px; }
 </style>
 </head>
 <body>
@@ -655,7 +671,11 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
             <button type="button" class="duration-chip" data-min="60">60 мин</button>
             <button type="button" class="duration-chip" data-min="0">Пока не устранят / не снимет мастер</button>
           </div>
-          <input type="number" min="0.5" step="0.5" class="input" id="thDurCustom" placeholder="или своё время, минут" style="margin-top:8px; max-width:240px;">
+          <div class="dur-exact">
+            <span class="dur-lbl">или точно:</span>
+            <label class="dur-box"><input type="number" min="0" max="999" step="1" class="input" id="thDurMin" placeholder="0" inputmode="numeric"><span>мин</span></label>
+            <label class="dur-box"><input type="number" min="0" max="59" step="1" class="input" id="thDurSec" placeholder="0" inputmode="numeric"><span>сек</span></label>
+          </div>
         </div>
         <div class="field">
           <label>Таймер обратного отсчёта на терминале</label>
@@ -3178,13 +3198,17 @@ Object.assign(Admin, {
       document.querySelectorAll('#durationRow .duration-chip').forEach(c => c.classList.remove('active'));
       ch.classList.add('active');
       this.selectedDurationMin = parseFloat(ch.dataset.min);
-      document.getElementById('thDurCustom').value = '';
+      this.setDurFields(this.selectedDurationMin);
       this.updateTimerHint();
     }));
-    document.getElementById('thDurCustom').addEventListener('input', () => {
-      if (document.getElementById('thDurCustom').value) document.querySelectorAll('#durationRow .duration-chip').forEach(c => c.classList.remove('active'));
+    ['thDurMin', 'thDurSec'].forEach(id => document.getElementById(id).addEventListener('input', () => {
+      const sec = document.getElementById('thDurSec');
+      if (+sec.value > 59) sec.value = 59;
+      const v = this.durFieldsValue();
+      this.selectedDurationMin = v;
+      document.querySelectorAll('#durationRow .duration-chip').forEach(c => c.classList.toggle('active', parseFloat(c.dataset.min) === v));
       this.updateTimerHint();
-    });
+    }));
     const chipRadio = (name, onChange) => document.querySelectorAll(`input[name="${name}"]`).forEach(r => r.addEventListener('change', () => {
       r.closest('.radio-group').querySelectorAll('.radio-chip').forEach(c => c.classList.remove('checked'));
       r.closest('.radio-chip').classList.add('checked');
@@ -3234,7 +3258,7 @@ Object.assign(Admin, {
     const dur = c.duration_min > 0 ? c.duration_min : 0;
     const chip = [...document.querySelectorAll('#durationRow .duration-chip')].find(x => parseFloat(x.dataset.min) === dur);
     document.querySelectorAll('#durationRow .duration-chip').forEach(x => x.classList.toggle('active', x === chip));
-    document.getElementById('thDurCustom').value = chip ? '' : dur;
+    this.setDurFields(dur);
     this.selectedDurationMin = dur;
     const tShow = document.getElementById('thTimerShow');
     tShow.checked = !!(c.timer && c.timer.show); tShow.closest('.checkbox-chip').classList.toggle('checked', tShow.checked);
@@ -3271,10 +3295,18 @@ Object.assign(Admin, {
     const custom = document.getElementById('thColorCustom'); if (custom && /^#[0-9a-f]{6}$/i.test(c)) custom.value = c;
     document.getElementById('threatFormPanel').style.setProperty('--tc', c);
   },
-  durationValue() {
-    const custom = parseFloat(document.getElementById('thDurCustom').value);
-    return custom > 0 ? custom : (this.selectedDurationMin || 0);
+  // длительность хранится в минутах (дробных): 1 мин 30 сек = 1.5
+  durFieldsValue() {
+    const m = Math.max(0, parseInt(document.getElementById('thDurMin').value, 10) || 0);
+    const sec = Math.max(0, Math.min(59, parseInt(document.getElementById('thDurSec').value, 10) || 0));
+    return Math.round((m + sec / 60) * 10000) / 10000;
   },
+  setDurFields(min) {
+    const total = Math.round((min || 0) * 60);
+    document.getElementById('thDurMin').value = total ? Math.floor(total / 60) : '';
+    document.getElementById('thDurSec').value = total ? total % 60 : '';
+  },
+  durationValue() { return this.durFieldsValue(); },
   updateTimerHint() {
     const show = document.getElementById('thTimerShow').checked;
     document.getElementById('thTimerHint').textContent = show && !this.durationValue()
