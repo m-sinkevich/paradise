@@ -468,6 +468,21 @@ input.input:disabled{ opacity:.4; }
 .cam-viewer .cv-cap{ color:var(--ink-100); font-size:12px; letter-spacing:1px; }
 .cam-viewer .cv-wait{ color:var(--amber); font-size:14px; letter-spacing:2px; }
 @media (max-width:700px){ .log-row{ grid-template-columns:1fr; gap:2px; } }
+
+details.fold{ border:1px solid var(--edge); margin:12px 0; background:rgba(255,255,255,.012); }
+details.fold > summary{ cursor:pointer; list-style:none; padding:10px 14px; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--cyan); user-select:none; }
+details.fold > summary::-webkit-details-marker{ display:none; }
+details.fold > summary::before{ content:'▸ '; }
+details.fold[open] > summary::before{ content:'▾ '; }
+details.fold > .editor-section{ margin:0; border-top:1px dashed var(--edge); padding:12px 14px; }
+details.fold.small{ margin:10px 0 0; }
+details.fold.small > summary{ padding:7px 12px; font-size:10px; color:var(--ink-400); }
+details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:auto; }
+.sub-title{ font-size:10px; letter-spacing:1.5px; color:var(--ink-400); text-transform:uppercase; margin:14px 0 8px; }
+.journal-entry .meta{ font-size:11.5px !important; color:var(--ink-100) !important; letter-spacing:.3px !important; align-items:center; }
+.journal-entry .meta span{ font-weight:600; }
+.journal-entry .meta a.dl-ico{ color:var(--ink-600) !important; font-size:12px; text-decoration:none; opacity:.55; padding:0 4px; }
+.journal-entry .meta a.dl-ico:hover{ opacity:1; color:var(--cyan) !important; }
 </style>
 </head>
 <body>
@@ -1073,43 +1088,43 @@ input.input:disabled{ opacity:.4; }
       <button class="modal-close" data-action="closeModuleEditor">✕</button>
     </div>
 
-    <!-- ---- Название и код доступа ---- -->
-    <div class="editor-section">
-      <div class="sec-title">Название и код доступа</div>
-      <div class="field">
-        <label>Название модуля</label>
-        <input type="text" class="input" id="moName" placeholder="Например: Жилой отсек Б">
-      </div>
-      <div class="trigger-row">
+    <!-- ---- Настройки модуля (для существующего модуля — под кнопкой) ---- -->
+    <details class="fold" id="moduleSettingsFold">
+      <summary>⚙ Настройки модуля</summary>
+      <div class="editor-section">
         <div class="field">
-          <label>Код доступа (access_code)</label>
-          <input type="text" class="input" id="moCode" placeholder="ABC123" style="text-transform:uppercase; letter-spacing:2px;">
+          <label>Название модуля</label>
+          <input type="text" class="input" id="moName" placeholder="Например: Жилой отсек Б">
         </div>
-        <button class="btn ghost" data-action="regenerateModuleCode">⟳ Сгенерировать</button>
-      </div>
-      <div class="status-line">Терминал модуля открывается по ссылке с этим кодом: <a id="moTerminalLink" href="#" target="_blank" style="color:var(--sky);word-break:break-all;"></a></div>
-      <div class="error-line" id="moduleCodeError"></div>
-    </div>
-
-    <!-- ---- Настройки ---- -->
-    <div class="editor-section">
-      <div class="sec-title">Настройки</div>
-      <div class="field">
-        <label>Таймер тишины бортового журнала, минут</label>
-        <input type="number" class="input" id="moSilence" min="1" value="20">
-      </div>
-      <div class="field">
-        <label>Тип терминала</label>
-        <div class="radio-group">
-          <label class="radio-chip checked"><input type="radio" name="moMaster" value="0" checked> Обычный модуль</label>
-          <label class="radio-chip"><input type="radio" name="moMaster" value="1"> Мастерский терминал</label>
+        <div class="trigger-row">
+          <div class="field">
+            <label>Код доступа (access_code)</label>
+            <input type="text" class="input" id="moCode" placeholder="ABC123" style="text-transform:uppercase; letter-spacing:2px;">
+          </div>
+          <button class="btn ghost" data-action="regenerateModuleCode">⟳ Сгенерировать</button>
+        </div>
+        <div class="status-line">Терминал модуля открывается по ссылке с этим кодом: <a id="moTerminalLink" href="#" target="_blank" style="color:var(--sky);word-break:break-all;"></a></div>
+        <div class="error-line" id="moduleCodeError"></div>
+        <div class="field">
+          <label>Таймер тишины бортового журнала, минут</label>
+          <input type="number" class="input" id="moSilence" min="1" value="20">
+        </div>
+        <div class="field">
+          <label>Тип терминала</label>
+          <div class="radio-group">
+            <label class="radio-chip checked"><input type="radio" name="moMaster" value="0" checked> Обычный модуль</label>
+            <label class="radio-chip"><input type="radio" name="moMaster" value="1"> Мастерский терминал</label>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn amber" data-action="saveModule">▸ Сохранить настройки</button>
         </div>
       </div>
-    </div>
+    </details>
 
-    <!-- ---- Текущее состояние (только просмотр, выставляется терминалом) ---- -->
+    <!-- ---- Текущее состояние ---- -->
     <div class="editor-section" id="moduleStateSection" style="display:none;">
-      <div class="sec-title">Текущее состояние (только просмотр)</div>
+      <div class="sec-title">Текущее состояние</div>
       <div class="row-list">
         <div class="row-item">
           <div class="main">
@@ -1131,9 +1146,15 @@ input.input:disabled{ opacity:.4; }
           </div>
         </div>
       </div>
+      <div class="sub-title">Действующие угрозы на этом модуле</div>
+      <div class="row-list" id="moduleAlertList"><div class="empty-line">Загрузка...</div></div>
+      <details class="fold small" id="moduleHistoryFold">
+        <summary>История угроз модуля</summary>
+        <div class="row-list" id="moduleThreatHistory"><div class="empty-line">Загрузка...</div></div>
+      </details>
     </div>
 
-    <!-- ---- Персонажи модуля ---- -->
+    <!-- ---- Камера ---- -->
     <div class="editor-section" id="moduleCameraSection" style="display:none;">
       <div class="sec-title">Камера терминала</div>
       <div class="btn-row" style="align-items:center; margin-bottom:10px;">
@@ -1143,23 +1164,7 @@ input.input:disabled{ opacity:.4; }
       <div class="photo-grid" id="modulePhotoGrid"><div class="empty-line">Загрузка...</div></div>
     </div>
 
-    <div class="editor-section" id="moduleLogSection" style="display:none;">
-      <div class="sec-title">Журнал действий терминала</div>
-      <div class="btn-row" style="align-items:center; margin-bottom:10px;">
-        <select class="input" id="moduleLogFilter" style="max-width:220px;">
-          <option value="threat">Угрозы</option>
-          <option value="">Все действия</option>
-          <option value="auth">Вход и выход</option>
-          <option value="scan">Сканирование и контент</option>
-          <option value="journal">Бортовой журнал</option>
-          <option value="camera">Снимки камеры</option>
-        </select>
-        <button class="btn ghost" data-cam="reloadLog">⟳ Обновить</button>
-        <span class="status-line" id="moduleLogCount"></span>
-      </div>
-      <div class="log-list" id="moduleLogList"><div class="empty-line">Загрузка...</div></div>
-    </div>
-
+    <!-- ---- Бортовой журнал ---- -->
     <div class="editor-section" id="moduleJournalSection" style="display:none;">
       <div class="sec-title">Бортовой журнал модуля</div>
       <div class="btn-row" style="align-items:center; margin-bottom:10px;">
@@ -1169,26 +1174,38 @@ input.input:disabled{ opacity:.4; }
       <div class="journal-list" id="moduleJournalList"><div class="empty-line">Загрузка...</div></div>
     </div>
 
-    <div class="editor-section" id="moduleCharactersSection" style="display:none;">
-      <div class="sec-title">Персонажи модуля</div>
-      <div class="row-list" id="moduleCharacterList"></div>
-    </div>
-
-    <!-- ---- Активные тревоги на модуле ---- -->
-    <div class="editor-section" id="moduleAlertsSection" style="display:none;">
-      <div class="sec-title">Активные тревоги на этом модуле</div>
-      <div class="row-list" id="moduleAlertList">
-        <div class="empty-line">Загрузка...</div>
+    <!-- ---- Журнал действий (под кнопкой) ---- -->
+    <details class="fold" id="moduleLogSection" style="display:none;">
+      <summary>Журнал действий терминала</summary>
+      <div class="editor-section">
+        <div class="btn-row" style="align-items:center; margin-bottom:10px;">
+          <select class="input" id="moduleLogFilter" style="max-width:220px;">
+            <option value="threat">Угрозы</option>
+            <option value="">Все действия</option>
+            <option value="auth">Вход и выход</option>
+            <option value="scan">Сканирование и контент</option>
+            <option value="journal">Бортовой журнал</option>
+            <option value="camera">Снимки камеры</option>
+          </select>
+          <button class="btn ghost" data-cam="reloadLog">⟳ Обновить</button>
+          <span class="status-line" id="moduleLogCount"></span>
+        </div>
+        <div class="log-list" id="moduleLogList"><div class="empty-line">Загрузка...</div></div>
       </div>
-    </div>
+    </details>
+
+    <!-- ---- Персонажи (под кнопкой) ---- -->
+    <details class="fold" id="moduleCharactersSection" style="display:none;">
+      <summary>Персонажи модуля</summary>
+      <div class="editor-section"><div class="row-list" id="moduleCharacterList"></div></div>
+    </details>
 
     <div class="error-line" id="moduleEditorError"></div>
     <div class="ok-line" id="moduleEditorOk"></div>
 
     <div class="btn-row">
-      <button class="btn amber" data-action="saveModule">▸ Сохранить</button>
-      <button class="btn danger" id="deleteModuleBtn" style="display:none;" data-action="confirmDeleteModule">Удалить модуль</button>
-      <button class="btn ghost" data-action="closeModuleEditor">Отмена</button>
+      <button class="btn amber" id="moSaveNewBtn" data-action="saveModule">▸ Создать модуль</button>
+      <button class="btn ghost" data-action="closeModuleEditor">Закрыть</button>
     </div>
   </div>
 </div>
@@ -2497,7 +2514,12 @@ const Admin = {
     const item = this.editingModuleId ? this.modules.find(m => m.id === this.editingModuleId) : null;
 
     document.getElementById('moduleEditorTitle').textContent = item ? `Редактирование: ${item.name || item.access_code}` : 'Новый модуль';
-    document.getElementById('deleteModuleBtn').style.display = item ? 'inline-block' : 'none';
+    // для существующего модуля настройки свёрнуты под кнопку, для нового — открыты
+    document.getElementById('moduleSettingsFold').open = !item;
+    document.getElementById('moSaveNewBtn').style.display = item ? 'none' : '';
+    document.getElementById('moduleHistoryFold').open = false;
+    document.getElementById('moduleLogSection').open = false;
+    document.getElementById('moduleCharactersSection').open = false;
 
     document.getElementById('moName').value = item ? (item.name || '') : '';
     document.getElementById('moCode').value = item ? (item.access_code || '') : this.generateTriggerCode();
@@ -2526,19 +2548,16 @@ const Admin = {
     }
 
     const charSection = document.getElementById('moduleCharactersSection');
-    const alertSection = document.getElementById('moduleAlertsSection');
     if (item) {
       charSection.style.display = 'block';
-      alertSection.style.display = 'block';
       document.getElementById('moduleJournalSection').style.display = 'block';
       ['moduleCameraSection', 'moduleLogSection'].forEach(id => document.getElementById(id).style.display = 'block');
-      this.loadModulePhotos(item.id); this.loadModuleLog(item.id);
+      this.loadModulePhotos(item.id);
       this.loadModuleJournal(item.id);
       this.renderModuleCharacterList(item.id);
       this.loadModuleAlerts(item.id);
     } else {
       charSection.style.display = 'none';
-      alertSection.style.display = 'none';
       document.getElementById('moduleJournalSection').style.display = 'none';
       ['moduleCameraSection', 'moduleLogSection'].forEach(id => document.getElementById(id).style.display = 'none');
       this.moduleAlerts = [];
@@ -2882,13 +2901,13 @@ const Admin = {
       meta.className = 'meta';
       const who = e.characters ? (e.characters.name || '—') + (e.characters.badge_id ? ` [${e.characters.badge_id}]` : '') : '—';
       const left = document.createElement('span');
-      left.textContent = `${who} · ${new Date(e.created_at).toLocaleString()}${e.type === 'audio' ? ' · 🎙 ГОЛОС' : ''}`;
+      left.innerHTML = `<b style="color:var(--cyan)">${this.escape(who)}</b> <span style="color:var(--amber);font-weight:500">${new Date(e.created_at).toLocaleString()}</span>${e.type === 'audio' ? ' <span style="color:var(--ink-400);font-weight:400">· 🎙 голос</span>' : ''}`;
       meta.appendChild(left);
       const url = this.journalMediaUrl(e.media_path);
       if (url) {
         const dl = document.createElement('a');
         dl.href = url; dl.target = '_blank'; dl.rel = 'noopener'; dl.download = '';
-        dl.textContent = '⤓ скачать';
+        dl.textContent = '⤓'; dl.title = 'Скачать запись'; dl.className = 'dl-ico';
         meta.appendChild(dl);
       }
       div.appendChild(meta);
@@ -3513,14 +3532,61 @@ Object.assign(Admin, {
 Object.assign(Admin, {
   async loadModuleAlerts(moduleId) {
     const el = document.getElementById('moduleAlertList');
-    el.innerHTML = '<div class="empty-line">Загрузка...</div>';
-    const { data, error } = await sb.from('alerts').select('*').eq('active', true).order('created_at', { ascending: false });
+    const { data, error } = await sb.from('alerts').select('*').eq('active', true).order('starts_at', { ascending: true });
+    if (moduleId !== this.editingModuleId) return;
     if (error) { el.innerHTML = `<div class="empty-line" style="color:var(--red)">Ошибка загрузки: ${this.escape(error.message)}</div>`; return; }
-    this.moduleAlerts = (data || []).filter(a => {
-      if ((a.excluded_module_ids || []).includes(moduleId)) return false;
-      return a.target_type === 'all' || a.target_module_id === moduleId || (a.target_module_ids || []).includes(moduleId);
-    }).map(a => Object.assign({}, a, { target_type: (a.target_type === 'all' || (a.target_module_ids || []).length > 1) ? 'all' : 'module' }));
+    const now = Date.now();
+    this.moduleAlerts = (data || []).filter(a => this.alertAppliesTo(a, moduleId) && !(a.excluded_module_ids || []).includes(moduleId)
+      && !(a.ends_at && new Date(a.ends_at).getTime() <= now));
     this.renderModuleAlertList();
+    if (document.getElementById('moduleHistoryFold').open) this.loadThreatHistory(moduleId);
+  },
+  alertAppliesTo(a, moduleId) {
+    return a.target_type === 'all' || a.target_module_id === moduleId || (a.target_module_ids || []).includes(moduleId);
+  },
+  renderModuleAlertList() {
+    const el = document.getElementById('moduleAlertList');
+    if (!this.moduleAlerts.length) { el.innerHTML = '<div class="empty-line">Сейчас на модуле угроз нет.</div>'; return; }
+    const now = Date.now();
+    el.innerHTML = this.moduleAlerts.map(a => {
+      const d = THREAT_DEFS[a.threat_type] || THREAT_DEFS.alert;
+      const running = new Date(a.starts_at).getTime() <= now;
+      const several = a.target_type === 'all' || (a.target_module_ids || []).length > 1;
+      const pill = running ? '<span class="pill warn">ИДЁТ</span>' : '<span class="pill amber">ЗАПЛАНИРОВАНА</span>';
+      const until = a.ends_at ? new Date(a.ends_at).toLocaleString() : 'без срока';
+      const actions = (running && several ? `<button class="btn ghost" data-action="excludeAlertFromModule" data-id="${a.id}">Снять с этого модуля</button>` : '')
+        + `<button class="btn danger" data-action="deactivateModuleAlert" data-id="${a.id}">${several ? 'Снять везде' : (running ? 'Снять' : 'Отменить')}</button>`;
+      return `<div class="row-item threat-row" style="--tc:${this.escape(a.color || d.color)}">
+          <div class="main">
+            <span class="name">${d.icon} ${this.escape(a.label)}</span>
+            <span class="meta">${several ? 'НЕСКОЛЬКО МОДУЛЕЙ' : 'ТОЛЬКО ЭТОТ МОДУЛЬ'} · С ${new Date(a.starts_at).toLocaleString()} · ДО ${until}</span>
+          </div>
+          <div class="actions">${pill}${actions}</div>
+        </div>`;
+    }).join('');
+  },
+  async loadThreatHistory(moduleId) {
+    const el = document.getElementById('moduleThreatHistory');
+    const { data, error } = await sb.from('alerts').select('*').order('starts_at', { ascending: false }).limit(300);
+    if (moduleId !== this.editingModuleId) return;
+    if (error) { el.innerHTML = `<div class="empty-line" style="color:var(--red)">${this.escape(error.message)}</div>`; return; }
+    const now = Date.now();
+    const list = (data || []).filter(a => this.alertAppliesTo(a, moduleId)).slice(0, 100);
+    if (!list.length) { el.innerHTML = '<div class="empty-line">Угроз на этом модуле ещё не было.</div>'; return; }
+    el.innerHTML = list.map(a => {
+      const d = THREAT_DEFS[a.threat_type] || THREAT_DEFS.alert;
+      const ex = (a.excluded_module_ids || []).includes(moduleId);
+      const ended = a.ends_at && new Date(a.ends_at).getTime() <= now;
+      const future = new Date(a.starts_at).getTime() > now;
+      const st = !a.active ? ['СНЯТА МАСТЕРОМ', 'off'] : ex ? ['СНЯТА С МОДУЛЯ', 'off'] : ended ? ['ЗАКОНЧИЛАСЬ', 'off'] : future ? ['ЗАПЛАНИРОВАНА', 'amber'] : ['ИДЁТ', 'warn'];
+      return `<div class="row-item threat-row" style="--tc:${this.escape(a.color || d.color)}">
+          <div class="main">
+            <span class="name">${d.icon} ${this.escape(a.label)}</span>
+            <span class="meta">${new Date(a.starts_at).toLocaleString()}${a.ends_at ? ' — ' + new Date(a.ends_at).toLocaleTimeString() : ''}${a.params && a.params.chain_from ? ' · ИЗ СЦЕНАРИЯ' : ''}</span>
+          </div>
+          <div class="actions"><span class="pill ${st[1]}">${st[0]}</span></div>
+        </div>`;
+    }).join('');
   }
 });
 
@@ -3768,6 +3834,11 @@ document.addEventListener('click', e => {
   if (act === 'reloadLog' && A.editingModuleId) A.loadModuleLog(A.editingModuleId);
 });
 document.addEventListener('change', e => { if (e.target.id === 'moduleLogFilter' && Admin.editingModuleId) Admin.loadModuleLog(Admin.editingModuleId); });
+document.addEventListener('toggle', e => {
+  if (!Admin.editingModuleId || !e.target.open) return;
+  if (e.target.id === 'moduleHistoryFold') Admin.loadThreatHistory(Admin.editingModuleId);
+  if (e.target.id === 'moduleLogSection') Admin.loadModuleLog(Admin.editingModuleId);
+}, true);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') Admin.closeViewer(); });
 
 MasterGate.ready(() => Admin.init());
