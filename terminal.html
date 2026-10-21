@@ -946,35 +946,33 @@
 
     /* ==========================================================
        КАРТА ПОЛИГОНА ПРИ УГРОЗЕ (map/polygon-map.js)
+       Квадратная карта в центре между колонками плашек; размер и место
+       считаются по экрану (ThreatMap.layout), плашки и кнопки остаются видны.
        ========================================================== */
     #tui-map {
-      position: fixed; inset: 22px; z-index: 45; display: none;
-      background: rgba(3, 7, 18, .94); border: 1px solid var(--tui-alert-color);
-      box-shadow: 0 0 40px color-mix(in srgb, var(--tui-alert-color) 30%, transparent);
-      clip-path: polygon(18px 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%, 0 18px);
-      flex-direction: column;
+      position: fixed; z-index: 45; display: none;
+      background: #06111e; border: 1px solid var(--tui-alert-color);
+      box-shadow: 0 0 34px color-mix(in srgb, var(--tui-alert-color) 30%, transparent), 0 0 0 4px rgba(3,7,18,.85);
     }
-    #terminal-ui.alerting ~ #tui-map, body.tui-alerting #tui-map { top: 62px; }
-    #tui-map.open { display: flex; animation: tui-map-in .45s ease; }
-    @keyframes tui-map-in { from { opacity: 0; transform: scale(.97); } }
-    .tm-head { display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-bottom: 1px dashed color-mix(in srgb, var(--tui-alert-color) 50%, transparent); flex-wrap: wrap; }
-    .tm-title { font-family: var(--tui-font-ui); font-size: 18px; letter-spacing: 1.5px; color: var(--tui-alert-color); }
-    .tm-sub { font-family: var(--tui-font-body); font-weight: 600; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; color: var(--tui-ink-100); flex: 1; }
-    .tm-btn { font-family: var(--tui-font-ui); font-size: 12px; letter-spacing: 1.4px; padding: 9px 16px; cursor: pointer;
-      background: color-mix(in srgb, var(--tui-alert-color) 14%, transparent); border: 1px solid var(--tui-alert-color); color: var(--tui-alert-color); }
-    .tm-btn:hover { background: var(--tui-alert-color); color: #041018; }
-    .tm-body { flex: 1; display: grid; grid-template-columns: 1fr 300px; min-height: 0; }
-    .tm-map { min-height: 0; min-width: 0; padding: 8px; }
-    .tm-legend { border-left: 1px dashed color-mix(in srgb, var(--tui-alert-color) 40%, transparent); padding: 14px 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-    .tm-legend h4 { font-family: var(--tui-font-body); font-size: 11px; letter-spacing: 2px; color: var(--tui-ink-400); margin: 4px 0 2px; font-weight: 600; }
-    .tm-pt { display: grid; grid-template-columns: 30px 1fr; gap: 10px; align-items: center; font-family: var(--tui-font-body); font-weight: 600; text-transform: uppercase; }
-    .tm-pt svg { width: 30px; height: 30px; }
-    .tm-pt b { display: block; font-size: 14px; letter-spacing: .8px; }
-    .tm-pt span { font-family: var(--tui-font-digital); font-size: 12px; color: var(--tui-ink-400); letter-spacing: 1px; }
-    .tm-key { display: grid; grid-template-columns: 34px 1fr; gap: 8px; align-items: center; font-family: var(--tui-font-body); font-size: 11.5px; color: var(--tui-ink-400); text-transform: uppercase; letter-spacing: .8px; }
-    .tm-key i { display: block; height: 14px; border: 1px solid; }
+
+    /* компактная карточка угрозы, пока открыта карта и места мало */
+    #tui-threat-card.map-compact { padding: 8px 14px; }
+    #tui-threat-card.map-compact .tc-instr { font-size: clamp(12px, 1vw, 15px); margin-top: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    #tui-threat-card.map-compact .tc-row { margin-top: 4px; }
+    #tui-threat-card.map-compact .tc-timer-val { font-size: clamp(20px, 1.8vw, 28px); }
+    #tui-threat-card.map-compact .tc-head { display: none; }   /* название и так в баннере сверху */
+    #tui-threat-card.map-compact .tc-instr { margin-top: 0; }
+    #tui-threat-card.map-compact .tc-task { font-size: 11px; padding: 4px 8px; }
+    #tui-threat-card.map-compact .tc-timer-label { font-size: 10px; }
+    #tui-map.open { display: block; animation: tui-map-in .45s ease; }
+    @keyframes tui-map-in { from { opacity: 0; transform: scale(.96); } }
+    #tm-map { position: absolute; inset: 0; }
+    .tm-ctrl { position: absolute; top: 8px; right: 8px; z-index: 4; display: flex; gap: 6px; }
+    .tm-btn { font-family: var(--tui-font-body); font-weight: 700; font-size: 13px; line-height: 1; width: 34px; height: 34px; cursor: pointer;
+      background: rgba(2,8,16,.78); border: 1px solid var(--tui-alert-color); color: var(--tui-alert-color); display: flex; align-items: center; justify-content: center; }
+    .tm-btn:hover, .tm-btn.on { background: var(--tui-alert-color); color: #041018; }
     #tui-map-chip {
-      position: fixed; left: 22px; bottom: 16px; z-index: 44; display: none;
+      position: fixed; z-index: 44; display: none;
       font-family: var(--tui-font-ui); font-size: 13px; letter-spacing: 1.4px; padding: 11px 18px; cursor: pointer;
       background: color-mix(in srgb, var(--tui-alert-color) 18%, rgba(3,7,18,.9)); border: 1px solid var(--tui-alert-color); color: var(--tui-alert-color);
       box-shadow: 0 0 18px color-mix(in srgb, var(--tui-alert-color) 40%, transparent); animation: tui-chip 1.6s ease-in-out infinite;
@@ -982,7 +980,6 @@
     #tui-map-chip.show { display: block; }
     #tui-map.open ~ #tui-map-chip { display: none; }
     @keyframes tui-chip { 50% { box-shadow: 0 0 30px color-mix(in srgb, var(--tui-alert-color) 75%, transparent); } }
-    @media (max-width: 1100px) { .tm-body { grid-template-columns: 1fr; grid-template-rows: 1fr auto; } .tm-legend { border-left: 0; border-top: 1px dashed var(--tui-edge); flex-direction: row; flex-wrap: wrap; max-height: 140px; } }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -1452,14 +1449,10 @@
 
 <!-- ======= КАРТА ПОЛИГОНА (при угрозе с точками) ======= -->
 <div id="tui-map" role="dialog" aria-label="Карта полигона">
-  <div class="tm-head">
-    <span class="tm-title">КАРТА ПОЛИГОНА</span>
-    <span class="tm-sub" id="tm-sub"></span>
-    <button class="tm-btn" data-action="collapseMap">СВЕРНУТЬ ▾</button>
-  </div>
-  <div class="tm-body">
-    <div class="tm-map" id="tm-map"></div>
-    <aside class="tm-legend" id="tm-legend"></aside>
+  <div id="tm-map"></div>
+  <div class="tm-ctrl">
+    <button class="tm-btn" data-action="toggleMapSat" id="tm-sat" title="Спутниковый снимок"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="6" height="6" transform="rotate(45 12 12)"/><path d="M4 4l4 4M16 16l4 4M2 9l4-4M18 22l4-4"/></svg></button>
+    <button class="tm-btn" data-action="collapseMap" title="Свернуть">▾</button>
   </div>
 </div>
 <button id="tui-map-chip" data-action="openMap">▣ КАРТА</button>
@@ -2588,7 +2581,7 @@
      сворачивается в кнопку «КАРТА» в левом нижнем углу.
      ========================================================================= */
   const ThreatMap = {
-    view: null, alertId: null, points: [],
+    view: null, alertId: null, points: [], sat: false,
     show(alert) {
       const pts = (alert.params && alert.params.points) || [];
       const chip = document.getElementById('tui-map-chip');
@@ -2596,41 +2589,72 @@
       const sameAlert = this.alertId === alert.id;
       const changed = JSON.stringify(pts) !== JSON.stringify(this.points);
       this.points = pts;
-      if (!this.view) this.view = PolygonMap.create(document.getElementById('tm-map'), { mode: 'view', points: pts, imageUrl: 'map/polygon.jpg' });
+      if (!this.view) this.view = PolygonMap.create(document.getElementById('tm-map'), { mode: 'view', points: pts });
       else if (changed) this.view.setPoints(pts);
-      document.getElementById('tm-sub').textContent = alert.label || '';
-      this.renderLegend();
-      chip.textContent = `▣ КАРТА · ${pts.length} ${pts.length === 1 ? 'ТОЧКА' : pts.length < 5 ? 'ТОЧКИ' : 'ТОЧЕК'}`;
+      chip.textContent = `▣ КАРТА · ${pts.length}`;
       chip.classList.add('show');
       if (!sameAlert) { this.alertId = alert.id; this.open(); }   // новая угроза — карта разворачивается сама
+      this.layout();
+      // интерфейс сдвигается под баннер тревоги с анимацией — пересчитываем после неё
+      [450, 1000].forEach(ms => setTimeout(() => this.layout(), ms));
     },
-    renderLegend() {
-      const T = PolygonMap.TYPES;
-      const icon = (type) => {
-        const t = T[type] || T.danger, c = t.color;
-        const shapes = { tri: '<path d="M15,4 L27,25 L3,25 Z"/>', square: '<rect x="5" y="5" width="20" height="20"/>', diamond: '<path d="M15,2 L28,15 L15,28 L2,15 Z"/>', hex: '<path d="M15,3 L26,9 L26,21 L15,27 L4,21 L4,9 Z"/>', circle: '<circle cx="15" cy="15" r="11"/>' };
-        return `<svg viewBox="0 0 30 30"><g fill="${c}" stroke="#fff" stroke-width="1.6">${shapes[t.shape]}</g></svg>`;
+    // квадрат в центре между колонками плашек, под шапкой и над карточкой угрозы и кнопками
+    layout() {
+      const box = document.getElementById('tui-map'), chip = document.getElementById('tui-map-chip');
+      const vw = window.innerWidth, vh = window.innerHeight, gap = 12;
+      const r = id => { const e = document.getElementById(id); if (!e) return null; const b = e.getBoundingClientRect(); return b.width && b.height ? b : null; };
+      const dock = r('tui-center');
+      // низ шапки — с учётом выступающих из неё часов и даты
+      let headBottom = 16;
+      document.querySelectorAll('#tui-header, #tui-header *').forEach(e => { const b = e.getBoundingClientRect(); if (b.height && b.bottom < vh * .4) headBottom = Math.max(headBottom, b.bottom); });
+      const cardEl = document.getElementById('tui-threat-card');
+      const cardOn = !!document.querySelector('#terminal-ui.threat-active #tui-threat-card.has-content') && box.classList.contains('open');
+      // ширина: сначала не задевая ни одной плашки; если карта выходит мелкой —
+      // разрешаем заходить на широкие верхние плашки; на узком экране — во всю ширину
+      const bounds = sel => {
+        let a = 16, z = vw - 16;
+        document.querySelectorAll(sel).forEach(p => {
+          const b = p.getBoundingClientRect(); if (!b.width) return;
+          if (b.left + b.width / 2 < vw / 2) a = Math.max(a, b.right + gap); else z = Math.min(z, b.left - gap);
+        });
+        return [a, z];
       };
-      const esc = s => String(s || '').replace(/[&<>]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
-      document.getElementById('tm-legend').innerHTML = '<h4>ТОЧКИ</h4>' + this.points.map((p, i) => {
-        const t = T[p.type] || T.danger;
-        return `<div class="tm-pt">${icon(p.type)}<div><b style="color:${t.color}">${i + 1}. ${esc(p.label || t.name)}</b><span>СЕКТОР ${PolygonMap.sectorOf(p.x, p.y)}</span></div></div>`;
-      }).join('') + `<h4 style="margin-top:12px">ОБОЗНАЧЕНИЯ</h4>
-        <div class="tm-key"><i style="border-color:#FFB454;border-style:dashed;border-width:3px 0 0 0;height:0"></i>граница полигона</div>
-        <div class="tm-key"><i style="border-color:#F5E6A8;background:repeating-linear-gradient(-35deg,rgba(245,230,168,.5) 0 1px,transparent 1px 6px)"></i>поле, луг</div>
-        <div class="tm-key"><i style="border-color:#B4F0C8;border-style:none;background:radial-gradient(circle,#B4F0C8 1px,transparent 1.5px) 0 0/8px 8px"></i>лес</div>
-        <div class="tm-key"><i style="border-color:#9FF5DD;border-style:dotted"></i>лагерь</div>
-        <div class="tm-key"><i style="border:0;height:4px;background:#fff;box-shadow:0 0 0 2px #04101c"></i>дорожка</div>
-        <div class="tm-key"><i style="width:16px;height:16px;border-radius:50%;background:#fff;border:2px solid #04101c"></i>купол (номер)</div>`;
+      const minSize = vh * .45;
+      let [x0, x1] = bounds('#tui-col-left .tui-panel, #tui-col-right .tui-panel');
+      if (x1 - x0 < minSize) [x0, x1] = bounds('#tui-col-left .tui-panel:not(:first-child), #tui-col-right .tui-panel:not(:first-child)');
+      if (x1 - x0 < minSize) { x0 = 16; x1 = vw - 16; }
+      const y0 = headBottom + gap, yDock = (dock ? dock.top : vh - 16) - gap;
+      // если над карточкой угрозы мало места — карточка становится компактной
+      cardEl.classList.remove('map-compact');
+      let card = cardOn ? cardEl.getBoundingClientRect() : null;
+      if (card && (card.top - gap - y0) < Math.min(x1 - x0, yDock - y0) * .78) { cardEl.classList.add('map-compact'); card = cardEl.getBoundingClientRect(); }
+      const y1 = (card ? card.top : yDock + gap) - gap;
+      const ratio = (window.PolygonMap ? PolygonMap.W / PolygonMap.H : 1.036);
+      let w = x1 - x0, h = y1 - y0;
+      if (w / h > ratio) w = h * ratio; else h = w / ratio;
+      box.style.width = Math.round(w) + 'px'; box.style.height = Math.round(h) + 'px';
+      box.style.left = Math.round(x0 + (x1 - x0 - w) / 2) + 'px'; box.style.top = Math.round(y0 + (y1 - y0 - h) / 2) + 'px';
+      chip.style.left = Math.round(x0) + 'px'; chip.style.top = Math.round(y0) + 'px';
     },
-    open() { document.getElementById('tui-map').classList.add('open'); },
-    collapse() { document.getElementById('tui-map').classList.remove('open'); },
+    toggleSat() {
+      this.sat = !this.sat;
+      if (this.view) this.view.setSatellite(this.sat);
+      document.getElementById('tm-sat').classList.toggle('on', this.sat);
+    },
+    open() { document.getElementById('tui-map').classList.add('open'); this.layout(); setTimeout(() => this.layout(), 450); },
+    collapse() { document.getElementById('tui-map').classList.remove('open'); document.getElementById('tui-threat-card').classList.remove('map-compact'); },
     hide() {
       this.collapse();
       document.getElementById('tui-map-chip').classList.remove('show');
       this.alertId = null; this.points = [];
     }
   };
+  window.TUI_ThreatMap = ThreatMap;
+  window.addEventListener('resize', () => { if (ThreatMap.alertId) setTimeout(() => ThreatMap.layout(), 60); });
+  // положение плашек меняется с анимацией (баннер тревоги, тряска) — подстраиваемся по её окончании и раз в 2 с
+  document.getElementById('tui-shell').addEventListener('transitionend', () => { if (ThreatMap.alertId) ThreatMap.layout(); });
+  setInterval(() => { if (ThreatMap.alertId && document.getElementById('tui-map').classList.contains('open')) ThreatMap.layout(); }, 2000);
+
 
   const ThreatEngine = {
     current: null, pattern: null, sev: 1, startedAt: 0,
@@ -3871,6 +3895,7 @@
       case 'saveJournalEntry': App.saveJournalEntry(); break;
       case 'openMap': ThreatMap.open(); break;
       case 'collapseMap': ThreatMap.collapse(); break;
+      case 'toggleMapSat': ThreatMap.toggleSat(); break;
       case 'toggleVoiceRecord': App.toggleVoiceRecord(); break;
       case 'pickAudioFile': App.pickAudioFile(); break;
       case 'sendVoiceEntry': App.sendVoiceEntry(); break;

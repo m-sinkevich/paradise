@@ -430,13 +430,14 @@ input.input:disabled{ opacity:.4; }
 
 /* ---------- Точки на карте ---------- */
 .map-edit{ display:grid; grid-template-columns: minmax(0,1.6fr) minmax(260px,1fr); gap:16px; margin-bottom:14px; }
-.map-edit-canvas{ border:1px solid var(--edge); background:#030712; aspect-ratio: 1000 / 922; }
+.map-edit-canvas{ border:1px solid var(--edge); background:#06111e; aspect-ratio: 2192 / 2116; }
 .pt-list{ display:flex; flex-direction:column; gap:8px; margin-top:10px; }
 .pt-row{ display:grid; grid-template-columns: 26px 1fr auto; gap:6px; align-items:center; padding:6px; border:1px solid var(--edge); }
 .pt-row.sel{ border-color: var(--cyan); background: rgba(94,234,212,.06); }
 .pt-row .pt-n{ width:24px; height:24px; display:flex; align-items:center; justify-content:center; font-weight:700; color:#04101c; }
 .pt-row .pt-f{ display:flex; flex-direction:column; gap:5px; min-width:0; }
-.pt-row select, .pt-row input{ padding:6px 8px; font-size:11px; }
+.pt-row select, .pt-row input, .pt-row textarea{ padding:6px 8px; font-size:11px; }
+.pt-row textarea{ min-height:44px; resize:vertical; }
 .pt-row .pt-sec{ font-size:9.5px; color:var(--ink-400); letter-spacing:.6px; }
 #thPtType .radio-chip{ padding:6px 9px; font-size:10px; }
 @media (max-width:900px){ .map-edit{ grid-template-columns:1fr; } }
@@ -3502,7 +3503,7 @@ Object.assign(Admin, {
       if (this.mapEd) this.mapEd.setOption('defaultType', r.value);
     }));
     const opts = {
-      mode: 'edit', imageUrl: 'map/polygon.jpg', points: [], max: 6, defaultType: this.ptType,
+      mode: 'edit', points: [], max: 6, defaultType: this.ptType,
       onChange: (pts, sel) => { this.th.points = pts; this.ptSel = sel; this.renderPointList(); },
       onSelect: (sel) => { this.ptSel = sel; this.renderPointList(); },
       onLimit: () => this.showError('На карте уже 6 точек — удалите одну, чтобы поставить новую.')
@@ -3511,13 +3512,14 @@ Object.assign(Admin, {
     document.getElementById('thPtList').addEventListener('input', e => {
       const i = +e.target.dataset.i; if (isNaN(i)) return;
       if (e.target.dataset.f === 'label') this.th.points[i].label = e.target.value;
+      if (e.target.dataset.f === 'info') { this.th.points[i].info = e.target.value; this.mapEd.setPoints(this.th.points); return; }
       if (e.target.dataset.f === 'type') this.th.points[i].type = e.target.value;
       this.mapEd.setPoints(this.th.points);
       if (e.target.dataset.f === 'type') this.renderPointList();
     });
   },
   setPoints(list) {
-    this.th.points = (list || []).map(p => ({ x: p.x, y: p.y, type: p.type || 'danger', label: p.label || '' }));
+    this.th.points = (list || []).map(p => PolygonMap.upgrade({ x: p.x, y: p.y, type: p.type || 'danger', label: p.label || '', info: p.info || '', v: p.v }));
     this.ptSel = -1;
     if (this.mapEd) this.mapEd.setPoints(this.th.points);
     this.renderPointList();
@@ -3533,6 +3535,7 @@ Object.assign(Admin, {
         <div class="pt-f">
           <select class="input" data-i="${i}" data-f="type">${Object.entries(T).map(([k, x]) => `<option value="${k}" ${k === p.type ? 'selected' : ''}>${x.name}</option>`).join('')}</select>
           <input class="input" data-i="${i}" data-f="label" value="${this.escape(p.label)}" placeholder="Подпись: ${this.escape(t.name)}">
+          <textarea class="input" data-i="${i}" data-f="info" rows="2" placeholder="Доп. информация — всплывает при нажатии на точку">${this.escape(p.info || '')}</textarea>
           <span class="pt-sec">СЕКТОР ${PolygonMap.sectorOf(p.x, p.y)}</span>
         </div>
         <button type="button" class="btn danger" data-th="delPoint" data-i="${i}">✕</button>
@@ -3544,7 +3547,7 @@ Object.assign(Admin, {
 (function () {
   const origRead = Admin.readConfig, origFill = Admin.fillForm, origWire = Admin.wireForm, origDefault = Admin.defaultConfig;
   Admin.defaultConfig = function (pattern) { const c = origDefault.call(this, pattern); c.points = []; return c; };
-  Admin.readConfig = function () { const c = origRead.call(this); c.points = (this.th.points || []).map(p => ({ x: p.x, y: p.y, type: p.type, label: (p.label || '').trim() })); return c; };
+  Admin.readConfig = function () { const c = origRead.call(this); c.points = (this.th.points || []).map(p => ({ x: p.x, y: p.y, type: p.type, label: (p.label || '').trim(), info: (p.info || '').trim(), v: 2 })); return c; };
   Admin.fillForm = function (c, keep) { origFill.call(this, c, keep); if (!keep) this.setPoints(c.points || []); };
   Admin.wireForm = function () { this.th.points = []; this.initMapEditor(); origWire.call(this); };
 })();
