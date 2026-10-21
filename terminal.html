@@ -839,6 +839,41 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     #tui-header.authenticated ~ * #tui-panel-journal, body.tui-auth #tui-panel-journal { cursor: pointer; }
     body.tui-auth #tui-panel-journal:hover { box-shadow: 0 0 0 1px var(--tui-cyan), 0 0 18px rgba(94,234,212,.35); }
     body.tui-auth #tui-panel-journal .tui-panel-title::after { content: '  ✎ ЗАПИСАТЬ'; font-size: .7em; color: var(--tui-amber); letter-spacing: 1px; opacity: .8; }
+
+    /* ---- Связь ---- */
+    .tui-badge { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--tui-amber); color: #241300; font-size: 11px; line-height: 18px; text-align: center; font-family: var(--tui-font-mono); }
+    .tui-badge:empty { display: none; }
+    #tui-msg-ind { position: fixed; z-index: 46; right: 22px; bottom: 96px; display: none; flex-direction: column; align-items: flex-end; gap: 2px; cursor: pointer;
+      background: rgba(3,7,18,.9); border: 1px solid var(--tui-amber); color: var(--tui-amber); padding: 9px 14px; font-family: var(--tui-font-body); text-transform: uppercase; letter-spacing: 1px;
+      box-shadow: 0 0 20px rgba(255,180,84,.35); animation: tui-chip-amber 1.4s ease-in-out infinite; }
+    #tui-msg-ind.show { display: flex; }
+    #tui-msg-ind b { font-size: 13px; }
+    #tui-msg-ind span { font-size: 10.5px; color: var(--tui-ink-100); opacity: .85; }
+    @keyframes tui-chip-amber { 50% { box-shadow: 0 0 34px rgba(255,180,84,.75); } }
+    .cm-box { max-width: 560px; }
+    .cm-tabs { display: flex; gap: 6px; }
+    .cm-tab { flex: 1; background: transparent; border: 1px solid var(--tui-edge); color: var(--tui-ink-400); font-family: var(--tui-font-body); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; font-size: 11px; padding: 8px; cursor: pointer; }
+    .cm-tab.on { border-color: var(--tui-cyan); color: var(--tui-cyan); background: rgba(94,234,212,.08); }
+    .cm-list { display: flex; flex-direction: column; gap: 8px; max-height: 52vh; overflow-y: auto; }
+    .cm-msg { border-left: 2px solid var(--tui-sky); padding: 8px 12px; background: rgba(255,255,255,.02); font-size: 12px; color: var(--tui-ink-100); }
+    .cm-msg.out { border-left-color: var(--tui-ink-600); opacity: .82; }
+    .cm-msg.new { border-left-color: var(--tui-amber); background: rgba(255,180,84,.06); }
+    .cm-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; font-size: 10.5px; letter-spacing: .5px; margin-bottom: 5px; }
+    .cm-meta b { color: var(--tui-cyan); }
+    .cm-msg.out .cm-meta b { color: var(--tui-ink-400); }
+    .cm-time { color: var(--tui-amber); margin-left: auto; }
+    .cm-pers { color: var(--tui-amber); border: 1px solid var(--tui-amber); padding: 0 5px; font-size: 9.5px; }
+    .cm-text { white-space: pre-wrap; line-height: 1.45; }
+    .cm-locked { color: var(--tui-ink-400); font-style: italic; }
+    .cm-msg audio, .cm-prev audio { color-scheme: dark; }
+    .cm-msg audio { width: 100%; height: 34px; margin-top: 6px; }
+    .cm-photo { max-width: 100%; max-height: 220px; margin-top: 6px; border: 1px solid var(--tui-edge); display: block; }
+    .cm-reply { margin-top: 6px; }
+    .cm-cam, .cm-prev { display: none; flex-direction: column; gap: 8px; border: 1px dashed var(--tui-edge); padding: 10px; }
+    .cm-cam.on, .cm-prev.on { display: flex; }
+    .cm-cam video, .cm-prev img { width: 100%; max-height: 260px; object-fit: contain; background: #000; }
+    .cm-prev audio { width: 100%; }
+    .cm-toast { position: sticky; bottom: 0; text-align: center; color: var(--tui-cyan); font-size: 12px; opacity: 0; transition: opacity .3s; }
     /* ==========================================================
        УГРОЗЫ (ThreatEngine): выделенная плашка, карточка с инструкцией
        и таймером, эффекты фона по типу угрозы
@@ -1277,6 +1312,10 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
           <svg viewBox="0 0 24 24"><path d="M4 5.5C4 4.7 4.7 4 5.5 4H11v16H5.5C4.7 20 4 19.3 4 18.5Z" stroke-linejoin="round"/><path d="M20 5.5C20 4.7 19.3 4 18.5 4H13v16h5.5c.8 0 1.5-.7 1.5-1.5Z" stroke-linejoin="round"/></svg>
           <span>Бортовой журнал</span>
         </button>
+        <button class="tui-dock-btn" id="tui-btn-comms" data-action="openComms">
+          <svg viewBox="0 0 24 24"><path d="M4 6h16v10H8l-4 4Z" stroke-linejoin="round"/><path d="M8 10h8M8 13h5" stroke-linecap="round"/></svg>
+          <span>Связь</span><b class="tui-badge" id="tui-comms-badge"></b>
+        </button>
         <button class="tui-dock-btn tui-danger" id="tui-btn-end" data-action="endSession">
           <svg viewBox="0 0 24 24"><path d="M12 3v9" stroke-linecap="round"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0" stroke-linecap="round"/></svg>
           <span>Завершить сеанс</span>
@@ -1494,6 +1533,49 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   </div>
 </div>
 <button id="tui-map-chip" data-action="openMap">▣ КАРТА</button>
+
+<!-- ======= СВЯЗЬ ======= -->
+<button id="tui-msg-ind" data-action="openComms"></button>
+<div class="tui-modal-veil" id="commsModal">
+  <div class="tui-modal-box cm-box">
+    <div class="tui-modal-head">
+      <span class="tui-modal-title">СВЯЗЬ</span>
+      <button class="tui-modal-close" data-action="closeComms">✕</button>
+    </div>
+    <div class="cm-tabs">
+      <button class="cm-tab on" data-cm="tab" data-tab="inbox">Сообщения</button>
+      <button class="cm-tab" data-cm="tab" data-tab="send">Написать</button>
+    </div>
+    <div id="cmInbox"><div class="cm-list" id="cmList"></div></div>
+    <div id="cmSend" style="display:none">
+      <div class="tui-field">
+        <label>Кому</label>
+        <select class="tui-input" id="cmTo"></select>
+        <p class="tui-status-line" id="cmNoCh" style="display:none">Каналов связи пока нет. Доступ выдаёт мастер или открывает QR-код канала.</p>
+      </div>
+      <div class="tui-field">
+        <label>Сообщение</label>
+        <textarea class="tui-textarea" id="cmText" rows="3" placeholder="Текст сообщения (или подпись к голосу и фото)"></textarea>
+      </div>
+      <div class="tui-voice-row">
+        <button class="tui-modal-btn" id="cmSendText" data-cm="sendText">Отправить текст</button>
+        <button class="tui-modal-btn ghost tui-voice-btn" id="cmVoiceBtn" data-cm="rec">● Голос</button>
+        <button class="tui-modal-btn ghost" id="cmPhotoBtn" data-cm="cam">📷 Фото</button>
+        <span class="tui-voice-timer" id="cmTimer"></span>
+      </div>
+      <div class="cm-cam" id="cmCamBox">
+        <video id="cmCam" muted playsinline></video>
+        <div class="tui-voice-row"><button class="tui-modal-btn" data-cm="snap">◉ Снять</button><button class="tui-modal-btn ghost" data-cm="camOff">Отмена</button></div>
+      </div>
+      <div class="cm-prev" id="cmPrevBox">
+        <div id="cmPrev"></div>
+        <div class="tui-voice-row"><button class="tui-modal-btn" data-cm="sendPending">Отправить</button><button class="tui-modal-btn ghost" data-cm="discard">Удалить</button></div>
+      </div>
+      <div class="tui-error-line" id="cmErr"></div>
+    </div>
+    <div class="cm-toast" id="cmToast"></div>
+  </div>
+</div>
 
 <!-- ======= ЛОГ РАЗРАБОТЧИКА ======= -->
 <button id="tui-devlog-toggle" data-action="toggleDevLog" title="Лог">log</button>
@@ -3195,6 +3277,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       document.getElementById('tui-char-id-badge').textContent = character.badge_id || '';
       document.getElementById('tui-header').classList.add('authenticated');
       document.body.classList.add('tui-auth');
+      Comms.loadChannels(); Comms.renderIndicator();
       document.getElementById('tui-dock').classList.add('visible');
 
       this.startSessionTimers(character);
@@ -3286,6 +3369,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       this.currentCharacter = null;
       document.getElementById('tui-header').classList.remove('authenticated');
       document.body.classList.remove('tui-auth');
+      Comms.close(); Comms.target = null; Comms.loadChannels();
       document.getElementById('tui-dock').classList.remove('visible');
       document.getElementById('tui-session-timer').textContent = "—:—";
       this.closeJournalModal();
@@ -3537,6 +3621,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 
     async resolveContentByCode(code) {
       if (await ThreatEngine.tryCode(code)) return;
+      if (await Comms.tryCode(code)) return;
       const item = await DB.findContentByTrigger(code);
       const errEl = document.getElementById('scannerModalError');
       if (!item) {
@@ -3929,6 +4014,310 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     }
   };
 
+
+  /* =========================================================================
+     СВЯЗЬ: сообщения между модулями и персонажами (comm_channels, comm_grants,
+     comm_messages). Писать можно по каналам, доступ к которым выдал мастер или
+     открыл QR-код. Личные сообщения читает только адресат после входа.
+     ========================================================================= */
+  const Comms = {
+    msgs: [], channels: [], modules: {}, rec: null, pending: null, camStream: null, tab: 'inbox', lastSeenId: null,
+    sel: 'id,channel_id,from_master,from_module_id,from_character_id,to_master,to_module_id,to_character_id,kind,text,media_path,reply_to,allow_reply,read_at,created_at,' +
+         'from_char:characters!from_character_id(name),to_char:characters!to_character_id(name)',
+    esc: s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])),
+    url(path) { return /^https?:/.test(path) ? path : sb.storage.from(MEDIA_BUCKET).getPublicUrl(path).data.publicUrl; },
+    modName(id) { return id && this.modules[id] ? this.modules[id] : 'модуль'; },
+    me() { return DB.moduleRow ? DB.moduleRow.id : null; },
+
+    async start() {
+      if (!DB.moduleRow) return;
+      const { data: mods } = await sb.from('modules').select('id,name');
+      (mods || []).forEach(m => this.modules[m.id] = m.name);
+      sb.channel('comms-' + this.me())
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comm_messages', filter: `to_module_id=eq.${this.me()}` }, () => this.refresh(true))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'comm_grants' }, () => this.loadChannels())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'comm_channels' }, () => this.loadChannels())
+        .subscribe();
+      await this.refresh(false);
+      setInterval(() => this.refresh(true), 20000);
+    },
+
+    async refresh(notify) {
+      const me = this.me(); if (!me) return;
+      const { data, error } = await sb.from('comm_messages').select(this.sel)
+        .or(`to_module_id.eq.${me},from_module_id.eq.${me}`).order('created_at', { ascending: false }).limit(120);
+      if (error) { if (!/comm_messages/.test(error.message)) console.error(error); return; }
+      const newest = (data || []).find(m => m.to_module_id === me);
+      if (notify && newest && newest.id !== this.lastSeenId && !newest.read_at) this.beep();
+      this.lastSeenId = newest ? newest.id : null;
+      this.msgs = data || [];
+      this.renderIndicator();
+      if (document.getElementById('commsModal').classList.contains('open')) { this.renderInbox(); this.markRead(); }
+      this.loadChannels();
+    },
+
+    // непрочитанное: общее для модуля + личные (по именам адресатов)
+    unread() { const me = this.me(); return this.msgs.filter(m => m.to_module_id === me && !m.read_at); },
+    renderIndicator() {
+      const un = this.unread(), ind = document.getElementById('tui-msg-ind'), badge = document.getElementById('tui-comms-badge');
+      if (!un.length) { ind.classList.remove('show'); badge.textContent = ''; return; }
+      const names = [...new Set(un.filter(m => m.to_character_id).map(m => (m.to_char && m.to_char.name) || 'персонаж'))];
+      const common = un.some(m => !m.to_character_id);
+      ind.innerHTML = `<b>✉ ${un.length === 1 ? 'НОВОЕ СООБЩЕНИЕ' : 'НОВЫХ СООБЩЕНИЙ: ' + un.length}</b>` +
+        (names.length ? `<span>${common ? 'в т. ч. ' : ''}лично: ${this.esc(names.join(', ')).toUpperCase()}</span>` : '');
+      ind.classList.add('show');
+      badge.textContent = un.length;
+    },
+
+    async loadChannels() {
+      const me = this.me(); if (!me) return;
+      const ch = App.currentCharacter;
+      const q = sb.from('comm_grants').select('channel_id');
+      const { data: g } = await (ch ? q.or(`module_id.eq.${me},character_id.eq.${ch.id}`) : q.eq('module_id', me));
+      const ids = [...new Set((g || []).map(x => x.channel_id))];
+      if (!ids.length) { this.channels = []; this.renderCompose(); return; }
+      const { data } = await sb.from('comm_channels').select('*').in('id', ids).eq('active', true).order('name');
+      this.channels = data || [];
+      this.renderCompose();
+    },
+
+    beep() {
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext; this.ac = this.ac || new AC();
+        const t = this.ac.currentTime;
+        [0, 0.18].forEach((d, i) => {
+          const o = this.ac.createOscillator(), g = this.ac.createGain();
+          o.frequency.value = i ? 1320 : 990; o.type = 'sine';
+          g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.25, t + d + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.16);
+          o.connect(g); g.connect(this.ac.destination); o.start(t + d); o.stop(t + d + 0.2);
+        });
+      } catch (e) {}
+    },
+
+    /* ---------- окно «Связь» ---------- */
+    open() {
+      if (!App.currentCharacter) { this.flashHint(); return; }
+      this.switchTab(this.unread().length || !this.channels.length ? 'inbox' : 'send');
+      document.getElementById('commsModal').classList.add('open');
+      this.loadChannels(); this.renderInbox(); this.markRead();
+    },
+    close() { this.stopRec(true); this.stopCam(); this.discard(); document.getElementById('commsModal').classList.remove('open'); },
+    flashHint() {
+      const ind = document.getElementById('tui-msg-ind');
+      const old = ind.innerHTML; ind.innerHTML = '<b>✉ АВТОРИЗУЙТЕСЬ, ЧТОБЫ ПРОЧИТАТЬ</b>';
+      setTimeout(() => this.renderIndicator(), 2200);
+    },
+    switchTab(t) {
+      this.tab = t;
+      document.querySelectorAll('#commsModal .cm-tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+      document.getElementById('cmInbox').style.display = t === 'inbox' ? '' : 'none';
+      document.getElementById('cmSend').style.display = t === 'send' ? '' : 'none';
+    },
+    visible(m) {   // личное чужое сообщение — только заголовок
+      const me = this.me(), ch = App.currentCharacter;
+      return !(m.to_module_id === me && m.to_character_id && (!ch || ch.id !== m.to_character_id));
+    },
+    async markRead() {
+      const me = this.me();
+      const ids = this.msgs.filter(m => m.to_module_id === me && !m.read_at && this.visible(m)).map(m => m.id);
+      if (!ids.length) return;
+      const now = new Date().toISOString();
+      this.msgs.forEach(m => { if (ids.includes(m.id)) m.read_at = now; });
+      this.renderIndicator();
+      await sb.from('comm_messages').update({ read_at: now }).in('id', ids);
+    },
+    senderName(m) {
+      if (m.from_master) return 'ЦЕНТР УПРАВЛЕНИЯ';
+      return this.modName(m.from_module_id).toUpperCase() + (m.from_char && m.from_char.name ? ' · ' + m.from_char.name : '');
+    },
+    targetName(m) {
+      if (m.to_master) return 'ЦЕНТР УПРАВЛЕНИЯ';
+      return this.modName(m.to_module_id).toUpperCase() + (m.to_char && m.to_char.name ? ' · ' + m.to_char.name : '');
+    },
+    renderInbox() {
+      const me = this.me(), el = document.getElementById('cmList');
+      if (!this.msgs.length) { el.innerHTML = '<p class="tui-status-line">Сообщений нет.</p>'; return; }
+      el.innerHTML = this.msgs.map(m => {
+        const incoming = m.to_module_id === me;
+        const t = new Date(m.created_at).toLocaleString();
+        const head = incoming ? `← ${this.esc(this.senderName(m))}` : `→ ${this.esc(this.targetName(m))}`;
+        const personal = m.to_character_id ? `<span class="cm-pers">ЛИЧНО: ${this.esc((m.to_char && m.to_char.name) || '')}</span>` : '';
+        let body;
+        if (!this.visible(m)) body = '<div class="cm-locked">🔒 Личное сообщение. Прочитать может только адресат после входа.</div>';
+        else {
+          body = (m.text ? `<div class="cm-text">${this.esc(m.text)}</div>` : '') +
+            (m.kind === 'audio' && m.media_path ? `<audio controls preload="none" src="${this.esc(this.url(m.media_path))}"></audio>` : '') +
+            (m.kind === 'photo' && m.media_path ? `<a href="${this.esc(this.url(m.media_path))}" target="_blank"><img class="cm-photo" src="${this.esc(this.url(m.media_path))}" alt=""></a>` : '');
+        }
+        const canReply = incoming && this.visible(m) && m.allow_reply !== false && (m.from_master || m.from_module_id);
+        return `<div class="cm-msg ${incoming ? 'in' : 'out'} ${incoming && !m.read_at ? 'new' : ''}">
+          <div class="cm-meta"><b>${head}</b>${personal}<span class="cm-time">${t}</span></div>
+          ${body}
+          ${canReply ? `<button class="tui-modal-btn ghost cm-reply" data-cm="reply" data-id="${m.id}">↩ Ответить</button>` : ''}
+        </div>`;
+      }).join('');
+    },
+
+    /* ---------- отправка ---------- */
+    target: null,   // { kind:'channel', ch } | { kind:'reply', msg }
+    renderCompose() {
+      const sel = document.getElementById('cmTo'); if (!sel) return;
+      const cur = sel.value;
+      const opts = this.channels.map(c => `<option value="ch:${c.id}">${this.esc(c.name)}</option>`);
+      if (this.target && this.target.kind === 'reply') opts.unshift(`<option value="reply">↩ Ответ: ${this.esc(this.senderName(this.target.msg))}</option>`);
+      sel.innerHTML = opts.join('') || '<option value="">— нет доступных каналов —</option>';
+      if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
+      if (this.target && this.target.kind === 'reply') sel.value = 'reply';
+      this.applyTarget();
+      document.getElementById('cmNoCh').style.display = opts.length ? 'none' : '';
+    },
+    applyTarget() {
+      const sel = document.getElementById('cmTo'), v = sel.value;
+      let allow = { text: false, voice: false, photo: false };
+      if (v === 'reply') allow = { text: true, voice: true, photo: true };
+      else if (v.startsWith('ch:')) {
+        const c = this.channels.find(x => 'ch:' + x.id === v);
+        if (c) allow = { text: c.allow_text !== false, voice: c.allow_voice !== false, photo: c.allow_photo !== false };
+      }
+      document.getElementById('cmText').disabled = !allow.text && !allow.voice && !allow.photo;
+      document.getElementById('cmSendText').style.display = allow.text ? '' : 'none';
+      document.getElementById('cmVoiceBtn').style.display = allow.voice ? '' : 'none';
+      document.getElementById('cmPhotoBtn').style.display = allow.photo ? '' : 'none';
+    },
+    startReply(id) {
+      const m = this.msgs.find(x => x.id === id); if (!m) return;
+      this.target = { kind: 'reply', msg: m };
+      this.switchTab('send'); this.renderCompose();
+      document.getElementById('cmText').focus();
+    },
+    route() {
+      const v = document.getElementById('cmTo').value, me = this.me(), ch = App.currentCharacter;
+      const base = { from_module_id: me, from_character_id: ch ? ch.id : null };
+      if (v === 'reply' && this.target && this.target.kind === 'reply') {
+        const m = this.target.msg;
+        return Object.assign(base, m.from_master
+          ? { to_master: true, allow_reply: true, reply_to: m.id }
+          : { to_module_id: m.from_module_id, to_character_id: m.from_character_id || null, allow_reply: true, reply_to: m.id, channel_id: m.channel_id });
+      }
+      const c = this.channels.find(x => 'ch:' + x.id === v);
+      if (!c) return null;
+      return Object.assign(base, c.target_module_id
+        ? { channel_id: c.id, to_module_id: c.target_module_id, to_character_id: c.target_character_id || null, allow_reply: c.two_way !== false }
+        : { channel_id: c.id, to_master: true, allow_reply: true });
+    },
+    err(t) { document.getElementById('cmErr').textContent = t || ''; },
+    async send(kind, blob, ext) {
+      const r = this.route(); if (!r) return this.err('Выберите, кому отправить.');
+      const text = document.getElementById('cmText').value.trim();
+      if (kind === 'text' && !text) return this.err('Введите текст сообщения.');
+      this.err('Отправка…');
+      try {
+        let media_path = null;
+        if (blob) {
+          media_path = `comms/${this.me()}/${Date.now()}.${ext}`;
+          const up = await sb.storage.from(MEDIA_BUCKET).upload(media_path, blob, { contentType: blob.type || (ext === 'jpg' ? 'image/jpeg' : 'audio/webm') });
+          if (up.error) throw up.error;
+        }
+        const { error } = await sb.from('comm_messages').insert(Object.assign(r, { kind, text: text || null, media_path }));
+        if (error) throw error;
+        App.log('comm_send', { kind, to: r.to_module_id || 'master' });
+        document.getElementById('cmText').value = '';
+        this.discard(); this.target = null; this.err('');
+        this.switchTab('inbox'); await this.refresh(false);
+        this.toast('Сообщение отправлено');
+      } catch (e) { this.err('Не удалось отправить: ' + (e.message || e)); }
+    },
+    toast(t) { const el = document.getElementById('cmToast'); el.textContent = '✓ ' + t; el.style.opacity = 1; setTimeout(() => el.style.opacity = 0, 1800); },
+
+    // голос
+    async toggleRec() {
+      const btn = document.getElementById('cmVoiceBtn');
+      if (this.rec && this.rec.state === 'recording') { this.rec.stop(); return; }
+      this.discard(); this.stopCam();
+      let stream;
+      try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (e) { return this.err('Нет доступа к микрофону: ' + e.message); }
+      const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || '';
+      const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined), chunks = [];
+      this.rec = rec;
+      rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+      rec.onstop = () => {
+        stream.getTracks().forEach(t => t.stop()); clearInterval(this.recTimer);
+        btn.classList.remove('recording'); btn.textContent = '● Голос';
+        document.getElementById('cmTimer').textContent = '';
+        if (this.recDiscard || !chunks.length) { this.recDiscard = false; return; }
+        const type = rec.mimeType || mime || 'audio/webm';
+        const blob = new Blob(chunks, { type });
+        this.showPreview({ blob, ext: /mp4/.test(type) ? 'm4a' : /ogg/.test(type) ? 'ogg' : 'webm', kind: 'audio' });
+      };
+      rec.start(500);
+      const t0 = Date.now();
+      btn.classList.add('recording'); btn.textContent = '■ Стоп';
+      this.recTimer = setInterval(() => {
+        const s = Math.floor((Date.now() - t0) / 1000);
+        document.getElementById('cmTimer').textContent = `● ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} / 2:00`;
+        if (App.inactivityMinutes) App.resetInactivityTimer();
+        if (s >= 120) rec.stop();
+      }, 400);
+    },
+    stopRec(discard) { if (this.rec && this.rec.state === 'recording') { this.recDiscard = !!discard; this.rec.stop(); } },
+
+    // фото с камеры терминала
+    async openCam() {
+      this.stopRec(true); this.discard();
+      const v = document.getElementById('cmCam');
+      try {
+        this.camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } }).catch(() => navigator.mediaDevices.getUserMedia({ video: true }));
+      } catch (e) { return this.err('Нет доступа к камере: ' + e.message); }
+      v.srcObject = this.camStream; await v.play().catch(() => {});
+      document.getElementById('cmCamBox').classList.add('on');
+    },
+    snap() {
+      const v = document.getElementById('cmCam'), w = v.videoWidth || 1280, h = v.videoHeight || 720;
+      const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(v, 0, 0, w, h);
+      this.stopCam();
+      c.toBlob(b => this.showPreview({ blob: b, ext: 'jpg', kind: 'photo' }), 'image/jpeg', 0.85);
+    },
+    stopCam() {
+      if (this.camStream) this.camStream.getTracks().forEach(t => t.stop());
+      this.camStream = null;
+      const v = document.getElementById('cmCam'); if (v) v.srcObject = null;
+      const box = document.getElementById('cmCamBox'); if (box) box.classList.remove('on');
+    },
+    showPreview(p) {
+      this.discard();
+      p.url = URL.createObjectURL(p.blob); this.pending = p;
+      document.getElementById('cmPrev').innerHTML = p.kind === 'audio' ? `<audio controls src="${p.url}"></audio>` : `<img src="${p.url}" alt="">`;
+      document.getElementById('cmPrevBox').classList.add('on');
+    },
+    discard() {
+      if (this.pending && this.pending.url) URL.revokeObjectURL(this.pending.url);
+      this.pending = null;
+      const b = document.getElementById('cmPrevBox'); if (b) b.classList.remove('on');
+      const p = document.getElementById('cmPrev'); if (p) p.innerHTML = '';
+    },
+    sendPending() { if (this.pending) this.send(this.pending.kind, this.pending.blob, this.pending.ext); },
+
+    /* ---------- QR-код, открывающий канал ---------- */
+    async tryCode(raw) {
+      const code = normCode(raw);
+      const { data, error } = await sb.from('comm_channels').select('*').eq('active', true).not('unlock_code', 'is', null);
+      if (error || !data) return false;
+      const c = data.find(x => normCode(x.unlock_code) === code);
+      if (!c) return false;
+      App.closeScannerModal(true);
+      const ch = App.currentCharacter;
+      const row = c.unlock_scope === 'character' && ch ? { channel_id: c.id, character_id: ch.id, source: 'qr' } : { channel_id: c.id, module_id: this.me(), source: 'qr' };
+      const q = sb.from('comm_grants').select('id').eq('channel_id', c.id);
+      const { data: ex } = await (row.character_id ? q.eq('character_id', row.character_id) : q.eq('module_id', row.module_id));
+      if (!ex || !ex.length) await sb.from('comm_grants').insert(row);
+      App.log('comm_unlock', { channelId: c.id, code });
+      const who = row.character_id ? 'для вас лично' : 'для этого модуля';
+      App.renderGate('КАНАЛ СВЯЗИ ОТКРЫТ', 'связь', `<div>Канал «${this.esc(c.name)}» доступен ${who}.</div><div style="margin-top:10px;opacity:.8">Откройте «Связь» внизу экрана, чтобы отправить сообщение.</div>`);
+      await this.loadChannels();
+      return true;
+    }
+  };
+
   DB.init().then(() => {
     const titleEl = document.getElementById('tui-module-title');
     const subEl = document.getElementById('tui-module-sub');
@@ -3956,6 +4345,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     AlertManager.start();
     SilenceWatcher.start();
     CameraWatcher.start();
+    Comms.start();
 
     // «Онлайн-таймер обратного отсчёта» — тишина в эфире тикает в реальном
     // времени между фактическими обновлениями refreshJournalWidget (раз в 60с),
@@ -3993,6 +4383,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   });
 
   window.App = App;
+  window.Comms = Comms;
 
   /* =========================================================================
      ДЕЛЕГИРОВАНИЕ КЛИКОВ вместо inline onclick="..." — некоторые браузеры
@@ -4009,6 +4400,20 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   document.getElementById('tui-panel-journal').addEventListener('click', () => {
     if (App.currentCharacter) App.goJournal();
   });
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-cm]'); if (!b) return;
+    const a = b.dataset.cm;
+    if (a === 'tab') Comms.switchTab(b.dataset.tab);
+    if (a === 'reply') Comms.startReply(b.dataset.id);
+    if (a === 'sendText') Comms.send('text');
+    if (a === 'rec') Comms.toggleRec();
+    if (a === 'cam') Comms.openCam();
+    if (a === 'snap') Comms.snap();
+    if (a === 'camOff') Comms.stopCam();
+    if (a === 'sendPending') Comms.sendPending();
+    if (a === 'discard') Comms.discard();
+  });
+  document.addEventListener('change', (e) => { if (e.target && e.target.id === 'cmTo') { if (e.target.value !== 'reply') Comms.target = null; Comms.applyTarget(); } });
   document.addEventListener('change', (e) => {
     if (e.target && e.target.id === 'journalAudioFile') App.onAudioFilePicked(e.target.files && e.target.files[0]);
   });
@@ -4027,6 +4432,8 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       case 'closeJournalModal': App.closeJournalModal(); break;
       case 'saveJournalEntry': App.saveJournalEntry(); break;
       case 'openMap': ThreatMap.open(); break;
+      case 'openComms': Comms.open(); break;
+      case 'closeComms': Comms.close(); break;
       case 'collapseMap': ThreatMap.collapse(); break;
       case 'toggleMapSat': ThreatMap.toggleSat(); break;
       case 'mapZoomIn': ThreatMap.view && ThreatMap.view.zoomIn(); break;
