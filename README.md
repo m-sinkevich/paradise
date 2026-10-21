@@ -1,16 +1,17 @@
 # Терминал колониста — сайт на GitHub Pages
 
-Адрес сайта: **https://m-sinkevich.github.io/**
+Репозиторий: https://github.com/m-sinkevich/paradise · адрес сайта: **https://m-sinkevich.github.io/paradise/**
 
 ## Ссылки
 
 | Что | Адрес | Где лежит |
 |---|---|---|
-| Стартовая страница — список всех модулей со ссылками и QR | https://m-sinkevich.github.io/ | `index.html` |
-| Терминал модуля | `https://m-sinkevich.github.io/terminal.html?module=<КОД>` | `terminal.html` |
-| Пример: модуль PARADISE | https://m-sinkevich.github.io/terminal.html?module=PARADISE | |
-| Панель мастера | `http://localhost:8000/admin.html` — **только локально**, на ноутбуке мастера | папка `master-local`, **не в репозитории** |
-| Будильник базы (журнал запусков) | https://github.com/m-sinkevich/m-sinkevich.github.io/actions | `.github/workflows/supabase-keepalive.yml` |
+| Стартовая страница — список всех модулей со ссылками и QR | https://m-sinkevich.github.io/paradise/ | `index.html` |
+| Терминал модуля | `https://m-sinkevich.github.io/paradise/terminal.html?module=<КОД>` | `terminal.html` |
+| Пример: модуль PARADISE | https://m-sinkevich.github.io/paradise/terminal.html?module=PARADISE | |
+| Терминал мастера (вход по паролю) | https://m-sinkevich.github.io/paradise/master.html | `master.html` |
+| Метки NFC для сканера (тот же пароль; есть и вкладкой в терминале мастера) | https://m-sinkevich.github.io/paradise/nfc.html | `nfc.html` |
+| Будильник базы (журнал запусков) | https://github.com/m-sinkevich/paradise/actions | `.github/workflows/supabase-keepalive.yml` |
 | Панель Supabase | https://supabase.com/dashboard/project/yfogwbxxomuzbezgpqjm | |
 
 Стартовая страница берёт список модулей прямо из базы. Новый модуль, созданный в панели мастера, появится на ней сам, редактировать сайт не нужно. Код модуля — поле «Код доступа» во вкладке «Модули» панели мастера. Там же теперь показывается готовая ссылка на терминал этого модуля.
@@ -18,7 +19,7 @@
 ## Состав репозитория
 
 ```
-m-sinkevich.github.io/                ← имя репозитория должно быть именно таким
+paradise/                             ← корень репозитория
 ├── index.html                        ← стартовая страница со списком модулей
 ├── terminal.html                     ← терминал (бывший terminal_full_paradise.html)
 ├── fonts/
@@ -38,13 +39,12 @@ m-sinkevich.github.io/                ← имя репозитория долж
 
 ## Публикация (один раз)
 
-1. На github.com: **New repository** → имя **`m-sinkevich.github.io`** → **Public** → **Create repository**.
-   Именно такое имя даёт адрес без подпапки. При любом другом имени, например `colonist`, сайт будет по адресу `https://m-sinkevich.github.io/colonist/`. Всё продолжит работать, потому что ссылки на странице относительные, но адреса в этой инструкции и в панели мастера придётся поправить.
+1. Репозиторий `paradise` уже есть: https://github.com/m-sinkevich/paradise (должен быть **Public**).
 2. **Add file → Upload files** → перетащите всё содержимое папки `site`, включая папки `fonts` и `.github` → **Commit changes**.
    Если браузер не увидел скрытые `.github` и `.nojekyll` (на macOS файлы с точкой скрыты в Finder), создайте их вручную: **Add file → Create new file**, в поле имени введите путь `.github/workflows/supabase-keepalive.yml` и вставьте содержимое файла.
 3. **Settings → Pages** → Source: **Deploy from a branch** → Branch **main**, папка **/ (root)** → **Save**.
 4. **Settings → Actions → General** → *Workflow permissions* → **Read and write permissions** → **Save**. Без этого будильник не сможет обновлять файл-отметку (см. ниже).
-5. Через 1–3 минуты откройте https://m-sinkevich.github.io/.
+5. Через 1–3 минуты откройте https://m-sinkevich.github.io/paradise/.
 
 ## Подготовка базы (один раз, SQL Editor в Supabase)
 
@@ -105,11 +105,14 @@ create policy "anon update content-media" on storage.objects for update to anon 
 
 ## Настройка терминала на компьютере модуля
 
-1. Откройте https://m-sinkevich.github.io/ → у нужного модуля нажмите **Открыть терминал**. На планшете можно отсканировать QR со стартовой страницы, открытой на другом экране.
+1. Откройте https://m-sinkevich.github.io/paradise/ → у нужного модуля нажмите **Открыть терминал**. На планшете можно отсканировать QR со стартовой страницы, открытой на другом экране.
 2. Нажмите «Авторизация» и разрешите камеру. Браузер запомнит разрешение.
 3. Добавьте страницу в закладки. Полный экран — `F11`. Режим киоска:
-   `chrome --kiosk "https://m-sinkevich.github.io/terminal.html?module=PARADISE"`
+   `chrome --kiosk "https://m-sinkevich.github.io/paradise/terminal.html?module=PARADISE"`
 4. Отключите сон и заставку экрана.
+5. Чтобы звук тревоги включался сам, без касания экрана, запускайте браузер так:
+   `chrome --kiosk --autoplay-policy=no-user-gesture-required "https://m-sinkevich.github.io/paradise/terminal.html?module=PARADISE"`
+   Без этого флага браузер включит звук только после первого касания экрана, о чём терминал напишет в баннере тревоги.
 
 ## Проверка перед игрой
 
@@ -128,3 +131,13 @@ create policy "anon update content-media" on storage.objects for update to anon 
 ## ⚠ Безопасность
 
 Ключ Supabase виден в коде страницы, а база разрешает анонимному пользователю всё. Любой человек, открывший сайт, технически может прочитать пароли персонажей и сюжет, а также изменить данные. Для LARP «на честность» этого достаточно, если не раздавать адрес за пределы игры. Перед каждой игрой делайте резервную выгрузку. Настоящая защита (вход мастера, ограничительные RLS-политики) — следующий этап, см. ТЗ v3, §15.
+
+
+## Терминал мастера по публичной ссылке
+
+`master.html` и `nfc.html` открываются по ссылкам выше и запрашивают пароль мастера.
+Пароль в коде не хранится — только его хэш; после ввода браузер помнит доступ 12 часов (кнопка «Выйти ⏻» сбрасывает).
+Чтобы сменить пароль, нужно пересчитать хэш (SALT/HASH в блоке «ДОСТУП ПО ПАРОЛЮ МАСТЕРА» обоих файлов).
+
+Пароль закрывает интерфейс от случайных посетителей, но ключ базы по-прежнему виден в коде страниц.
+Не публикуйте ссылку на терминал мастера открыто; полноценная защита — вход через Supabase Auth (следующий этап).
