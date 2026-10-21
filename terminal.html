@@ -833,9 +833,9 @@
     #terminal-ui.threat-active #tui-threat-fx { opacity: 1; }
 
     #terminal-ui.threat-active .tui-panel { transition: opacity .6s ease, filter .6s ease, box-shadow .6s ease, transform .6s ease; }
-    #terminal-ui.threat-active .tui-panel:not(.threat-focus) { filter: saturate(.5) brightness(.72); }
+    #terminal-ui.threat-active .tui-panel:not(.threat-focus) { filter: saturate(.35) brightness(.48) blur(.4px); }
     #terminal-ui .tui-panel.threat-focus {
-      z-index: 5; transform: scale(1.025); opacity: 1;
+      z-index: 5; transform: scale(1.06); opacity: 1; --tui-frame-color: var(--tui-alert-color);
       box-shadow: 0 0 0 1px var(--tui-alert-color), 0 0 26px color-mix(in srgb, var(--tui-alert-color) 55%, transparent),
                   inset 0 0 30px color-mix(in srgb, var(--tui-alert-color) 18%, transparent);
       animation: tui-threat-focus 1.6s ease-in-out infinite;
@@ -849,6 +849,26 @@
     .tui-threat-blink { animation: tui-threat-blink 1s steps(2, start) infinite; }
     @keyframes tui-threat-blink { 50% { opacity: .35; } }
 
+
+    /* плашка угрозы: бегущая полоса сканирования, мигающие уголки, «живые» значения */
+    #terminal-ui .tui-panel.threat-focus::after {
+      content: ""; position: absolute; left: 0; right: 0; top: -40%; height: 40%; pointer-events: none; z-index: 3;
+      background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--tui-alert-color) 26%, transparent) 70%, color-mix(in srgb, var(--tui-alert-color) 55%, transparent) 96%, transparent);
+      animation: tui-threat-sweep 2.2s linear infinite;
+    }
+    @keyframes tui-threat-sweep { to { top: 110%; } }
+    #terminal-ui .tui-panel.threat-focus .tui-corner path { stroke: var(--tui-alert-color) !important; animation: tui-threat-blink .6s steps(2, start) infinite; }
+    #terminal-ui .tui-panel.threat-focus .tui-panel-title svg { animation: tui-threat-blink .8s steps(2, start) infinite; }
+    #terminal-ui .tui-panel.threat-focus .tui-panel-body { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--tui-alert-color) 35%, transparent)); }
+    .tui-threat-val { display: inline-block; animation: tui-threat-val 1.3s ease-in-out infinite; transform-origin: right center; }
+    @keyframes tui-threat-val {
+      0%, 100% { transform: scale(1); text-shadow: 0 0 6px color-mix(in srgb, var(--tui-alert-color) 60%, transparent); }
+      50% { transform: scale(1.12); text-shadow: 0 0 16px var(--tui-alert-color), 0 0 2px #fff; }
+    }
+    .tui-threat-val.tui-threat-blink { animation: tui-threat-val 1.3s ease-in-out infinite, tui-threat-blink 1s steps(2, start) infinite; }
+    #terminal-ui .tui-panel.threat-focus .tui-bar-fill, #terminal-ui .tui-panel.threat-focus .tui-eq-bar { background: var(--tui-alert-color) !important; box-shadow: 0 0 8px var(--tui-alert-color); }
+    #terminal-ui .tui-panel.threat-focus .tui-spark-line { stroke: var(--tui-alert-color) !important; filter: drop-shadow(0 0 4px var(--tui-alert-color)); }
+    @media (prefers-reduced-motion: reduce) { #terminal-ui .tui-panel.threat-focus::after, .tui-threat-val { animation: none; } }
     /* карточка угрозы — в центральной области над куполом, не перекрывает кнопки */
     #tui-threat-card {
       grid-area: center; align-self: end; justify-self: center; z-index: 6; pointer-events: none;
@@ -967,7 +987,8 @@
     #tui-map.open { display: block; animation: tui-map-in .45s ease; }
     @keyframes tui-map-in { from { opacity: 0; transform: scale(.96); } }
     #tm-map { position: absolute; inset: 0; }
-    .tm-ctrl { position: absolute; top: 8px; right: 8px; z-index: 4; display: flex; gap: 6px; }
+    .tm-ctrl { position: absolute; top: 8px; right: 8px; z-index: 4; display: flex; flex-direction: column; gap: 6px; }
+    #tui-map.full { z-index: 55; }
     .tm-btn { font-family: var(--tui-font-body); font-weight: 700; font-size: 13px; line-height: 1; width: 34px; height: 34px; cursor: pointer;
       background: rgba(2,8,16,.78); border: 1px solid var(--tui-alert-color); color: var(--tui-alert-color); display: flex; align-items: center; justify-content: center; }
     .tm-btn:hover, .tm-btn.on { background: var(--tui-alert-color); color: #041018; }
@@ -1452,6 +1473,9 @@
   <div id="tm-map"></div>
   <div class="tm-ctrl">
     <button class="tm-btn" data-action="toggleMapSat" id="tm-sat" title="Спутниковый снимок"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="6" height="6" transform="rotate(45 12 12)"/><path d="M4 4l4 4M16 16l4 4M2 9l4-4M18 22l4-4"/></svg></button>
+    <button class="tm-btn" data-action="mapZoomIn" title="Приблизить">+</button>
+    <button class="tm-btn" data-action="mapZoomOut" title="Отдалить">−</button>
+    <button class="tm-btn" data-action="mapFull" id="tm-full" title="На весь экран">⛶</button>
     <button class="tm-btn" data-action="collapseMap" title="Свернуть">▾</button>
   </div>
 </div>
@@ -2590,6 +2614,7 @@
       const changed = JSON.stringify(pts) !== JSON.stringify(this.points);
       this.points = pts;
       if (!this.view) this.view = PolygonMap.create(document.getElementById('tm-map'), { mode: 'view', points: pts });
+      if (!sameAlert && this.view.zoomReset) this.view.zoomReset();
       else if (changed) this.view.setPoints(pts);
       chip.textContent = `▣ КАРТА · ${pts.length}`;
       chip.classList.add('show');
@@ -2599,9 +2624,22 @@
       [450, 1000].forEach(ms => setTimeout(() => this.layout(), ms));
     },
     // квадрат в центре между колонками плашек, под шапкой и над карточкой угрозы и кнопками
+    full: false,
+    toggleFull() {
+      this.full = !this.full;
+      document.getElementById('tui-map').classList.toggle('full', this.full);
+      document.getElementById('tm-full').classList.toggle('on', this.full);
+      document.getElementById('tm-full').textContent = this.full ? '⤡' : '⛶';
+      this.layout();
+    },
     layout() {
       const box = document.getElementById('tui-map'), chip = document.getElementById('tui-map-chip');
       const vw = window.innerWidth, vh = window.innerHeight, gap = 12;
+      if (this.full) {   // во весь экран — под баннером тревоги, поверх плашек
+        const top = document.body.classList.contains('tui-alerting') ? 52 : 12;
+        Object.assign(box.style, { left: '12px', top: top + 'px', width: (vw - 24) + 'px', height: (vh - top - 12) + 'px' });
+        return;
+      }
       const r = id => { const e = document.getElementById(id); if (!e) return null; const b = e.getBoundingClientRect(); return b.width && b.height ? b : null; };
       const dock = r('tui-center');
       // низ шапки — с учётом выступающих из неё часов и даты
@@ -2642,7 +2680,7 @@
       document.getElementById('tm-sat').classList.toggle('on', this.sat);
     },
     open() { document.getElementById('tui-map').classList.add('open'); this.layout(); setTimeout(() => this.layout(), 450); },
-    collapse() { document.getElementById('tui-map').classList.remove('open'); document.getElementById('tui-threat-card').classList.remove('map-compact'); },
+    collapse() { if (this.full) this.toggleFull(); document.getElementById('tui-map').classList.remove('open'); document.getElementById('tui-threat-card').classList.remove('map-compact'); },
     hide() {
       this.collapse();
       document.getElementById('tui-map-chip').classList.remove('show');
@@ -3801,6 +3839,80 @@
     }
   };
 
+
+  /* =========================================================================
+     СНИМОК С КАМЕРЫ ПО ЗАПРОСУ МАСТЕРА (таблица camera_requests).
+     Терминал ловит запрос своего модуля, делает кадр, загружает его в хранилище
+     и отмечает запрос выполненным. На экране на 2 с появляется значок фотофиксации.
+     ========================================================================= */
+  const CameraWatcher = {
+    busy: false,
+    start() {
+      if (!DB.moduleRow) return;
+      sb.channel('camera-' + DB.moduleRow.id)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'camera_requests', filter: `module_id=eq.${DB.moduleRow.id}` }, () => this.check())
+        .subscribe();
+      this.check();
+      setInterval(() => this.check(), 10000);
+    },
+    async check() {
+      if (this.busy || !DB.moduleRow) return;
+      const since = new Date(Date.now() - 2 * 60000).toISOString();   // старые запросы не выполняем
+      const { data, error } = await sb.from('camera_requests').select('id').eq('module_id', DB.moduleRow.id)
+        .eq('status', 'pending').gt('requested_at', since).order('requested_at').limit(1);
+      if (error || !data || !data.length) return;
+      // забираем запрос себе (если открыто два терминала одного модуля — снимает один)
+      const { data: claimed } = await sb.from('camera_requests').update({ status: 'processing' })
+        .eq('id', data[0].id).eq('status', 'pending').select('id');
+      if (!claimed || !claimed.length) return;
+      this.busy = true;
+      try {
+        const blob = await this.capture();
+        const path = `photos/${DB.moduleRow.id}/${Date.now()}.jpg`;
+        const up = await sb.storage.from(MEDIA_BUCKET).upload(path, blob, { contentType: 'image/jpeg' });
+        if (up.error) throw up.error;
+        await sb.from('camera_requests').update({ status: 'done', photo_path: path, taken_at: new Date().toISOString() }).eq('id', data[0].id);
+        App.log('camera_photo', { requestId: data[0].id, path });
+      } catch (e) {
+        console.error('[Camera]', e);
+        await sb.from('camera_requests').update({ status: 'error', error: String(e.message || e).slice(0, 300) }).eq('id', data[0].id);
+      } finally { this.busy = false; }
+    },
+    async capture() {
+      this.indicator(true);
+      let stream = App.stream && App.stream.getVideoTracks().some(t => t.readyState === 'live') ? App.stream : null;
+      let own = false;
+      if (!stream) {
+        try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1280 } } }); }
+        catch (e1) { stream = await navigator.mediaDevices.getUserMedia({ video: true }); }
+        own = true;
+      }
+      try {
+        const v = document.createElement('video');
+        v.muted = true; v.playsInline = true; v.srcObject = stream;
+        await v.play();
+        await new Promise(r => setTimeout(r, 900));   // камере нужно время на экспозицию
+        const w = v.videoWidth || 1280, h = v.videoHeight || 720;
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        c.getContext('2d').drawImage(v, 0, 0, w, h);
+        v.srcObject = null;
+        return await new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('кадр не получен')), 'image/jpeg', 0.85));
+      } finally {
+        if (own) stream.getTracks().forEach(t => t.stop());
+        setTimeout(() => this.indicator(false), 1200);
+      }
+    },
+    indicator(on) {
+      let el = document.getElementById('tui-cam-ind');
+      if (!el) {
+        el = document.createElement('div'); el.id = 'tui-cam-ind'; el.textContent = '◉ ФОТОФИКСАЦИЯ';
+        el.style.cssText = 'position:fixed;top:56px;right:22px;z-index:70;font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:2px;color:#FF6B6B;background:rgba(3,7,18,.85);border:1px solid #FF6B6B;padding:5px 10px;display:none;';
+        document.body.appendChild(el);
+      }
+      el.style.display = on ? 'block' : 'none';
+    }
+  };
+
   DB.init().then(() => {
     const titleEl = document.getElementById('tui-module-title');
     const subEl = document.getElementById('tui-module-sub');
@@ -3827,6 +3939,7 @@
     setInterval(() => App.refreshJournalWidget(), 60000);
     AlertManager.start();
     SilenceWatcher.start();
+    CameraWatcher.start();
 
     // «Онлайн-таймер обратного отсчёта» — тишина в эфире тикает в реальном
     // времени между фактическими обновлениями refreshJournalWidget (раз в 60с),
@@ -3896,6 +4009,9 @@
       case 'openMap': ThreatMap.open(); break;
       case 'collapseMap': ThreatMap.collapse(); break;
       case 'toggleMapSat': ThreatMap.toggleSat(); break;
+      case 'mapZoomIn': ThreatMap.view && ThreatMap.view.zoomIn(); break;
+      case 'mapZoomOut': ThreatMap.view && ThreatMap.view.zoomOut(); break;
+      case 'mapFull': ThreatMap.toggleFull(); break;
       case 'toggleVoiceRecord': App.toggleVoiceRecord(); break;
       case 'pickAudioFile': App.pickAudioFile(); break;
       case 'sendVoiceEntry': App.sendVoiceEntry(); break;

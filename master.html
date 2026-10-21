@@ -430,7 +430,9 @@ input.input:disabled{ opacity:.4; }
 
 /* ---------- Точки на карте ---------- */
 .map-edit{ display:grid; grid-template-columns: minmax(0,1.6fr) minmax(260px,1fr); gap:16px; margin-bottom:14px; }
-.map-edit-canvas{ border:1px solid var(--edge); background:#06111e; aspect-ratio: 2192 / 2116; }
+.map-edit-canvas{ border:1px solid var(--edge); background:#06111e; aspect-ratio: 2192 / 2116; position:relative; }
+.map-zoom{ position:absolute; top:8px; right:8px; display:flex; flex-direction:column; gap:6px; z-index:2; }
+.map-zoom .btn{ width:34px; height:34px; padding:0; font-size:16px; background:rgba(2,8,16,.8); }
 .pt-list{ display:flex; flex-direction:column; gap:8px; margin-top:10px; }
 .pt-row{ display:grid; grid-template-columns: 26px 1fr auto; gap:6px; align-items:center; padding:6px; border:1px solid var(--edge); }
 .pt-row.sel{ border-color: var(--cyan); background: rgba(94,234,212,.06); }
@@ -441,6 +443,31 @@ input.input:disabled{ opacity:.4; }
 .pt-row .pt-sec{ font-size:9.5px; color:var(--ink-400); letter-spacing:.6px; }
 #thPtType .radio-chip{ padding:6px 9px; font-size:10px; }
 @media (max-width:900px){ .map-edit{ grid-template-columns:1fr; } }
+
+.threat-card.clickable{ cursor:pointer; transition: transform .15s ease, box-shadow .15s ease, background .15s ease; }
+.threat-card.clickable:hover{ transform: translateY(-2px); box-shadow: 0 0 18px color-mix(in srgb, var(--tc) 45%, transparent); background:color-mix(in srgb, var(--tc) 12%, rgba(4,11,22,.6)); }
+#threatFormPanel.collapsed{ display:none; }
+.mod-threats{ display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
+.mod-threat{ display:inline-flex; align-items:center; gap:6px; font-size:9.5px; letter-spacing:.4px; padding:2px 4px 2px 8px; border:1px solid var(--tc); color:var(--tc); background:color-mix(in srgb, var(--tc) 10%, transparent); animation:pulseOp 1.6s ease-in-out infinite; }
+.mod-threat .mod-x{ font-size:10px; }
+
+.photo-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(130px,1fr)); gap:8px; max-height:360px; overflow-y:auto; }
+.photo-grid figure{ margin:0; border:1px solid var(--edge); background:#000; cursor:zoom-in; position:relative; }
+.photo-grid img{ width:100%; aspect-ratio: 4/3; object-fit:cover; display:block; }
+.photo-grid figcaption{ font-size:9px; color:var(--ink-400); padding:3px 6px; letter-spacing:.4px; }
+.photo-grid .ph-err{ aspect-ratio:4/3; display:flex; align-items:center; justify-content:center; text-align:center; color:var(--red); font-size:10px; padding:6px; }
+.log-list{ display:flex; flex-direction:column; gap:4px; max-height:380px; overflow-y:auto; font-size:11px; }
+.log-row{ display:grid; grid-template-columns: 112px 150px 1fr; gap:10px; padding:5px 8px; border-left:2px solid var(--edge); background:rgba(255,255,255,.015); }
+.log-row.threat{ border-left-color: var(--amber); }
+.log-row .t{ color:var(--ink-600); font-size:10px; }
+.log-row .a{ color:var(--ink-100); font-weight:600; }
+.log-row .d{ color:var(--ink-400); word-break:break-word; }
+.cam-viewer{ position:fixed; inset:0; z-index:200; background:rgba(2,6,14,.92); display:none; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:20px; }
+.cam-viewer.open{ display:flex; }
+.cam-viewer img{ max-width:min(1100px,96vw); max-height:78vh; border:1px solid var(--cyan); box-shadow:0 0 30px rgba(94,234,212,.25); }
+.cam-viewer .cv-cap{ color:var(--ink-100); font-size:12px; letter-spacing:1px; }
+.cam-viewer .cv-wait{ color:var(--amber); font-size:14px; letter-spacing:2px; }
+@media (max-width:700px){ .log-row{ grid-template-columns:1fr; gap:2px; } }
 </style>
 </head>
 <body>
@@ -527,13 +554,14 @@ input.input:disabled{ opacity:.4; }
   </section>
 
   <!-- ======= НАСТРОЙКА И ЗАПУСК УГРОЗЫ ======= -->
-  <section class="panel shape-a wide" id="threatFormPanel">
+  <section class="panel shape-a wide collapsed" id="threatFormPanel">
     <div class="panel-head">
       <div class="panel-title">
         <svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" stroke-linejoin="round"/></svg>
         <span id="formTitle">Запуск угрозы</span>
       </div>
       <span class="tech-id" id="formModeTag">NEW</span>
+      <button type="button" class="btn ghost" data-th="closeForm" style="margin-left:12px;">Свернуть ✕</button>
     </div>
     <div class="panel-body">
 
@@ -622,15 +650,16 @@ input.input:disabled{ opacity:.4; }
         </div>
       </div>
 
-      <div class="sec-sub">Точки на карте полигона — карта развернётся на терминале при угрозе</div>
-      <div class="map-edit">
+      <div class="sec-sub">Карта полигона</div>
+      <label class="checkbox-chip" style="align-self:flex-start;margin-bottom:12px;"><input type="checkbox" id="thMapOn"> Показать на терминале карту с точками</label>
+      <div class="map-edit" id="thMapBlock" style="display:none;">
         <div class="map-edit-canvas" id="thMap"></div>
         <div class="map-edit-side">
           <div class="field" style="margin-bottom:8px;">
             <label>Тип новой точки</label>
             <div class="radio-group" id="thPtType"></div>
           </div>
-          <div class="status-line">Клик по карте ставит точку (до 6), точку можно перетащить. Без точек карта на терминале не показывается.</div>
+          <div class="status-line">Клик по карте ставит точку (до 6), точку можно перетащить. Колесо мыши или +/− — масштаб, перетаскивание пустого места — сдвиг карты. На терминале точки показываются без подписей — подпись и доп. информация всплывают при нажатии.</div>
           <div id="thPtList" class="pt-list"></div>
           <div class="btn-row" style="margin-top:8px;"><button type="button" class="btn ghost" data-th="clearPoints">Убрать все точки</button></div>
         </div>
@@ -1105,6 +1134,32 @@ input.input:disabled{ opacity:.4; }
     </div>
 
     <!-- ---- Персонажи модуля ---- -->
+    <div class="editor-section" id="moduleCameraSection" style="display:none;">
+      <div class="sec-title">Камера терминала</div>
+      <div class="btn-row" style="align-items:center; margin-bottom:10px;">
+        <button class="btn amber" data-cam="snapEditor">📷 Сделать снимок</button>
+        <span class="status-line" id="moduleCamStatus"></span>
+      </div>
+      <div class="photo-grid" id="modulePhotoGrid"><div class="empty-line">Загрузка...</div></div>
+    </div>
+
+    <div class="editor-section" id="moduleLogSection" style="display:none;">
+      <div class="sec-title">Журнал действий терминала</div>
+      <div class="btn-row" style="align-items:center; margin-bottom:10px;">
+        <select class="input" id="moduleLogFilter" style="max-width:220px;">
+          <option value="threat">Угрозы</option>
+          <option value="">Все действия</option>
+          <option value="auth">Вход и выход</option>
+          <option value="scan">Сканирование и контент</option>
+          <option value="journal">Бортовой журнал</option>
+          <option value="camera">Снимки камеры</option>
+        </select>
+        <button class="btn ghost" data-cam="reloadLog">⟳ Обновить</button>
+        <span class="status-line" id="moduleLogCount"></span>
+      </div>
+      <div class="log-list" id="moduleLogList"><div class="empty-line">Загрузка...</div></div>
+    </div>
+
     <div class="editor-section" id="moduleJournalSection" style="display:none;">
       <div class="sec-title">Бортовой журнал модуля</div>
       <div class="btn-row" style="align-items:center; margin-bottom:10px;">
@@ -1138,6 +1193,7 @@ input.input:disabled{ opacity:.4; }
   </div>
 </div>
 
+<div class="cam-viewer" id="camViewer"><div class="cv-wait" id="cvWait"></div><img id="cvImg" alt="" style="display:none"><div class="cv-cap" id="cvCap"></div><div class="btn-row"><a class="btn ghost" id="cvDl" target="_blank" rel="noopener" style="display:none">⤓ Открыть оригинал</a><button class="btn" data-cam="closeViewer">Закрыть</button></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
 <script src="map/polygon-map.js"></script>
@@ -1358,10 +1414,29 @@ const Admin = {
             <span class="meta">ТИШИНА: ${m.silence_timeout_minutes != null ? m.silence_timeout_minutes : 20} МИН · КОНТЕНТ: ${this.escape(contentLabel)} · ВИДЕН: ${lastSeen}</span>
           </div>
           <div class="actions">
-            <button class="btn ghost" data-action="openModuleEditor" data-id="${m.id}">Изменить</button>
+            <button class="btn ghost" data-cam="snap" data-mod="${m.id}" title="Сделать снимок камерой терминала">📷 Снимок</button>
+            <button class="btn ghost" data-action="openModuleEditor" data-id="${m.id}">Открыть</button>
           </div>
+          ${this.moduleThreatsHtml(m.id)}
         </div>`;
     }).join('');
+  },
+  // действующие угрозы модуля (для таблицы модулей) с кнопкой снятия с этого модуля
+  moduleThreatsHtml(moduleId) {
+    const now = Date.now();
+    const list = (this.activeAlertsCache || []).filter(a => {
+      if ((a.excluded_module_ids || []).includes(moduleId)) return false;
+      if (new Date(a.starts_at).getTime() > now) return false;
+      if (a.ends_at && new Date(a.ends_at).getTime() < now) return false;
+      return a.target_type === 'all' || a.target_module_id === moduleId || (a.target_module_ids || []).includes(moduleId);
+    });
+    if (!list.length) return '';
+    return '<div class="mod-threats" style="grid-column:1 / -1;">' + list.map(a => {
+      const d = (typeof THREAT_DEFS !== 'undefined' && THREAT_DEFS[a.threat_type]) || { icon: '⚠', color: '#FF6B6B' };
+      const until = a.ends_at ? ' · ДО ' + new Date(a.ends_at).toLocaleTimeString().slice(0, 5) : '';
+      return `<span class="mod-threat" style="--tc:${this.escape(a.color || d.color)}">${d.icon} ${this.escape(a.label)}${until}
+        <button type="button" class="mod-x" data-th="excludeHere" data-id="${a.id}" data-mod="${moduleId}" title="Прекратить угрозу на этом модуле">✕ СНЯТЬ</button></span>`;
+    }).join('') + '</div>';
   },
 
   /* ---------- Активные тревоги ---------- */
@@ -2456,6 +2531,8 @@ const Admin = {
       charSection.style.display = 'block';
       alertSection.style.display = 'block';
       document.getElementById('moduleJournalSection').style.display = 'block';
+      ['moduleCameraSection', 'moduleLogSection'].forEach(id => document.getElementById(id).style.display = 'block');
+      this.loadModulePhotos(item.id); this.loadModuleLog(item.id);
       this.loadModuleJournal(item.id);
       this.renderModuleCharacterList(item.id);
       this.loadModuleAlerts(item.id);
@@ -2463,6 +2540,7 @@ const Admin = {
       charSection.style.display = 'none';
       alertSection.style.display = 'none';
       document.getElementById('moduleJournalSection').style.display = 'none';
+      ['moduleCameraSection', 'moduleLogSection'].forEach(id => document.getElementById(id).style.display = 'none');
       this.moduleAlerts = [];
     }
 
@@ -3009,11 +3087,10 @@ Object.assign(Admin, {
   renderTemplates() {
     const cat = document.getElementById('threatCatalog');
     cat.innerHTML = Object.entries(THREAT_DEFS).map(([k, d]) => `
-      <div class="threat-card" style="--tc:${d.color}">
+      <div class="threat-card clickable" style="--tc:${d.color}" data-th="usePattern" data-key="${k}" title="Настроить и запустить">
         <div class="tc-top"><span class="tc-ico">${d.icon}</span><span class="tc-name">${this.escape(d.name)}</span></div>
         <div class="tc-panel">ПЛАШКА: ${this.escape(d.panel)}</div>
         <div class="tc-desc">${this.escape(d.desc)}</div>
-        <div class="t-actions"><button class="btn" data-th="usePattern" data-key="${k}">Настроить и запустить</button></div>
       </div>`).join('');
     this.renderPresets();
   },
@@ -3034,11 +3111,10 @@ Object.assign(Admin, {
       if (c.resolve && c.resolve.journal) bits.push('журнал');
       if (c.next_ref) bits.push('→ ' + this.nextRefName(c.next_ref));
       return `
-        <div class="threat-card" style="--tc:${this.escape(c.color || d.color)}">
+        <div class="threat-card clickable" style="--tc:${this.escape(c.color || d.color)}" data-th="usePreset" data-id="${p.id}" title="Настроить и запустить">
           <div class="tc-top"><span class="tc-ico">${d.icon}</span><span class="tc-name">${this.escape(p.name)}</span></div>
           <div class="tc-panel">${this.escape(bits.join(' · '))}</div>
           <div class="t-actions">
-            <button class="btn" data-th="usePreset" data-id="${p.id}">Настроить и запустить</button>
             <button class="btn danger" data-th="deletePreset" data-id="${p.id}">Удалить</button>
           </div>
         </div>`;
@@ -3363,7 +3439,8 @@ Object.assign(Admin, {
     this.fillForm(this.defaultConfig(document.getElementById('thPattern').value || 'seismic'));
     this.showOk('');
   },
-  scrollToForm() { document.getElementById('threatFormPanel').scrollIntoView({ behavior: 'smooth', block: 'start' }); },
+  scrollToForm() { const f = document.getElementById('threatFormPanel'); f.classList.remove('collapsed'); setTimeout(() => f.scrollIntoView({ behavior: 'smooth', block: 'start' }), 30); },
+  closeForm() { document.getElementById('threatFormPanel').classList.add('collapsed'); },
 
   /* ---------- активные угрозы: по модулям, прогресс, снятие ---------- */
   alertModuleIds(a) {
@@ -3375,6 +3452,8 @@ Object.assign(Admin, {
     if (error) { console.error(error); return; }
     const nowMs = Date.now();
     const list = (data || []).filter(a => !(a.ends_at && new Date(a.ends_at).getTime() < nowMs - 5 * 60000));
+    this.activeAlertsCache = list;
+    this.renderModuleTable();
     document.getElementById('metaAlertCount').textContent = list.filter(a => !(a.ends_at && new Date(a.ends_at).getTime() < nowMs)).length;
     const ids = list.map(a => a.id);
     this.threatProgress = [];
@@ -3485,6 +3564,7 @@ document.addEventListener('click', e => {
     case 'reset': A.resetForm(); break;
     case 'test': A.launchTest(); break;
     case 'excludeHere': A.excludeHere(el.dataset.id, el.dataset.mod); break;
+    case 'closeForm': A.closeForm(); break;
   }
 });
 
@@ -3509,6 +3589,12 @@ Object.assign(Admin, {
       onLimit: () => this.showError('На карте уже 6 точек — удалите одну, чтобы поставить новую.')
     };
     this.mapEd = PolygonMap.create(document.getElementById('thMap'), opts);
+    const ctl = document.createElement('div');
+    ctl.className = 'map-zoom';
+    ctl.innerHTML = '<button type="button" class="btn ghost" data-z="in" title="Приблизить">+</button><button type="button" class="btn ghost" data-z="out" title="Отдалить">−</button>';
+    ctl.addEventListener('click', e => { const b = e.target.closest('[data-z]'); if (!b) return; e.stopPropagation(); b.dataset.z === 'in' ? this.mapEd.zoomIn() : this.mapEd.zoomOut(); });
+    ctl.addEventListener('pointerdown', e => e.stopPropagation());
+    this.mapEd.ready.then(() => document.getElementById('thMap').appendChild(ctl));
     document.getElementById('thPtList').addEventListener('input', e => {
       const i = +e.target.dataset.i; if (isNaN(i)) return;
       if (e.target.dataset.f === 'label') this.th.points[i].label = e.target.value;
@@ -3547,15 +3633,142 @@ Object.assign(Admin, {
 (function () {
   const origRead = Admin.readConfig, origFill = Admin.fillForm, origWire = Admin.wireForm, origDefault = Admin.defaultConfig;
   Admin.defaultConfig = function (pattern) { const c = origDefault.call(this, pattern); c.points = []; return c; };
-  Admin.readConfig = function () { const c = origRead.call(this); c.points = (this.th.points || []).map(p => ({ x: p.x, y: p.y, type: p.type, label: (p.label || '').trim(), info: (p.info || '').trim(), v: 2 })); return c; };
-  Admin.fillForm = function (c, keep) { origFill.call(this, c, keep); if (!keep) this.setPoints(c.points || []); };
-  Admin.wireForm = function () { this.th.points = []; this.initMapEditor(); origWire.call(this); };
+  Admin.readConfig = function () { const c = origRead.call(this); c.points = !document.getElementById('thMapOn').checked ? [] : (this.th.points || []).map(p => ({ x: p.x, y: p.y, type: p.type, label: (p.label || '').trim(), info: (p.info || '').trim(), v: 2 })); return c; };
+  Admin.fillForm = function (c, keep) {
+    origFill.call(this, c, keep);
+    if (!keep) { this.setPoints(c.points || []); this.setMapOn((c.points || []).length > 0); }
+  };
+  Admin.setMapOn = function (on) {
+    const cb = document.getElementById('thMapOn'); cb.checked = on; cb.closest('.checkbox-chip').classList.toggle('checked', on);
+    document.getElementById('thMapBlock').style.display = on ? 'grid' : 'none';
+  };
+  Admin.wireForm = function () {
+    this.th.points = []; this.initMapEditor(); origWire.call(this);
+    document.getElementById('thMapOn').addEventListener('change', e => this.setMapOn(e.target.checked));
+  };
 })();
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-th]'); if (!el) return;
   if (el.dataset.th === 'delPoint') { Admin.th.points.splice(+el.dataset.i, 1); Admin.setPoints(Admin.th.points); }
   if (el.dataset.th === 'clearPoints') Admin.setPoints([]);
 });
+
+
+/* ---------- камера терминала, архив снимков, журнал действий модуля ---------- */
+const LOG_LABELS = {
+  auth: 'Вход', session_end: 'Выход', scan: 'Сканирование', content_open: 'Открыт объект', content_choice: 'Выбор в объекте',
+  journal_entry: 'Запись в журнал', journal_voice_start: 'Начата голосовая запись',
+  threat_shown: 'Угроза началась', threat_end: 'Угроза закончилась', threat_code: 'Код устранения', threat_chain: 'Сценарий: следующая угроза',
+  camera_photo: 'Снимок камеры'
+};
+const LOG_GROUPS = {
+  threat: ['threat_shown', 'threat_end', 'threat_code', 'threat_chain'],
+  auth: ['auth', 'session_end'], scan: ['scan', 'content_open', 'content_choice'],
+  journal: ['journal_entry', 'journal_voice_start'], camera: ['camera_photo']
+};
+Object.assign(Admin, {
+  photoUrl(path) { return /^https?:/.test(path) ? path : sb.storage.from(MEDIA_BUCKET).getPublicUrl(path).data.publicUrl; },
+  viewer(state) {
+    const v = document.getElementById('camViewer'), img = document.getElementById('cvImg');
+    v.classList.add('open');
+    document.getElementById('cvWait').textContent = state.wait || '';
+    document.getElementById('cvCap').textContent = state.cap || '';
+    const dl = document.getElementById('cvDl');
+    if (state.url) { img.src = state.url; img.style.display = 'block'; dl.href = state.url; dl.style.display = ''; }
+    else { img.style.display = 'none'; img.removeAttribute('src'); dl.style.display = 'none'; }
+  },
+  closeViewer() { document.getElementById('camViewer').classList.remove('open'); this.camWaitId = null; },
+
+  async requestSnapshot(moduleId) {
+    const m = this.modules.find(x => x.id === moduleId);
+    const name = m ? (m.name || m.access_code) : 'модуль';
+    const online = m && m.last_seen_at && (Date.now() - new Date(m.last_seen_at).getTime()) < 2 * 60000;
+    this.viewer({ wait: `◉ ЗАПРОС СНИМКА: ${name.toUpperCase()}…`, cap: online ? 'Терминал делает снимок, обычно 2–5 секунд.' : 'Терминал этого модуля сейчас не на связи — снимок будет сделан, когда он откроется (в течение 2 минут).' });
+    const { data, error } = await sb.from('camera_requests').insert({ module_id: moduleId }).select('id').single();
+    if (error) { this.viewer({ wait: 'ОШИБКА', cap: error.message + (/camera_requests/.test(error.message) ? ' — выполните sql/camera.sql в Supabase.' : '') }); return; }
+    const id = data.id; this.camWaitId = id;
+    const started = Date.now();
+    const poll = async () => {
+      if (this.camWaitId !== id) return;
+      const { data: r } = await sb.from('camera_requests').select('*').eq('id', id).maybeSingle();
+      if (r && r.status === 'done') {
+        this.viewer({ url: this.photoUrl(r.photo_path), cap: `${name} · ${new Date(r.taken_at).toLocaleString()}` });
+        if (this.editingModuleId === moduleId) this.loadModulePhotos(moduleId);
+        return;
+      }
+      if (r && r.status === 'error') { this.viewer({ wait: 'СНИМОК НЕ ПОЛУЧЕН', cap: 'Терминал ответил ошибкой: ' + (r.error || '—') + '. Проверьте, что браузер терминала разрешил доступ к камере.' }); return; }
+      if (Date.now() - started > 130000) { this.viewer({ wait: 'ТЕРМИНАЛ НЕ ОТВЕТИЛ', cap: 'За 2 минуты терминал не сделал снимок. Откройте терминал модуля и проверьте связь.' }); return; }
+      setTimeout(poll, 1500);
+    };
+    setTimeout(poll, 1500);
+  },
+
+  async loadModulePhotos(moduleId) {
+    const el = document.getElementById('modulePhotoGrid');
+    const { data, error } = await sb.from('camera_requests').select('*').eq('module_id', moduleId).order('requested_at', { ascending: false }).limit(60);
+    if (moduleId !== this.editingModuleId) return;
+    if (error) { el.innerHTML = `<div class="empty-line" style="color:var(--red)">${this.escape(error.message)}${/camera_requests/.test(error.message) ? ' — выполните sql/camera.sql' : ''}</div>`; return; }
+    const list = (data || []).filter(r => r.status === 'done' || r.status === 'error');
+    document.getElementById('moduleCamStatus').textContent = list.length ? `СНИМКОВ: ${list.filter(r => r.status === 'done').length}` : '';
+    if (!list.length) { el.innerHTML = '<div class="empty-line">Снимков пока нет.</div>'; return; }
+    el.innerHTML = list.map(r => r.status === 'done'
+      ? `<figure data-cam="view" data-url="${this.escape(this.photoUrl(r.photo_path))}" data-cap="${this.escape(new Date(r.taken_at).toLocaleString())}"><img loading="lazy" src="${this.escape(this.photoUrl(r.photo_path))}" alt=""><figcaption>${new Date(r.taken_at).toLocaleString()}</figcaption></figure>`
+      : `<figure><div class="ph-err">Ошибка: ${this.escape(r.error || '—')}</div><figcaption>${new Date(r.requested_at).toLocaleString()}</figcaption></figure>`).join('');
+  },
+
+  async loadModuleLog(moduleId) {
+    const el = document.getElementById('moduleLogList');
+    const f = document.getElementById('moduleLogFilter').value;
+    let q = sb.from('logs').select('*, characters(name, badge_id)').eq('module_id', moduleId).order('timestamp', { ascending: false }).limit(300);
+    if (f) q = q.in('action_type', LOG_GROUPS[f]);
+    let { data, error } = await q;
+    if (error && /badge_id/.test(error.message)) {
+      let q2 = sb.from('logs').select('*, characters(name)').eq('module_id', moduleId).order('timestamp', { ascending: false }).limit(300);
+      if (f) q2 = q2.in('action_type', LOG_GROUPS[f]);
+      ({ data, error } = await q2);
+    }
+    if (moduleId !== this.editingModuleId) return;
+    if (error) { el.innerHTML = `<div class="empty-line" style="color:var(--red)">${this.escape(error.message)}</div>`; return; }
+    document.getElementById('moduleLogCount').textContent = (data || []).length ? `ЗАПИСЕЙ: ${data.length}${data.length >= 300 ? ' (последние 300)' : ''}` : '';
+    if (!data || !data.length) { el.innerHTML = '<div class="empty-line">Записей нет.</div>'; return; }
+    const alertName = id => { const a = (this.activeAlertsCache || []).find(x => x.id === id); return a ? a.label : ''; };
+    const detail = r => {
+      const d = r.details || {};
+      if (r.action_type.startsWith('threat_')) {
+        const parts = [];
+        const nm = alertName(d.alertId || d.from); if (nm) parts.push(nm);
+        if (d.type) parts.push((THREAT_DEFS[d.type] || {}).name || d.type);
+        if (d.code) parts.push('код ' + d.code);
+        if (d.reason) parts.push({ time: 'по времени', qr: 'устранена кодами', journal: 'записью в журнал' }[d.reason] || d.reason);
+        return parts.join(' · ');
+      }
+      if (r.action_type === 'auth') return d.result === 'ok' ? 'успешно' : (d.result || '') + (d.code ? ' · ' + d.code : '');
+      if (r.action_type === 'session_end') return { manual: 'вручную', timeout: 'истекло время сеанса', inactivity: 'бездействие' }[d.reason] || d.reason || '';
+      if (r.action_type === 'scan') return (d.code || '') + (d.result === 'not_found' ? ' · не найден' : '');
+      if (r.action_type === 'journal_entry') return d.type === 'audio' ? 'голосовая' + (d.text ? ': ' + d.text : '') : (d.text || '');
+      return Object.entries(d).filter(([k]) => !/Id$|^path$/.test(k)).map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`).join(' · ');
+    };
+    el.innerHTML = data.map(r => {
+      const who = r.characters ? (r.characters.name + (r.characters.badge_id ? ` [${r.characters.badge_id}]` : '')) : '';
+      return `<div class="log-row ${r.action_type.startsWith('threat_') ? 'threat' : ''}">
+        <span class="t">${new Date(r.timestamp).toLocaleString()}</span>
+        <span class="a">${this.escape(LOG_LABELS[r.action_type] || r.action_type)}</span>
+        <span class="d">${this.escape(detail(r))}${who ? ` <span style="color:var(--ink-600)">· ${this.escape(who)}</span>` : ''}</span>
+      </div>`;
+    }).join('');
+  }
+});
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-cam]'); if (!el) return;
+  const A = Admin, act = el.dataset.cam;
+  if (act === 'snap') A.requestSnapshot(el.dataset.mod);
+  if (act === 'snapEditor' && A.editingModuleId) A.requestSnapshot(A.editingModuleId);
+  if (act === 'closeViewer') A.closeViewer();
+  if (act === 'view') A.viewer({ url: el.dataset.url, cap: el.dataset.cap });
+  if (act === 'reloadLog' && A.editingModuleId) A.loadModuleLog(A.editingModuleId);
+});
+document.addEventListener('change', e => { if (e.target.id === 'moduleLogFilter' && Admin.editingModuleId) Admin.loadModuleLog(Admin.editingModuleId); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') Admin.closeViewer(); });
 
 MasterGate.ready(() => Admin.init());
 

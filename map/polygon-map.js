@@ -143,11 +143,12 @@
         <div style="opacity:.7;font-size:11px;letter-spacing:1px;margin:2px 0 8px">СЕКТОР ${sectorOf(p.x, p.y)} · ${esc(T.name).toUpperCase()}</div>
         <div style="white-space:pre-wrap">${esc(p.info || 'Дополнительных сведений нет.')}</div>`;
       popup.style.display = 'block';
-      const sr = svg.getBoundingClientRect(), cr = container.getBoundingClientRect();
-      const sx = sr.width / W(), sy = sr.height / H();
-      let left = sr.left - cr.left + p.x * sx + 24, top = sr.top - cr.top + p.y * sy - 20;
+      const cr = container.getBoundingClientRect();
+      const m = svg.getScreenCTM(); const sp = svg.createSVGPoint(); sp.x = p.x; sp.y = p.y; const q = sp.matrixTransform(m);
+      let left = q.x - cr.left + 24, top = q.y - cr.top - 20;
       const pw = popup.offsetWidth, ph = popup.offsetHeight;
-      if (left + pw > cr.width - 6) left = sr.left - cr.left + p.x * sx - pw - 24;
+      const px = q.x - cr.left;
+      if (left + pw > cr.width - 6) left = px - pw - 24;
       top = Math.max(6, Math.min(cr.height - ph - 6, top));
       popup.style.left = Math.max(6, left) + 'px'; popup.style.top = top + 'px';
     }
@@ -158,28 +159,24 @@
       points.forEach((p, i) => {
         const T = TYPES[p.type] || TYPES.danger;
         const g = el('g', { transform: `translate(${p.x},${p.y})`, class: 'pm-point', 'data-i': i, style: 'cursor:' + (opts.mode === 'edit' ? 'grab' : 'pointer') }, ptsG);
-        const S = 1.7;   // точки и подписи крупнее: карта на экране показывается в 3–4 раза меньше натурального размера
-        el('circle', { r: 60 * S, fill: 'transparent' }, g);   // область нажатия
-        [0, 1].forEach(k => {
-          const c = el('circle', { r: 30 * S, fill: 'none', stroke: T.color, 'stroke-width': 6 * S }, g);
-          el('animate', { attributeName: 'r', values: `${30 * S};${120 * S}`, dur: '2s', begin: `${k}s`, repeatCount: 'indefinite' }, c);
-          el('animate', { attributeName: 'opacity', values: '1;0', dur: '2s', begin: `${k}s`, repeatCount: 'indefinite' }, c);
+        // точка без подписи — только значок с анимацией; подпись и сведения — по нажатию
+        const S = 0.68;
+        el('circle', { r: 110, fill: 'transparent' }, g);   // область нажатия больше значка
+        [0, 0.7, 1.4].forEach(k => {
+          const c = el('circle', { r: 30 * S, fill: 'none', stroke: T.color, 'stroke-width': 5 }, g);
+          el('animate', { attributeName: 'r', values: `${30 * S};${150 * S}`, dur: '2.1s', begin: `${k}s`, repeatCount: 'indefinite' }, c);
+          el('animate', { attributeName: 'opacity', values: '1;0', dur: '2.1s', begin: `${k}s`, repeatCount: 'indefinite' }, c);
         });
-        const rot = el('circle', { r: 52 * S, fill: 'none', stroke: T.color, 'stroke-width': 4 * S, 'stroke-dasharray': `${12 * S} ${12 * S}` }, g);
-        el('animateTransform', { attributeName: 'transform', type: 'rotate', from: '0', to: '360', dur: '6s', repeatCount: 'indefinite' }, rot);
-        el('path', { d: shapePath(T.shape, 32 * S), fill: '#04101c', stroke: '#04101c', 'stroke-width': 14 * S }, g);
-        const body = el('path', { d: shapePath(T.shape, 32 * S), fill: T.color, stroke: '#FFFFFF', 'stroke-width': 5 * S, filter: `url(#${uid}-glow)` }, g);
-        el('animate', { attributeName: 'opacity', values: '1;.6;1', dur: '1.2s', repeatCount: 'indefinite' }, body);
-        el('text', { y: (T.shape === 'tri' ? 14 : 11) * S, 'text-anchor': 'middle', 'font-size': 32 * S, 'font-weight': 800, fill: '#04101c', 'font-family': 'IBM Plex Mono, monospace' }, g).textContent = i + 1;
-        // подпись — полупрозрачная плашка: название и сектор
-        const text = (p.label || T.name).toUpperCase();
-        const right = p.x < W() - 760;
-        const lg = el('g', { transform: `translate(${right ? 66 * S : -66 * S},${-62 * S})`, opacity: .8 }, g);
-        const w = (Math.max(text.length * 20, 190) + 34) * S;
-        el('rect', { x: right ? 0 : -w, y: 0, width: w, height: 82 * S, fill: 'rgba(2,8,16,.5)', stroke: T.color, 'stroke-width': 3 * S, 'stroke-opacity': .65 }, lg);
-        el('text', { x: right ? 16 * S : -w + 16 * S, y: 35 * S, 'font-size': 30 * S, 'font-weight': 700, fill: T.color, 'font-family': 'Exo 2, IBM Plex Mono, sans-serif' }, lg).textContent = text;
-        el('text', { x: right ? 16 * S : -w + 16 * S, y: 68 * S, 'font-size': 24 * S, fill: '#EAF6FF', 'font-family': 'IBM Plex Mono, monospace' }, lg).textContent = `СЕКТОР ${sectorOf(p.x, p.y)}${p.info ? '  ⓘ' : ''}`;
-        if (opts.mode === 'edit' && i === selected) el('circle', { r: 66 * S, fill: 'none', stroke: '#FFFFFF', 'stroke-width': 4 * S, 'stroke-dasharray': '10 10' }, g);
+        const rot = el('circle', { r: 52 * S, fill: 'none', stroke: T.color, 'stroke-width': 3, 'stroke-dasharray': '8 8' }, g);
+        el('animateTransform', { attributeName: 'transform', type: 'rotate', from: '0', to: '360', dur: '5s', repeatCount: 'indefinite' }, rot);
+        el('path', { d: shapePath(T.shape, 32 * S), fill: '#04101c', stroke: '#04101c', 'stroke-width': 10 }, g);
+        const body = el('path', { d: shapePath(T.shape, 32 * S), fill: T.color, stroke: '#FFFFFF', 'stroke-width': 3.5, filter: `url(#${uid}-glow)` }, g);
+        el('animate', { attributeName: 'opacity', values: '1;.5;1', dur: '1.1s', repeatCount: 'indefinite' }, body);
+        el('animateTransform', { attributeName: 'transform', type: 'scale', values: '1;1.18;1', dur: '1.1s', repeatCount: 'indefinite' }, body);
+        if (opts.mode === 'edit') {
+          el('text', { y: (T.shape === 'tri' ? 9 : 7.5), 'text-anchor': 'middle', 'font-size': 22, 'font-weight': 800, fill: '#04101c', 'font-family': 'IBM Plex Mono, monospace', 'pointer-events': 'none' }, g).textContent = i + 1;
+          if (i === selected) el('circle', { r: 46, fill: 'none', stroke: '#FFFFFF', 'stroke-width': 3, 'stroke-dasharray': '8 8' }, g);
+        }
       });
     }
 
@@ -189,27 +186,71 @@
       return { x: Math.max(0, Math.min(W(), Math.round(p.x))), y: Math.max(0, Math.min(H(), Math.round(p.y))) };
     }
 
+    /* ---------- масштаб и перемещение (кнопки +/−, колесо, перетаскивание) ---------- */
+    const view = { z: 1, cx: 0, cy: 0 };
+    function applyView() {
+      if (!svg) return;
+      const w = W() / view.z, h = H() / view.z;
+      view.cx = Math.max(w / 2, Math.min(W() - w / 2, view.cx));
+      view.cy = Math.max(h / 2, Math.min(H() - h / 2, view.cy));
+      svg.setAttribute('viewBox', `${(view.cx - w / 2).toFixed(1)} ${(view.cy - h / 2).toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)}`);
+      popupHide();
+      opts.onZoom && opts.onZoom(view.z);
+    }
+    function zoomBy(f, ax, ay) {
+      const nz = Math.max(1, Math.min(6, view.z * f));
+      if (ax != null) { const k = 1 - view.z / nz; view.cx += (ax - view.cx) * k; view.cy += (ay - view.cy) * k; }
+      view.z = nz; applyView();
+    }
+    let pan = null;   // { x, y, cx, cy, moved }
+    function panStart(e) { pan = { x: e.clientX, y: e.clientY, cx: view.cx, cy: view.cy, moved: false }; }
+    function panMove(e) {
+      if (!pan) return;
+      const dx = e.clientX - pan.x, dy = e.clientY - pan.y;
+      if (Math.hypot(dx, dy) > 5) pan.moved = true;
+      if (!pan.moved || view.z === 1) return;
+      const sc = svg.getScreenCTM().a;   // пикселей экрана на единицу карты
+      view.cx = pan.cx - dx / sc; view.cy = pan.cy - dy / sc; applyView();
+    }
+
     const ready = load().then(D => {
       svg = el('svg', { viewBox: `0 0 ${D.W} ${D.H}`, preserveAspectRatio: 'xMidYMid meet', role: 'img', 'aria-label': 'Карта полигона' }, container);
       svg.style.cssText = 'width:100%;height:100%;display:block;user-select:none;touch-action:none;' + (opts.mode === 'edit' ? 'cursor:crosshair;' : '');
+      view.cx = D.W / 2; view.cy = D.H / 2;
       satImg = drawBase(svg, D, uid, opts);
       ptsG = el('g', {}, svg);
       drawPoints();
+      svg.addEventListener('wheel', e => { e.preventDefault(); const p = toVB(e); zoomBy(e.deltaY < 0 ? 1.25 : 0.8, p.x, p.y); }, { passive: false });
       if (opts.mode === 'edit') {
         svg.addEventListener('pointerdown', e => {
+          svg.setPointerCapture(e.pointerId);
           const g = e.target.closest('.pm-point');
-          if (g) { selected = +g.dataset.i; drag = selected; svg.setPointerCapture(e.pointerId); drawPoints(); opts.onSelect && opts.onSelect(selected); return; }
+          if (g) { selected = +g.dataset.i; drag = selected; drawPoints(); opts.onSelect && opts.onSelect(selected); return; }
+          panStart(e);
+        });
+        svg.addEventListener('pointermove', e => {
+          if (drag != null) { const p = toVB(e); points[drag].x = p.x; points[drag].y = p.y; drawPoints(); return; }
+          panMove(e);
+        });
+        svg.addEventListener('pointerup', e => {
+          if (drag != null) { drag = null; opts.onChange && opts.onChange(points.slice(), selected); return; }
+          const wasPan = pan && pan.moved; pan = null;
+          if (wasPan) return;
+          // короткий клик по пустому месту — новая точка
           if (points.length >= opts.max) { opts.onLimit && opts.onLimit(); return; }
           const p = toVB(e);
           points.push({ x: p.x, y: p.y, type: opts.defaultType, label: '', info: '', v: 2 });
           selected = points.length - 1; drawPoints(); opts.onChange && opts.onChange(points.slice(), selected);
         });
-        svg.addEventListener('pointermove', e => { if (drag == null) return; const p = toVB(e); points[drag].x = p.x; points[drag].y = p.y; drawPoints(); });
-        svg.addEventListener('pointerup', () => { if (drag != null) { drag = null; opts.onChange && opts.onChange(points.slice(), selected); } });
       } else {
-        svg.addEventListener('click', e => {
-          const g = e.target.closest('.pm-point');
-          if (g) { e.stopPropagation(); popupShow(+g.dataset.i); } else popupHide();
+        svg.addEventListener('pointerdown', e => { svg.setPointerCapture(e.pointerId); panStart(e); });
+        svg.addEventListener('pointermove', panMove);
+        svg.addEventListener('pointerup', e => {
+          const wasPan = pan && pan.moved; pan = null;
+          if (wasPan) return;
+          const hit = document.elementFromPoint(e.clientX, e.clientY);
+          const g = hit && hit.closest && hit.closest('.pm-point');
+          if (g) popupShow(+g.dataset.i); else popupHide();
         });
       }
     }).catch(err => { container.innerHTML = '<div style="padding:20px;color:#FF6B6B;font-family:monospace">Карта не загрузилась: ' + esc(err.message) + '</div>'; });
@@ -220,7 +261,9 @@
       getPoints() { return points.slice(); },
       select(i) { selected = i; drawPoints(); },
       setOption(k, v) { opts[k] = v; },
-      setSatellite(on) { opts.satellite = !!on; if (satImg) satImg.setAttribute('opacity', on ? .55 : .14); }
+      setSatellite(on) { opts.satellite = !!on; if (satImg) satImg.setAttribute('opacity', on ? .55 : .14); },
+      zoomIn() { zoomBy(1.4); }, zoomOut() { zoomBy(1 / 1.4); }, zoomReset() { view.z = 1; applyView(); },
+      get zoom() { return view.z; }
     };
   }
 
