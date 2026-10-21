@@ -824,6 +824,125 @@
     /* нижние плашки — в ширину колонки, не заходят на купол */
     #tui-col-left > .tui-panel:last-child,
     #tui-col-right > .tui-panel:last-child { width: auto; margin-left: 0; margin-right: 0; }
+
+    /* ==========================================================
+       УГРОЗЫ (ThreatEngine): выделенная плашка, карточка с инструкцией
+       и таймером, эффекты фона по типу угрозы
+       ========================================================== */
+    #tui-threat-fx { position: absolute; inset: 0; pointer-events: none; opacity: 0; z-index: 1; transition: opacity .8s ease; }
+    #terminal-ui.threat-active #tui-threat-fx { opacity: 1; }
+
+    #terminal-ui.threat-active .tui-panel { transition: opacity .6s ease, filter .6s ease, box-shadow .6s ease, transform .6s ease; }
+    #terminal-ui.threat-active .tui-panel:not(.threat-focus) { filter: saturate(.5) brightness(.72); }
+    #terminal-ui .tui-panel.threat-focus {
+      z-index: 5; transform: scale(1.025); opacity: 1;
+      box-shadow: 0 0 0 1px var(--tui-alert-color), 0 0 26px color-mix(in srgb, var(--tui-alert-color) 55%, transparent),
+                  inset 0 0 30px color-mix(in srgb, var(--tui-alert-color) 18%, transparent);
+      animation: tui-threat-focus 1.6s ease-in-out infinite;
+    }
+    #terminal-ui .tui-panel.threat-focus .tui-panel-title { color: var(--tui-alert-color) !important; }
+    @keyframes tui-threat-focus {
+      50% { box-shadow: 0 0 0 1px var(--tui-alert-color), 0 0 44px color-mix(in srgb, var(--tui-alert-color) 80%, transparent),
+                        inset 0 0 40px color-mix(in srgb, var(--tui-alert-color) 30%, transparent); }
+    }
+    .tui-threat-val { color: var(--tui-alert-color) !important; text-shadow: 0 0 8px color-mix(in srgb, var(--tui-alert-color) 70%, transparent); }
+    .tui-threat-blink { animation: tui-threat-blink 1s steps(2, start) infinite; }
+    @keyframes tui-threat-blink { 50% { opacity: .35; } }
+
+    /* карточка угрозы — в центральной области над куполом, не перекрывает кнопки */
+    #tui-threat-card {
+      grid-area: center; align-self: end; justify-self: center; z-index: 6; pointer-events: none;
+      width: min(620px, 100%); margin-bottom: 6px; display: none;
+      background: color-mix(in srgb, var(--tui-alert-color) 10%, rgba(3, 7, 18, .86));
+      border: 1px solid var(--tui-alert-color); padding: 14px 18px 14px;
+      clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+      box-shadow: 0 0 30px color-mix(in srgb, var(--tui-alert-color) 35%, transparent);
+    }
+    #terminal-ui.threat-active #tui-threat-card.has-content { display: block; animation: tui-card-in .5s ease; }
+    @keyframes tui-card-in { from { opacity: 0; transform: translateY(-10px) scale(.98); } }
+    .tc-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .tc-sev { font-family: var(--tui-font-digital); font-size: 11px; letter-spacing: 1.5px; color: #041018; background: var(--tui-alert-color); padding: 3px 8px; }
+    .tc-title { font-family: var(--tui-font-ui); font-size: clamp(14px, 1.25vw, 19px); letter-spacing: 1.5px; color: var(--tui-alert-color); text-shadow: 0 0 10px color-mix(in srgb, var(--tui-alert-color) 70%, transparent); }
+    .tc-instr { font-family: var(--tui-font-body); font-weight: 600; font-size: clamp(14px, 1.2vw, 19px); line-height: 1.4; color: var(--tui-ink-100); margin-top: 10px; white-space: pre-wrap; }
+    .tc-instr:empty { display: none; }
+    .tc-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; margin-top: 12px; flex-wrap: wrap; }
+    .tc-timer { display: none; flex-direction: column; }
+    .tc-timer.on { display: flex; }
+    .tc-timer-label { font-family: var(--tui-font-body); font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--tui-ink-400); }
+    .tc-timer-val { font-family: var(--tui-font-digital); font-size: clamp(26px, 2.6vw, 40px); letter-spacing: 3px; color: var(--tui-alert-color); text-shadow: 0 0 12px color-mix(in srgb, var(--tui-alert-color) 70%, transparent); line-height: 1.05; }
+    .tc-timer.last .tc-timer-val { color: var(--tui-red); animation: tui-threat-blink .5s steps(2, start) infinite; }
+    .tc-task { font-family: var(--tui-font-body); font-weight: 600; font-size: 12.5px; letter-spacing: .8px; text-transform: uppercase; color: var(--tui-ink-100);
+      border: 1px dashed color-mix(in srgb, var(--tui-alert-color) 60%, transparent); padding: 6px 10px; }
+    .tc-task:empty { display: none; }
+    .tc-task b { color: var(--tui-alert-color); }
+
+    /* --- сейсмика: тряска --- */
+    body.tui-shaking #tui-shell, body.tui-shaking #canvas-container { animation: tui-shake .11s linear infinite; }
+    @keyframes tui-shake {
+      0% { transform: translate(0, 0) rotate(0); }
+      25% { transform: translate(calc(var(--shake, 4px) * -1), calc(var(--shake, 4px) * .6)) rotate(-.15deg); }
+      50% { transform: translate(var(--shake, 4px), calc(var(--shake, 4px) * -.4)) rotate(.12deg); }
+      75% { transform: translate(calc(var(--shake, 4px) * -.5), var(--shake, 4px)) rotate(0); }
+      100% { transform: translate(0, 0); }
+    }
+    /* --- биоугроза: споры --- */
+    #terminal-ui.fx-spores #tui-threat-fx {
+      background-image:
+        radial-gradient(circle, color-mix(in srgb, var(--tui-alert-color) 70%, transparent) 0 2px, transparent 3px),
+        radial-gradient(circle, color-mix(in srgb, var(--tui-alert-color) 45%, transparent) 0 1.5px, transparent 2.5px),
+        radial-gradient(ellipse at 50% 50%, transparent 40%, color-mix(in srgb, var(--tui-alert-color) 22%, transparent) 100%);
+      background-size: 140px 160px, 90px 110px, 100% 100%;
+      animation: tui-spores 14s linear infinite;
+    }
+    @keyframes tui-spores { to { background-position: 40px -320px, -60px -220px, 0 0; } }
+    /* --- разгерметизация: красная пульсирующая виньетка --- */
+    #terminal-ui.fx-breach #tui-threat-fx { animation: tui-breach 1.3s ease-in-out infinite; }
+    @keyframes tui-breach {
+      0%, 100% { box-shadow: inset 0 0 120px color-mix(in srgb, var(--tui-alert-color) 35%, transparent); }
+      50% { box-shadow: inset 0 0 260px color-mix(in srgb, var(--tui-alert-color) 70%, transparent); }
+    }
+    /* --- удушье: «дыхание» — края экрана медленно темнеют --- */
+    #terminal-ui.fx-suffocate #tui-threat-fx {
+      background: radial-gradient(ellipse at 50% 50%, transparent 30%, color-mix(in srgb, var(--tui-alert-color) 25%, #000) 100%);
+      animation: tui-breathe 4.5s ease-in-out infinite;
+    }
+    @keyframes tui-breathe { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
+    /* --- перегрузка: просадки напряжения --- */
+    body.tui-brownout #terminal-ui, body.tui-brownout #canvas-container { filter: brightness(var(--brown, .35)) saturate(.6); }
+    #terminal-ui.fx-flicker #tui-threat-fx { background: color-mix(in srgb, var(--tui-alert-color) 6%, transparent); animation: tui-hum .09s steps(2) infinite; }
+    @keyframes tui-hum { 50% { opacity: .55; } }
+    /* --- буря: песок и пыль летят по экрану --- */
+    #terminal-ui.fx-dust #tui-threat-fx {
+      background-image:
+        repeating-linear-gradient(100deg, transparent 0 46px, color-mix(in srgb, var(--tui-alert-color) 22%, transparent) 46px 48px, transparent 48px 120px),
+        repeating-linear-gradient(97deg, transparent 0 80px, rgba(203, 213, 225, .12) 80px 81px, transparent 81px 190px),
+        linear-gradient(180deg, transparent 50%, color-mix(in srgb, var(--tui-alert-color) 14%, transparent));
+      background-size: 600px 100%, 900px 100%, 100% 100%;
+      animation: tui-dust var(--dust-speed, .9s) linear infinite;
+    }
+    @keyframes tui-dust { to { background-position: 600px 0, 900px 0, 0 0; } }
+    #terminal-ui.fx-dust .tui-windrose .needle { animation-duration: .7s; animation-timing-function: linear; }
+    /* --- потеря связи: помехи и глитч --- */
+    #terminal-ui.fx-glitch #tui-threat-fx {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+      opacity: var(--noise, .12); animation: tui-noise .18s steps(3) infinite; mix-blend-mode: screen;
+    }
+    @keyframes tui-noise { 33% { background-position: 60px 30px; } 66% { background-position: -40px 90px; } }
+    .tui-panel.tui-glitch { animation: tui-glitch .28s steps(3) 1 !important; opacity: 1; }
+    @keyframes tui-glitch {
+      0% { transform: translate(5px, 0) skewX(-6deg); filter: hue-rotate(90deg) saturate(2); clip-path: inset(10% 0 40% 0); }
+      50% { transform: translate(-7px, 2px) skewX(4deg); filter: hue-rotate(-60deg); clip-path: inset(50% 0 5% 0); }
+      100% { transform: none; filter: none; clip-path: none; }
+    }
+    /* --- запрос центра: сигнальная волна от плашки журнала --- */
+    #terminal-ui.fx-ping #tui-threat-fx {
+      background: radial-gradient(circle at 80% 45%, color-mix(in srgb, var(--tui-alert-color) 30%, transparent) 0, transparent 35%);
+      animation: tui-ping 2.4s ease-out infinite;
+    }
+    @keyframes tui-ping { 0% { opacity: .9; } 100% { opacity: .15; } }
+    @media (prefers-reduced-motion: reduce) {
+      body.tui-shaking #tui-shell, body.tui-shaking #canvas-container, #terminal-ui.threat-active #tui-threat-fx { animation: none !important; }
+    }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -863,6 +982,7 @@
 
 <div id="terminal-ui">
   <div id="tui-alert-tint"></div>
+  <div id="tui-threat-fx"></div>
   <div id="tui-alert-banner"><span id="tui-alert-text"></span><span id="tui-alert-sound-hint"> · 🔇 КОСНИТЕСЬ ЭКРАНА, ЧТОБЫ ВКЛЮЧИТЬ ЗВУК</span></div>
   <div id="tui-vignette"></div>
   <div id="tui-scanlines"></div>
@@ -946,7 +1066,7 @@
     <!-- ======= ЛЕВАЯ КОЛОНКА ======= -->
     <aside id="tui-col-left">
 
-      <section class="tui-panel tui-shape-a">
+      <section class="tui-panel tui-shape-a" id="tui-panel-bio">
         <svg class="tui-corner tl" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
         <svg class="tui-corner tr" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
         <svg class="tui-corner bl" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
@@ -971,7 +1091,7 @@
         </div>
       </section>
 
-      <section class="tui-panel tui-shape-b">
+      <section class="tui-panel tui-shape-b" id="tui-panel-hull">
         <svg class="tui-corner tl" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
         <svg class="tui-corner tr" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
         <svg class="tui-corner bl" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
@@ -996,7 +1116,7 @@
         </div>
       </section>
 
-      <section class="tui-panel tui-shape-c">
+      <section class="tui-panel tui-shape-c" id="tui-panel-atmo">
         <svg class="tui-corner tl" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
         <svg class="tui-corner tr" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
         <svg class="tui-corner bl" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
@@ -1065,6 +1185,16 @@
     </aside>
 
     <!-- ======= ЦЕНТР (открыт для купола) ======= -->
+    <!-- ======= КАРТОЧКА УГРОЗЫ: инструкция, таймер, задание ======= -->
+    <div id="tui-threat-card" aria-live="polite">
+      <div class="tc-head"><span class="tc-sev" id="tc-sev"></span><span class="tc-title" id="tc-title"></span></div>
+      <div class="tc-instr" id="tc-instr"></div>
+      <div class="tc-row">
+        <div class="tc-timer" id="tc-timer"><span class="tc-timer-label" id="tc-timer-label"></span><span class="tc-timer-val" id="tc-timer-val">--:--</span></div>
+        <div class="tc-task" id="tc-task"></div>
+      </div>
+    </div>
+
     <section id="tui-center">
       <nav class="tui-panel tui-shape-c tui-dock" id="tui-dock">
         <button class="tui-dock-btn" id="tui-btn-scan" data-action="goScanContent">
@@ -1109,7 +1239,7 @@
         </div>
       </section>
 
-      <section class="tui-panel tui-shape-a">
+      <section class="tui-panel tui-shape-a" id="tui-panel-journal">
         <svg class="tui-corner tl" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
         <svg class="tui-corner tr" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
         <svg class="tui-corner bl" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
@@ -1139,7 +1269,7 @@
         </div>
       </section>
 
-      <section class="tui-panel tui-shape-c">
+      <section class="tui-panel tui-shape-c" id="tui-panel-comms">
         <svg class="tui-corner tl" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
         <svg class="tui-corner tr" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
         <svg class="tui-corner bl" viewBox="0 0 30 30"><path pathLength="100" d="M0,16 L0,4 L4,0 L16,0"/><circle class="node" cx="6" cy="6" r="2.2"/></svg>
@@ -1405,7 +1535,11 @@
   scene.add(lightGlow);
 
   // ==================== 4. ФОТОНЫ (ВЕТЕР) ====================
-  const particleCount = 80;
+  // Параметры сцены, которыми управляют угрозы (см. ThreatEngine):
+  // windMul — скорость ветра, particles — сколько частиц видно, particleColor — их цвет,
+  // bgColor/bgPulse — оттенок фона (пульсирует), particleSize — размер частиц.
+  window.TUI_SCENE = { windMul: 1, particles: 80, particleColor: null, particleSize: 0.045, bgColor: null, bgPulse: 0 };
+  const particleCount = 260;
   const pGeo = new THREE.BufferGeometry();
   const pPos = new Float32Array(particleCount * 3);
   const pData = [];
@@ -1425,7 +1559,10 @@
   const pMat = new THREE.PointsMaterial({ color: 0x5EEAD4, size: 0.045, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending });
   const particles = new THREE.Points(pGeo, pMat);
   particles.renderOrder = 4;
+  pGeo.setDrawRange(0, 80);
   scene.add(particles);
+  const baseBg = new THREE.Color(0x030712), threatBg = new THREE.Color(0x030712), baseParticle = new THREE.Color(0x5EEAD4);
+  let windMulNow = 1;
 
   let targetWindDir = 1;
   let currentWindDir = 1;
@@ -1657,12 +1794,25 @@
 
     // Ветер
     currentWindDir += (targetWindDir - currentWindDir) * delta * 0.8;
+    const TS = window.TUI_SCENE;
+    windMulNow += (TS.windMul - windMulNow) * Math.min(1, delta * 1.5);   // плавный разгон/затихание ветра
+    pGeo.setDrawRange(0, Math.min(particleCount, TS.particles));
+    pMat.color.lerp(TS.particleColor ? new THREE.Color(TS.particleColor) : baseParticle, Math.min(1, delta * 2));
+    pMat.size += ((TS.particleSize || 0.045) - pMat.size) * Math.min(1, delta * 2);
+    if (TS.bgColor) {
+      threatBg.set(TS.bgColor);
+      const k = 0.16 + (TS.bgPulse ? (Math.sin(elapsedTime * TS.bgPulse) * 0.5 + 0.5) * 0.14 : 0);
+      scene.background.copy(baseBg).lerp(threatBg, k);
+    } else {
+      scene.background.lerp(baseBg, Math.min(1, delta * 2));
+    }
     const pArray = particles.geometry.attributes.position.array;
+    const gust = windMulNow > 1.5 ? (1 + Math.sin(elapsedTime * 2.3) * 0.35) : 1;
     for(let i = 0; i < particleCount; i++) {
       const data = pData[i];
-      pArray[i*3] += data.speedBase * currentWindDir;
-      pArray[i*3 + 1] += Math.sin(elapsedTime * 1.5 + data.seedY) * 0.0015;
-      pArray[i*3 + 2] += Math.cos(elapsedTime * 1.5 + data.seedZ) * 0.0015;
+      pArray[i*3] += data.speedBase * currentWindDir * windMulNow * gust;
+      pArray[i*3 + 1] += Math.sin(elapsedTime * 1.5 + data.seedY) * 0.0015 * Math.min(windMulNow, 4);
+      pArray[i*3 + 2] += Math.cos(elapsedTime * 1.5 + data.seedZ) * 0.0015 * Math.min(windMulNow, 4);
 
       if (pArray[i*3] > 5.5) pArray[i*3] = -5.5;
       if (pArray[i*3] < -5.5) pArray[i*3] = 5.5;
@@ -1734,10 +1884,19 @@
   // Плашка «Активность жителей» (#tui-histo) заменена «Сейсмо-скан» в разметке —
   // старый код гистограммы убран вместе с ней (элемента больше нет в DOM).
 
+  // Во время угрозы ThreatEngine сам пишет значения в эти элементы:
+  // TUI_LOCK — id элементов, которые обычная «живая» телеметрия не трогает,
+  // TUI_SPARK_OVR / TUI_EQ_OVR — усиленные параметры графиков и эквалайзеров.
+  window.TUI_LOCK = new Set();
+  window.TUI_SPARK_OVR = {};
+  window.TUI_EQ_OVR = {};
+  const tuiLocked = id => window.TUI_LOCK.has(id);
+
   function tuiDrift(elId, base, min, max, jitter, format, intervalMs) {
     const el = document.getElementById(elId);
     let v = base;
     setInterval(() => {
+      if (tuiLocked(elId)) return;
       v = Math.max(min, Math.min(max, v + (Math.random() - 0.5) * jitter));
       if (el) el.textContent = format(v);
     }, intervalMs || 2000);
@@ -1763,9 +1922,12 @@
     setInterval(() => {
       vals.shift();
       t++;
-      let next = (opts.mode === 'sine')
-        ? opts.base + Math.sin(t / 2) * (opts.jitter * 3) + (Math.random() - 0.5) * opts.jitter
-        : vals[vals.length - 1] + (Math.random() - 0.5) * opts.jitter;
+      const o = window.TUI_SPARK_OVR[elId];
+      const P = o ? Object.assign({}, opts, o) : opts;
+      const last = vals[vals.length - 1];
+      let next = (P.mode === 'sine')
+        ? P.base + Math.sin(t / 2) * (P.jitter * 3) + (Math.random() - 0.5) * P.jitter
+        : (o && o.pull != null ? last + (P.base - last) * o.pull : last) + (Math.random() - 0.5) * P.jitter;
       vals.push(Math.max(opts.min, Math.min(opts.max, next)));
       render();
     }, opts.intervalMs || 1200);
@@ -1785,7 +1947,8 @@
       bars.push(b);
     }
     setInterval(() => {
-      bars.forEach(b => { b.style.height = (Math.floor(Math.random() * (opts.spread || 70)) + (opts.floor || 12)) + '%'; });
+      const P = window.TUI_EQ_OVR[containerId] || opts;
+      bars.forEach(b => { b.style.height = Math.min(100, Math.floor(Math.random() * (P.spread || 70)) + (P.floor || 12)) + '%'; });
     }, opts.intervalMs || 420);
   }
 
@@ -1808,6 +1971,7 @@
     const el = document.getElementById('tui-pressure');
     let v = 1.01;
     setInterval(() => {
+      if (tuiLocked('tui-pressure')) return;
       const jump = Math.random() < 0.35;
       v = Math.max(0.94, Math.min(1.04, v + (jump ? (Math.random() - 0.5) * 0.06 : (Math.random() - 0.5) * 0.01)));
       el.textContent = v.toFixed(2) + ' ATM';
@@ -1825,6 +1989,7 @@
       pts.push(d);
     }
     setInterval(() => {
+      if (tuiLocked('tui-dents')) return;
       const i = Math.floor(Math.random() * pts.length);
       pts[i].classList.add('hit');
       setTimeout(() => pts[i].classList.remove('hit'), 900);
@@ -1837,11 +2002,12 @@
   // «Патогенный индекс» — сдвиг цвета при тревоге (демонстрационно, крайне редко)
   (function () {
     setInterval(() => {
-      if (Math.random() < 0.12) tuiFlashOnce('tui-pathogen', 'alert', 1600);
+      if (!tuiLocked('tui-pathogen') && Math.random() < 0.12) tuiFlashOnce('tui-pathogen', 'alert', 1600);
     }, 6000);
   })();
   tuiDrift('tui-toxicity', 0, 0, 0.03, 0.01, v => v.toFixed(2) + ' PPM [SAFE]', 3000);
   setInterval(() => {
+    if (tuiLocked('tui-toxicity')) return;
     document.getElementById('tui-toxicity-bar').style.width = (2 + Math.random() * 4).toFixed(0) + '%';
   }, 3000);
 
@@ -1850,6 +2016,7 @@
   tuiDrift('tui-co2', 0.04, 0.02, 0.08, 0.01, v => v.toFixed(2) + '%', 2600);
   // «Всплеск цвета при превышении нормы CO₂»
   setInterval(() => {
+    if (tuiLocked('tui-co2')) return;
     const co2El = document.getElementById('tui-co2');
     const v = parseFloat(co2El.textContent);
     co2El.classList.toggle('red', v > 0.06);
@@ -1871,6 +2038,7 @@
     const el = document.getElementById('tui-storm-val');
     const panel = document.getElementById('tui-panel-meteo');
     setInterval(() => {
+      if (tuiLocked('tui-storm-val')) return;
       const risky = Math.random() < 0.18;
       el.textContent = risky ? 'РИСК БУРИ' : 'ШТИЛЬ';
       el.classList.toggle('red', risky);
@@ -1887,6 +2055,7 @@
     const noiseEl = document.getElementById('tui-tect-noise');
     const vals = [-14, -12, -11, -9, -13];
     setInterval(() => {
+      if (tuiLocked('tui-tect-noise')) return;
       noiseEl.textContent = vals[Math.floor(Math.random() * vals.length)] + ' dB (LOW)';
     }, 2400);
   })();
@@ -1895,6 +2064,7 @@
     const statusEl = document.getElementById('tui-platform-status');
     const panel = document.getElementById('tui-panel-seismo');
     setInterval(() => {
+      if (tuiLocked('tui-platform-status')) return;
       const unstable = Math.random() < 0.1;
       statusEl.textContent = unstable ? 'ВИБРАЦИЯ' : 'СТАБИЛЬНО';
       statusEl.classList.toggle('amber', unstable);
@@ -2136,6 +2306,523 @@
   /* =========================================================================
      ТРЕВОГА МОДУЛЯ (alerts) — видна независимо от аутентификации, п.6 ТЗ
      ========================================================================= */
+
+  /* =========================================================================
+     УГРОЗЫ — встроенные звуки (синтез Web Audio, без файлов).
+     Если мастер загрузил свой звук (alerts.sound_url), играет файл, а синтез молчит.
+     ========================================================================= */
+  const ThreatAudio = {
+    ctx: null, master: null, nodes: [], timers: [], kind: null,
+    ensure() {
+      if (!this.ctx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        this.ctx = new AC();
+        this.master = this.ctx.createGain();
+        this.master.gain.value = 0.55;
+        this.master.connect(this.ctx.destination);
+      }
+      return this.ctx;
+    },
+    noiseBuffer(type) {
+      const ctx = this.ctx, len = ctx.sampleRate * 2, buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
+      let last = 0;
+      for (let i = 0; i < len; i++) {
+        const w = Math.random() * 2 - 1;
+        if (type === 'brown') { last = (last + 0.02 * w) / 1.02; d[i] = last * 3.5; } else d[i] = w;
+      }
+      return buf;
+    },
+    noise(type, filterType, freq, q, gain) {
+      const ctx = this.ctx;
+      const src = ctx.createBufferSource(); src.buffer = this.noiseBuffer(type); src.loop = true;
+      const f = ctx.createBiquadFilter(); f.type = filterType; f.frequency.value = freq; f.Q.value = q || 0.7;
+      const g = ctx.createGain(); g.gain.value = gain;
+      src.connect(f); f.connect(g); g.connect(this.master); src.start();
+      this.nodes.push(src);
+      return { src, f, g };
+    },
+    lfo(param, rate, depth, offset) {
+      const ctx = this.ctx, o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = rate; g.gain.value = depth; param.value = offset;
+      o.connect(g); g.connect(param); o.start(); this.nodes.push(o);
+    },
+    tone(freq, dur, type, vol, when) {
+      const ctx = this.ctx, t = (when || ctx.currentTime);
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type || 'sine'; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol || 0.2, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(this.master); o.start(t); o.stop(t + dur + 0.05);
+    },
+    click(vol) {
+      const ctx = this.ctx, t = ctx.currentTime, src = ctx.createBufferSource();
+      const b = ctx.createBuffer(1, 400, ctx.sampleRate), d = b.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / 40);
+      src.buffer = b; const g = ctx.createGain(); g.gain.value = vol || 0.5;
+      src.connect(g); g.connect(this.master); src.start(t);
+    },
+    every(ms, fn) { const id = setInterval(fn, ms); this.timers.push(id); return id; },
+    start(kind, sev) {
+      this.stop();
+      if (!kind || !this.ensure()) return;
+      this.kind = kind;
+      const s = sev || 1;
+      if (kind === 'rumble') {
+        const n = this.noise('brown', 'lowpass', 110, 0.8, 0.0);
+        this.lfo(n.g.gain, 0.25, 0.25 * s, 0.35 * s);
+        this.rumble = n;
+      } else if (kind === 'geiger') {
+        const rate = [5, 11, 22][s - 1];
+        this.every(60, () => { if (Math.random() < rate * 0.06) this.click(0.35 + Math.random() * 0.3); });
+      } else if (kind === 'hiss') {
+        const n = this.noise('white', 'highpass', 2600, 0.6, 0);
+        this.lfo(n.g.gain, 0.15, 0.04, 0.06 + 0.05 * s);
+        this.every([2600, 1700, 1000][s - 1], () => this.tone(1400, 0.12, 'square', 0.05));
+      } else if (kind === 'beep') {
+        this.noise('brown', 'lowpass', 300, 0.7, 0.12);
+        this.every([1600, 1100, 700][s - 1], () => this.tone(880, 0.16, 'sine', 0.25));
+      } else if (kind === 'hum') {
+        const o = this.ctx.createOscillator(), g = this.ctx.createGain(), f = this.ctx.createBiquadFilter();
+        o.type = 'sawtooth'; o.frequency.value = 50; f.type = 'lowpass'; f.frequency.value = 400; g.gain.value = 0.07 + 0.04 * s;
+        o.connect(f); f.connect(g); g.connect(this.master); o.start(); this.nodes.push(o);
+        this.every(120, () => { if (Math.random() < 0.08 * s) this.click(0.6); });
+      } else if (kind === 'wind') {
+        const n = this.noise('white', 'bandpass', 500, 1.2, 0);
+        this.lfo(n.f.frequency, 0.18, 250 + 120 * s, 520 + 80 * s);
+        this.lfo(n.g.gain, 0.11, 0.12, 0.16 + 0.08 * s);
+        this.noise('brown', 'lowpass', 180, 0.7, 0.18 * s);
+      } else if (kind === 'static') {
+        const n = this.noise('white', 'bandpass', 2200, 0.5, 0.1 + 0.04 * s);
+        this.every(180, () => { n.g.gain.value = Math.random() < 0.2 ? 0.01 : 0.1 + 0.05 * s; });
+      } else if (kind === 'radio') {
+        const morse = [0.08, 0.08, 0.08, 0.24, 0.24, 0.24, 0.08, 0.08, 0.08];
+        this.every(4200 - s * 900, () => {
+          let t = this.ctx.currentTime + 0.05;
+          morse.forEach(d => { this.tone(1150, d, 'sine', 0.18, t); t += d + 0.07; });
+        });
+        this.noise('white', 'bandpass', 1800, 0.8, 0.025);
+      }
+      this.resume();
+    },
+    // короткий удар (подземный толчок) — синхронно с тряской экрана
+    burst(power) {
+      if (!this.ctx || this.kind !== 'rumble') return;
+      const t = this.ctx.currentTime, g = this.ctx.createGain(), src = this.ctx.createBufferSource(), f = this.ctx.createBiquadFilter();
+      src.buffer = this.noiseBuffer('brown'); f.type = 'lowpass'; f.frequency.value = 90;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.9 * power, t + 0.05);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 1.4);
+      src.connect(f); f.connect(g); g.connect(this.master); src.start(t); src.stop(t + 1.5);
+    },
+    resume() {
+      if (!this.ctx) return;
+      this.ctx.resume().then(() => {
+        if (this.ctx.state === 'running') { if (!AlertManager.audio) AlertManager.setSoundHint(false); }
+      }).catch(() => {});
+      setTimeout(() => {
+        if (this.kind && this.ctx && this.ctx.state !== 'running') { AlertManager.soundBlocked = true; AlertManager.setSoundHint(true); }
+      }, 400);
+    },
+    stop() {
+      this.timers.forEach(clearInterval); this.timers = [];
+      this.nodes.forEach(n => { try { n.stop(); } catch (e) {} }); this.nodes = [];
+      this.kind = null; this.rumble = null;
+    }
+  };
+
+  /* =========================================================================
+     УГРОЗЫ — паттерны. Для каждой: плашка, цвет, звук, какие показатели
+     и как меняются (для силы 1/2/3), эффект фона.
+       metrics — числа, плавно уходящие от нормы к угрозе (peak: true — главный показатель,
+                 его целевое значение мастер может задать сам);
+       texts   — подписи (status: true — текст статуса, который мастер может заменить);
+       spark/eq — усиление графиков; scene — фон, частицы и ветер вокруг купола.
+     Такие же ключи паттернов использует терминал мастера (master.html).
+     ========================================================================= */
+  const THREAT_PATTERNS = {
+    seismic: {
+      panel: 'tui-panel-seismo', color: '#FFB454', sound: 'rumble', fx: 'shake', title: 'СЕЙСМИЧЕСКАЯ УГРОЗА',
+      metrics: [{ id: 'tui-seismo-mag', to: [4.4, 6.2, 7.9], jitter: 0.35, fmt: v => v.toFixed(1) + ' M', peak: true }],
+      texts: [
+        { id: 'tui-tect-noise', text: ['+8 dB (HIGH)', '+16 dB (HIGH)', '+24 dB (EXTREME)'] },
+        { id: 'tui-platform-status', text: ['НЕСТАБИЛЬНО', 'КРИТИЧНО', 'ОБРУШЕНИЕ'], status: true }
+      ],
+      spark: { 'tui-seismo-spark': { jitter: [1.1, 2.0, 3.0] } },
+      eq: { 'tui-tect-eq': { spread: 45, floor: [35, 48, 58] } },
+      scene: { bgPulse: 3 }
+    },
+    bio: {
+      panel: 'tui-panel-bio', color: '#A3E635', sound: 'geiger', fx: 'spores', title: 'БИОЛОГИЧЕСКАЯ УГРОЗА',
+      metrics: [
+        { id: 'tui-bio-contam', to: [8.5, 36, 120], jitter: 0.5, fmt: v => (v < 10 ? v.toFixed(2) : v.toFixed(1)) + ' PPM', peak: true },
+        { id: 'tui-rad-val', to: [0.6, 1.8, 4.2], jitter: 0.06, fmt: v => v.toFixed(2) + ' µSv/h' },
+        { id: 'tui-toxicity', to: [0.8, 2.4, 6.5], jitter: 0.08, fmt: v => v.toFixed(2) + ' PPM [ОПАСНО]', bar: 'tui-toxicity-bar', barMax: 7 }
+      ],
+      texts: [{ id: 'tui-pathogen', text: ['2.4% [ЗАРАЖЕНИЕ]', '11.8% [ЗАРАЖЕНИЕ]', '38.5% [ЭПИДЕМИЯ]'], status: true }],
+      spark: { 'tui-rad-spark': { base: 0.21, jitter: 0.05, pull: 0.3 } },
+      scene: { particleColor: '#A3E635', particles: 170, particleSize: 0.065, bgPulse: 1.2 }
+    },
+    hull: {
+      panel: 'tui-panel-hull', color: '#FF6B6B', sound: 'hiss', fx: 'breach', title: 'РАЗГЕРМЕТИЗАЦИЯ',
+      metrics: [
+        { id: 'tui-hull-val', to: [78, 61, 38], jitter: 0.5, fmt: v => v.toFixed(1) + '%', peak: true, bar: 'tui-hull-bar', barMax: 100 },
+        { id: 'tui-pressure', to: [0.86, 0.68, 0.44], jitter: 0.012, fmt: v => v.toFixed(2) + ' ATM' }
+      ],
+      texts: [{ id: 'tui-dent-val', text: ['2 DENT DETECTED', '4 DENT DETECTED', '7 BREACH DETECTED'], status: true }],
+      dents: [2, 4, 7],
+      scene: { bgPulse: 4.5 }
+    },
+    atmo: {
+      panel: 'tui-panel-atmo', color: '#C084FC', sound: 'beep', fx: 'suffocate', title: 'ОТКАЗ ЖИЗНЕОБЕСПЕЧЕНИЯ',
+      metrics: [
+        { id: 'tui-o2', to: [18.2, 16.1, 13.4], jitter: 0.08, fmt: v => v.toFixed(1) + '%', peak: true },
+        { id: 'tui-co2', to: [1.2, 2.8, 4.9], jitter: 0.04, fmt: v => v.toFixed(2) + '%' },
+        { id: 'tui-humidity', to: [61, 72, 86], jitter: 0.5, fmt: v => v.toFixed(1) + '% (КРИТИЧНО)' }
+      ],
+      texts: [],
+      scene: { bgPulse: 0.8 }
+    },
+    power: {
+      panel: 'tui-panel-power', color: '#FACC15', sound: 'hum', fx: 'flicker', title: 'ПЕРЕГРУЗКА ЭНЕРГОСИСТЕМЫ',
+      metrics: [
+        { id: 'tui-power-load', to: [78, 112, 164], jitter: 4, fmt: v => v.toFixed(1) + ' kW', peak: true },
+        { id: 'tui-batt-val', to: [64, 31, 7], jitter: 1, fmt: v => Math.round(v) + '%' }
+      ],
+      texts: [{ id: 'tui-reactor-val', text: ['118% (ПЕРЕГРЕВ)', '137% (ПЕРЕГРУЗКА)', '164% (АВАРИЯ)'], status: true }],
+      eq: { 'tui-power-eq': { spread: 25, floor: [60, 70, 76] } },
+      scene: { bgPulse: 7 }
+    },
+    meteo: {
+      panel: 'tui-panel-meteo', color: '#93C5FD', sound: 'wind', fx: 'dust', title: 'ПЫЛЕВАЯ БУРЯ',
+      metrics: [
+        { id: 'tui-wind-val', to: [38, 64, 96], jitter: 4, fmt: v => v.toFixed(1) + ' m/s', peak: true },
+        { id: 'tui-temp-out', to: [-71, -84, -103], jitter: 1.5, fmt: v => v.toFixed(1) + ' °C' }
+      ],
+      texts: [{ id: 'tui-storm-val', text: ['ШТОРМ · УРОВЕНЬ 1', 'ШТОРМ · УРОВЕНЬ 2', 'УРАГАН · УРОВЕНЬ 3'], status: true }],
+      spark: { 'tui-temp-spark': { base: -69, jitter: 3, pull: 0.25 } },
+      scene: { windMul: [4, 7, 11], particles: [170, 230, 260], particleColor: '#CBD5E1', particleSize: 0.055 }
+    },
+    comms: {
+      panel: 'tui-panel-comms', color: '#F472B6', sound: 'static', fx: 'glitch', title: 'ПОТЕРЯ СВЯЗИ',
+      metrics: [
+        { id: 'tui-latency', to: [480, 2400, 9999], jitter: 60, fmt: v => Math.round(v) + ' ms' },
+        { id: 'tui-loss', to: [42, 78, 100], jitter: 5, fmt: v => Math.min(100, v).toFixed(1) + '% LOSS', peak: true }
+      ],
+      texts: [{ id: 'tui-conn-status', text: ['ПОМЕХИ', 'КАНАЛ НЕСТАБИЛЕН', 'КАНАЛ ПОТЕРЯН'], status: true }],
+      spark: { 'tui-loss-spark': { base: 0.48, jitter: 0.3, pull: 0.4 } },
+      eq: { 'tui-latency-eq': { spread: 100, floor: 0 } }
+    },
+    journal: {
+      panel: 'tui-panel-journal', color: '#F59E0B', sound: 'radio', fx: 'ping', title: 'ЗАПРОС ЦЕНТРА УПРАВЛЕНИЯ',
+      metrics: [],
+      texts: [{ id: 'tui-sync-status', text: ['ЗАПРОС ДОКЛАДА', 'ЗАПРОС ДОКЛАДА · СРОЧНО', 'ПОСЛЕДНЕЕ ПРЕДУПРЕЖДЕНИЕ'], status: true }]
+    },
+    alert: { panel: null, color: '#FF6B6B', sound: null, fx: null, title: 'ТРЕВОГА', metrics: [], texts: [] }
+  };
+  const pick = (v, sev) => Array.isArray(v) ? v[Math.max(0, Math.min(v.length - 1, sev - 1))] : v;
+  const normCode = c => String(c || '').trim().toUpperCase().replace(/[\s:\-]/g, '');
+
+  /* =========================================================================
+     УГРОЗЫ — движок на терминале: показывает текущую угрозу модуля,
+     ведёт таймер, принимает QR-коды устранения и запись в журнал,
+     по окончании запускает следующую угрозу сценария.
+     ========================================================================= */
+  const ThreatEngine = {
+    current: null, pattern: null, sev: 1, startedAt: 0,
+    loops: [], saved: new Map(), metricState: [], ended: false, progress: new Set(), tickId: null,
+
+    params() { return (this.current && this.current.params) || {}; },
+
+    apply(alert) {
+      if (!alert) { this.stop(); return; }
+      if (this.current && this.current.id === alert.id) { this.current = alert; this.renderCard(); return; }
+      this.stop();
+      this.current = alert;
+      this.ended = false;
+      const key = alert.threat_type && THREAT_PATTERNS[alert.threat_type] ? alert.threat_type : 'alert';
+      const P = THREAT_PATTERNS[key];
+      this.pattern = P;
+      const prm = this.params();
+      this.sev = Math.max(1, Math.min(3, parseInt(prm.severity, 10) || 2));
+      this.startedAt = Date.now();
+      const ui = document.getElementById('terminal-ui');
+      ui.classList.add('threat-active');
+      if (P.fx && P.fx !== 'shake') ui.classList.add('fx-' + P.fx);
+
+      // выделяем плашку
+      if (P.panel) { const el = document.getElementById(P.panel); if (el) el.classList.add('threat-focus'); }
+
+      // показатели
+      const peakOverride = prm.peak != null && prm.peak !== '' && !isNaN(parseFloat(prm.peak)) ? parseFloat(prm.peak) : null;
+      this.metricState = (P.metrics || []).map(m => {
+        const el = document.getElementById(m.id);
+        if (!el) return null;
+        this.save(el);
+        window.TUI_LOCK.add(m.id);
+        const from = parseFloat(String(el.textContent).replace(',', '.')) || 0;
+        const to = m.peak && peakOverride != null ? peakOverride : pick(m.to, this.sev);
+        el.classList.add('tui-threat-val');
+        el.classList.remove('cyan');
+        return { m, el, from, to };
+      }).filter(Boolean);
+      (P.texts || []).forEach(t => {
+        const el = document.getElementById(t.id);
+        if (!el) return;
+        this.save(el);
+        window.TUI_LOCK.add(t.id);
+        el.textContent = t.status && prm.status ? String(prm.status).toUpperCase() : pick(t.text, this.sev);
+        el.classList.add('tui-threat-val', 'tui-threat-blink');
+        el.classList.remove('cyan', 'amber');
+      });
+      Object.entries(P.spark || {}).forEach(([id, o]) => {
+        window.TUI_SPARK_OVR[id] = Object.fromEntries(Object.entries(o).map(([k, v]) => [k, pick(v, this.sev)]));
+      });
+      Object.entries(P.eq || {}).forEach(([id, o]) => {
+        window.TUI_EQ_OVR[id] = { spread: pick(o.spread, this.sev), floor: pick(o.floor, this.sev) };
+      });
+      if (P.dents) {
+        window.TUI_LOCK.add('tui-dents');
+        const pts = document.querySelectorAll('#tui-dents .tui-dent-pt');
+        const n = pick(P.dents, this.sev);
+        let lit = 0;
+        this.loop(() => { if (lit < n && lit < pts.length) { pts[lit].classList.add('hit'); lit++; } }, 2500);
+      }
+
+      // фон, частицы, ветер
+      const sc = P.scene || {};
+      Object.assign(window.TUI_SCENE, {
+        bgColor: alert.color || P.color, bgPulse: pick(sc.bgPulse, this.sev) || 1.5,
+        windMul: pick(sc.windMul, this.sev) || 1, particles: pick(sc.particles, this.sev) || 80,
+        particleColor: sc.particleColor || null, particleSize: sc.particleSize || 0.045
+      });
+
+      // плавный выход показателей на «угрожающие» значения
+      const ramp = [26, 18, 11][this.sev - 1] * 1000;
+      this.loop(() => {
+        const k = Math.min(1, (Date.now() - this.startedAt) / ramp);
+        const e = 1 - Math.pow(1 - k, 3);
+        this.metricState.forEach(s => {
+          const v = s.from + (s.to - s.from) * e + (Math.random() - 0.5) * s.m.jitter;
+          s.el.textContent = s.m.fmt(v);
+          if (s.m.bar) { const b = document.getElementById(s.m.bar); if (b) b.style.width = Math.max(1, Math.min(100, v / s.m.barMax * 100)).toFixed(1) + '%'; }
+        });
+      }, 600);
+
+      this.startFx(P.fx);
+      if (!alert.sound_url && P.sound && !prm.mute) ThreatAudio.start(P.sound, this.sev);
+
+      this.tickId = setInterval(() => this.tick(), 1000);
+      this.loadProgress();
+      this.renderCard();
+      App.log('threat_shown', { alertId: alert.id, type: key });
+    },
+
+    save(el) { if (!this.saved.has(el)) this.saved.set(el, { text: el.textContent, cls: el.className }); },
+    loop(fn, ms) { this.loops.push(setInterval(fn, ms)); },
+    later(fn, ms) { const id = setTimeout(fn, ms); this.loops.push(id); },
+
+    startFx(fx) {
+      const sev = this.sev;
+      if (fx === 'shake') {
+        document.body.style.setProperty('--shake', [3, 6, 11][sev - 1] + 'px');
+        const quake = () => {
+          const dur = 500 + Math.random() * [900, 1500, 2400][sev - 1];
+          document.body.classList.add('tui-shaking');
+          ThreatAudio.burst([0.45, 0.7, 1][sev - 1]);
+          this.later(() => document.body.classList.remove('tui-shaking'), dur);
+          this.later(quake, dur + [7000, 4500, 2500][sev - 1] * (0.6 + Math.random() * 0.8));
+        };
+        this.later(quake, 600);
+      } else if (fx === 'flicker') {
+        const drop = () => {
+          const deep = sev === 3 && Math.random() < 0.3;
+          document.body.style.setProperty('--brown', deep ? '.12' : String(0.3 + Math.random() * 0.25));
+          document.body.classList.add('tui-brownout');
+          this.later(() => document.body.classList.remove('tui-brownout'), deep ? 1800 : 70 + Math.random() * 420);
+          this.later(drop, [5200, 3000, 1600][sev - 1] * (0.4 + Math.random()));
+        };
+        this.later(drop, 800);
+      } else if (fx === 'glitch') {
+        document.getElementById('terminal-ui').style.setProperty('--noise', String([0.07, 0.13, 0.2][sev - 1]));
+        this.loop(() => {
+          const panels = document.querySelectorAll('#terminal-ui .tui-panel');
+          const p = panels[Math.floor(Math.random() * panels.length)];
+          if (!p) return;
+          p.classList.add('tui-glitch');
+          setTimeout(() => p.classList.remove('tui-glitch'), 300);
+        }, [2600, 1500, 700][sev - 1]);
+      } else if (fx === 'dust') {
+        document.getElementById('terminal-ui').style.setProperty('--dust-speed', ['1.6s', '.9s', '.5s'][sev - 1]);
+      }
+    },
+
+    stop() {
+      this.loops.forEach(id => { clearInterval(id); clearTimeout(id); });
+      this.loops = [];
+      if (this.tickId) clearInterval(this.tickId);
+      this.tickId = null;
+      ThreatAudio.stop();
+      document.body.classList.remove('tui-shaking', 'tui-brownout');
+      const ui = document.getElementById('terminal-ui');
+      ui.classList.remove('threat-active', 'fx-spores', 'fx-breach', 'fx-suffocate', 'fx-flicker', 'fx-dust', 'fx-glitch', 'fx-ping');
+      document.querySelectorAll('.threat-focus').forEach(el => el.classList.remove('threat-focus'));
+      this.saved.forEach((v, el) => { el.textContent = v.text; el.className = v.cls; });
+      this.saved.clear();
+      this.metricState = [];
+      window.TUI_LOCK.clear();
+      Object.keys(window.TUI_SPARK_OVR).forEach(k => delete window.TUI_SPARK_OVR[k]);
+      Object.keys(window.TUI_EQ_OVR).forEach(k => delete window.TUI_EQ_OVR[k]);
+      document.querySelectorAll('#tui-dents .tui-dent-pt.hit').forEach(p => p.classList.remove('hit'));
+      const b = document.getElementById('tui-hull-bar'); if (b) b.style.width = '94%';
+      Object.assign(window.TUI_SCENE, { windMul: 1, particles: 80, particleColor: null, particleSize: 0.045, bgColor: null, bgPulse: 0 });
+      const card = document.getElementById('tui-threat-card');
+      card.classList.remove('has-content');
+      this.current = null; this.pattern = null; this.progress = new Set();
+    },
+
+    /* ---------- карточка: инструкция, таймер, задание ---------- */
+    renderCard() {
+      const a = this.current; if (!a) return;
+      const prm = this.params();
+      const card = document.getElementById('tui-threat-card');
+      document.getElementById('tc-sev').textContent = 'УРОВЕНЬ ' + this.sev;
+      document.getElementById('tc-title').textContent = (a.label || this.pattern.title || '').toUpperCase();
+      document.getElementById('tc-instr').textContent = prm.instruction || '';
+      const codes = (prm.resolve && prm.resolve.codes) || [];
+      const task = document.getElementById('tc-task');
+      const parts = [];
+      if (codes.length) {
+        const done = codes.filter(c => this.progress.has(normCode(c.code))).length;
+        parts.push(`Устранение: отсканируйте коды ремонта — <b>${done} из ${codes.length}</b>`);
+      }
+      if (prm.resolve && prm.resolve.journal) parts.push('Устранение: сделайте <b>запись в бортовой журнал</b>');
+      task.innerHTML = parts.join('<br>');
+      card.classList.toggle('has-content', !!(prm.instruction || parts.length || this.timerOn()));
+      this.tick();
+    },
+    timerOn() { const prm = this.params(); return !!(this.current && this.current.ends_at && prm.timer && prm.timer.show); },
+    tick() {
+      const a = this.current; if (!a) return;
+      const prm = this.params();
+      const tWrap = document.getElementById('tc-timer');
+      if (this.timerOn()) {
+        const left = Math.max(0, new Date(a.ends_at).getTime() - Date.now());
+        const sec = Math.ceil(left / 1000);
+        const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+        document.getElementById('tc-timer-val').textContent = (h ? h + ':' : '') + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+        document.getElementById('tc-timer-label').textContent = (prm.timer.label || 'До окончания угрозы');
+        tWrap.classList.add('on');
+        tWrap.classList.toggle('last', sec <= 10);
+      } else {
+        tWrap.classList.remove('on');
+      }
+      if (a.ends_at && !this.ended && Date.now() >= new Date(a.ends_at).getTime()) {
+        this.ended = true;
+        this.finish('time');
+      }
+    },
+
+    /* ---------- окончание угрозы в этом модуле ---------- */
+    async finish(reason) {
+      const a = this.current;
+      if (!a) return;
+      await App.log('threat_end', { alertId: a.id, reason });
+      await this.chainNext(a);
+      setTimeout(() => AlertManager.check(), 800);
+    },
+
+    // QR-коды или запись в журнал выполнены — снимаем угрозу только с этого модуля
+    async resolveHere(reason) {
+      const a = this.current;
+      if (!a || !DB.moduleRow) return;
+      this.ended = true;
+      const moduleId = DB.moduleRow.id;
+      const { data } = await sb.from('alerts').select('excluded_module_ids').eq('id', a.id).maybeSingle();
+      const ex = new Set((data && data.excluded_module_ids) || []);
+      ex.add(moduleId);
+      const { error } = await sb.from('alerts').update({ excluded_module_ids: Array.from(ex) }).eq('id', a.id);
+      if (error) console.error(error);
+      await this.finish(reason);
+    },
+
+    async chainNext(a) {
+      const next = a.params && a.params.next;
+      if (!next || !next.config || !DB.moduleRow) return;
+      const moduleId = DB.moduleRow.id;
+      const key = `threat_chain_${a.id}_${moduleId}`;
+      try { if (localStorage.getItem(key)) return; localStorage.setItem(key, '1'); } catch (e) {}
+      const { data: exists } = await sb.from('alerts').select('id').eq('params->>chain_from', a.id).eq('target_module_id', moduleId).limit(1);
+      if (exists && exists.length) return;
+      const startsAt = new Date(Date.now() + Math.max(0, parseInt(next.delay_sec, 10) || 0) * 1000);
+      const row = threatRowFromConfig(next.config, startsAt, [moduleId], a.id);
+      const { error } = await sb.from('alerts').insert(row);
+      if (error) console.error('[Threat] не удалось запустить следующую угрозу', error);
+      else await App.log('threat_chain', { from: a.id, type: next.config.pattern });
+    },
+
+    async loadProgress() {
+      const a = this.current;
+      if (!a || !DB.moduleRow) return;
+      const codes = (a.params && a.params.resolve && a.params.resolve.codes) || [];
+      if (!codes.length) return;
+      const { data } = await sb.from('threat_progress').select('code').eq('alert_id', a.id).eq('module_id', DB.moduleRow.id);
+      this.progress = new Set((data || []).map(r => normCode(r.code)));
+      this.renderCard();
+    },
+
+    /* Код со сканера (после авторизации): если это код устранения текущей угрозы —
+       засчитываем, показываем сообщение и при последнем коде снимаем угрозу. */
+    async tryCode(raw) {
+      const a = this.current;
+      const codes = (a && a.params && a.params.resolve && a.params.resolve.codes) || [];
+      const code = normCode(raw);
+      const hit = codes.find(c => normCode(c.code) === code);
+      if (!hit || this.ended) return false;
+      App.closeScannerModal(true);
+      const charId = App.currentCharacter ? App.currentCharacter.id : null;
+      await sb.from('threat_progress').upsert(
+        { alert_id: a.id, module_id: DB.moduleRow.id, code, character_id: charId },
+        { onConflict: 'alert_id,module_id,code', ignoreDuplicates: true });
+      await App.log('threat_code', { alertId: a.id, code });
+      await this.loadProgress();
+      const done = codes.filter(c => this.progress.has(normCode(c.code))).length;
+      const all = done >= codes.length;
+      const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+      let html = `<div style="white-space:pre-wrap">${esc(hit.message || 'Код принят.')}</div>` +
+                 `<div style="margin-top:10px;opacity:.8">Выполнено: ${done} из ${codes.length}</div>`;
+      if (all) html += `<div style="margin-top:12px;color:var(--tui-cyan);white-space:pre-wrap">${esc((a.params.resolve && a.params.resolve.done_message) || 'Угроза устранена. Модуль в безопасности.')}</div>`;
+      App.renderGate('УСТРАНЕНИЕ УГРОЗЫ', 'код ' + code, html);
+      if (all) await this.resolveHere('qr');
+      return true;
+    },
+
+    async onJournalEntry() {
+      const a = this.current;
+      if (!a || this.ended || !(a.params && a.params.resolve && a.params.resolve.journal)) return;
+      const msg = (a.params.resolve && a.params.resolve.done_message) || 'Доклад принят. Угроза снята.';
+      App.renderGate('ДОКЛАД ПРИНЯТ', 'журнал', `<div style="white-space:pre-wrap">${String(msg).replace(/[&<>]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]))}</div>`);
+      await this.resolveHere('journal');
+    }
+  };
+
+  // Строка таблицы alerts из настроек угрозы (те же правила, что в терминале мастера)
+  function threatRowFromConfig(cfg, startsAt, moduleIds, chainFrom) {
+    const dur = parseFloat(cfg.duration_min) > 0 ? parseFloat(cfg.duration_min) : null;
+    const params = Object.assign({}, cfg);
+    if (chainFrom) params.chain_from = chainFrom;
+    return {
+      target_type: 'module', target_module_id: moduleIds[0], target_module_ids: moduleIds,
+      label: cfg.title || (THREAT_PATTERNS[cfg.pattern] || THREAT_PATTERNS.alert).title,
+      starts_at: startsAt.toISOString(),
+      ends_at: dur ? new Date(startsAt.getTime() + dur * 60000).toISOString() : null,
+      active: true,
+      color: cfg.color || (THREAT_PATTERNS[cfg.pattern] || THREAT_PATTERNS.alert).color,
+      sound_url: cfg.sound_url || null, sound_loop: cfg.sound_loop !== false,
+      threat_type: cfg.pattern && cfg.pattern !== 'alert' ? cfg.pattern : null,
+      params
+    };
+  }
+
   const AlertManager = {
     timer: null,
     async check() {
@@ -2155,21 +2842,32 @@
       // остальных (см. Admin.excludeAlertFromModule в terminal_admin_6.html).
       const moduleId = DB.moduleRow ? DB.moduleRow.id : null;
       const relevant = (data || []).filter(a => {
-        if (a.target_type === 'all') {
-          const excluded = a.excluded_module_ids || [];
-          return !(moduleId && excluded.includes(moduleId));
-        }
-        return moduleId && a.target_module_id === moduleId;
+        const excluded = a.excluded_module_ids || [];
+        if (moduleId && excluded.includes(moduleId)) return false;
+        if (a.target_type === 'all') return true;
+        return !!moduleId && (a.target_module_id === moduleId || (a.target_module_ids || []).includes(moduleId));
       });
+      this.scheduleNext(nowIso);
       console.log(`[AlertManager] проверка: получено строк=${(data || []).length}, релевантных=${relevant.length}, moduleId=${moduleId}`);
       this.render(relevant.length ? relevant[0] : null);
     },
+    // угроза по расписанию: проверяем ровно в момент её начала, не дожидаясь опроса
+    async scheduleNext(nowIso) {
+      const { data } = await sb.from('alerts').select('starts_at').eq('active', true).gt('starts_at', nowIso).order('starts_at').limit(1);
+      if (this.nextTimer) clearTimeout(this.nextTimer);
+      if (data && data.length) {
+        const ms = new Date(data[0].starts_at).getTime() - Date.now() + 400;
+        if (ms < 6 * 3600 * 1000) this.nextTimer = setTimeout(() => this.check(), Math.max(200, ms));
+      }
+    },
     render(alert) {
+      ThreatEngine.apply(alert);
       const banner = document.getElementById('tui-alert-banner');
       const ui = document.getElementById('terminal-ui');
       if (alert) {
         document.getElementById('tui-alert-text').textContent = "⚠ " + alert.label;
-        ui.style.setProperty('--tui-alert-color', alert.color || '#FF6B6B');
+        const pc = (THREAT_PATTERNS[alert.threat_type] || {}).color;
+        ui.style.setProperty('--tui-alert-color', alert.color || pc || '#FF6B6B');
         banner.classList.add('active');
         if (!ui.classList.contains('alerting')) { ui.classList.add('alerting'); setTimeout(() => window.dispatchEvent(new Event('resize')), 350); }
       } else {
@@ -2200,6 +2898,7 @@
       this.tryPlay();
     },
     tryPlay() {
+      ThreatAudio.resume();
       if (!this.audio) return;
       this.audio.play()
         .then(() => { this.soundBlocked = false; this.setSoundHint(false); })
@@ -2560,6 +3259,7 @@
         errEl.textContent = '';
         await this.renderJournalList();
         await this.refreshJournalWidget();
+        ThreatEngine.onJournalEntry();
         SilenceWatcher.lastFiredFor = null;
       } catch (e) {
         console.error(e);
@@ -2613,6 +3313,7 @@
       textEl.value = "";
       await this.renderJournalList();
       await this.refreshJournalWidget();
+      ThreatEngine.onJournalEntry();
       // новая запись — «тишина» прервана, автотриггер может сработать заново
       // при следующем длительном молчании
       SilenceWatcher.lastFiredFor = null;
@@ -2647,6 +3348,7 @@
     },
 
     async resolveContentByCode(code) {
+      if (await ThreatEngine.tryCode(code)) return;
       const item = await DB.findContentByTrigger(code);
       const errEl = document.getElementById('scannerModalError');
       if (!item) {
@@ -3007,7 +3709,7 @@
     setInterval(() => {
       const led = document.getElementById('tui-sync-led');
       const label = document.getElementById('tui-sync-status');
-      if (!led || !label) return;
+      if (!led || !label || window.TUI_LOCK.has('tui-sync-status')) return;
       const ok = !!DB.moduleRow;
       label.textContent = ok ? 'СИНХРОНИЗИРОВАНО' : 'ОШИБКА СВЯЗИ';
       led.className = 'tui-led' + (ok ? '' : ' tui-led--red');
@@ -3037,7 +3739,7 @@
      не подвержен.
      ========================================================================= */
   ['pointerdown', 'keydown', 'touchstart'].forEach(evt => document.addEventListener(evt, () => {
-    if (AlertManager.soundBlocked) AlertManager.tryPlay();
+    if (AlertManager.soundBlocked) { AlertManager.soundBlocked = false; AlertManager.tryPlay(); }
   }, true));
 
   document.addEventListener('change', (e) => {

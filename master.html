@@ -398,6 +398,35 @@ footer.admin-footer a{ color:var(--sky); text-decoration:none; }
 .journal-entry .meta a{ color:var(--sky); text-decoration:none; }
 .journal-entry audio{ width:100%; height:34px; margin-top:6px; }
 .journal-entry .text{ white-space:pre-wrap; word-break:break-word; }
+
+/* ---------- Угрозы ---------- */
+.threat-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:12px; }
+.threat-card{ border:1px solid color-mix(in srgb, var(--tc) 55%, transparent); background:color-mix(in srgb, var(--tc) 6%, rgba(4,11,22,.6));
+  padding:12px 14px; display:flex; flex-direction:column; gap:7px; border-left:3px solid var(--tc); }
+.threat-card .tc-top{ display:flex; align-items:center; gap:9px; }
+.threat-card .tc-ico{ width:26px; height:26px; display:flex; align-items:center; justify-content:center; border:1px solid var(--tc); color:var(--tc); font-size:14px; flex-shrink:0; }
+.threat-card .tc-name{ color:var(--tc); font-weight:600; font-size:12.5px; letter-spacing:.5px; text-transform:uppercase; }
+.threat-card .tc-panel{ font-size:9.5px; letter-spacing:.6px; color:var(--ink-400); }
+.threat-card .tc-desc{ font-size:11px; color:var(--ink-600); line-height:1.45; flex:1; }
+.threat-card .t-actions{ display:flex; gap:6px; flex-wrap:wrap; }
+.sec-sub{ font-size:10px; letter-spacing:2px; color:var(--ink-400); text-transform:uppercase; margin:18px 0 10px; padding-bottom:6px; border-bottom:1px dashed var(--edge); }
+#threatFormPanel{ --tc:#FFB454; }
+#threatFormPanel .panel-head{ border-bottom-color: color-mix(in srgb, var(--tc) 50%, transparent); }
+#threatFormPanel .panel-title{ color: var(--tc); }
+#thSevRow .duration-chip.active{ border-color:var(--tc); color:var(--tc); background:color-mix(in srgb, var(--tc) 12%, transparent); }
+#thColorRow .color-chip{ padding:7px 9px; }
+.code-list{ display:flex; flex-direction:column; gap:6px; }
+.code-row{ display:grid; grid-template-columns:130px 1fr auto auto; gap:6px; align-items:center; }
+.code-row .code-in{ font-weight:700; letter-spacing:2px; color:var(--cyan); }
+@media (max-width:700px){ .code-row{ grid-template-columns:1fr auto auto; } .code-row input:nth-child(2){ grid-column:1 / -1; grid-row:2; } }
+.threat-row{ border-left:3px solid var(--tc); }
+.mod-chips{ display:flex; flex-wrap:wrap; gap:5px; margin-top:4px; }
+.mod-chip{ display:inline-flex; align-items:center; gap:4px; font-size:9.5px; letter-spacing:.4px; padding:2px 4px 2px 8px; border:1px solid color-mix(in srgb, var(--tc) 60%, transparent); color:var(--ink-100); }
+.mod-chip.off{ opacity:.45; padding-right:8px; text-decoration:line-through; }
+.mod-x{ background:none; border:0; color:var(--red); cursor:pointer; font-size:11px; padding:0 4px; }
+.mod-x:hover{ color:#fff; background:var(--red); }
+textarea.input{ resize:vertical; min-height:70px; line-height:1.45; }
+input.input:disabled{ opacity:.4; }
 </style>
 </head>
 <body>
@@ -412,14 +441,14 @@ footer.admin-footer a{ color:var(--sky); text-decoration:none; }
   </div>
   <div class="admin-meta">
     <div>МОДУЛЕЙ: <b id="metaModuleCount">—</b></div>
-    <div>АКТИВНЫХ ТРЕВОГ: <b id="metaAlertCount">—</b></div>
-    <div>ШАБЛОНОВ: <b id="metaTemplateCount">—</b></div>
+    <div>АКТИВНЫХ УГРОЗ: <b id="metaAlertCount">—</b></div>
+    <div>СВОИХ УГРОЗ: <b id="metaTemplateCount">—</b></div>
     <div>ПЕРСОНАЖЕЙ: <b id="metaCharacterCount">—</b></div>
   </div>
 </header>
 
 <div class="tab-nav">
-  <button class="tab-btn active" id="tabBtn-events" data-action="switchTab" data-tab="events">События</button>
+  <button class="tab-btn active" id="tabBtn-events" data-action="switchTab" data-tab="events">Угрозы</button>
   <button class="tab-btn" id="tabBtn-content" data-action="switchTab" data-tab="content">Контент</button>
   <button class="tab-btn" id="tabBtn-characters" data-action="switchTab" data-tab="characters">Персонажи</button>
   <button class="tab-btn" id="tabBtn-modules" data-action="switchTab" data-tab="modules">Модули</button>
@@ -434,14 +463,14 @@ footer.admin-footer a{ color:var(--sky); text-decoration:none; }
 <div class="tab-panel active" id="tabPanel-events">
 <div class="admin-grid">
 
-  <!-- ======= АКТИВНЫЕ ТРЕВОГИ ======= -->
+  <!-- ======= АКТИВНЫЕ УГРОЗЫ ======= -->
   <section class="panel shape-a">
     <div class="panel-head">
       <div class="panel-title">
         <svg viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3z" stroke-linejoin="round"/><line x1="12" y1="9" x2="12" y2="14"/><circle cx="12" cy="17" r="0.6" fill="currentColor" stroke="none"/></svg>
-        <span>Активные тревоги</span>
+        <span>Активные угрозы</span>
       </div>
-      <span class="tech-id">ALERTS_LIVE</span>
+      <span class="tech-id">THREATS_LIVE</span>
     </div>
     <div class="panel-body scroll">
       <div class="row-list" id="activeAlertsList">
@@ -466,50 +495,86 @@ footer.admin-footer a{ color:var(--sky); text-decoration:none; }
     </div>
   </section>
 
-  <!-- ======= ШАБЛОНЫ СОБЫТИЙ ======= -->
+  <!-- ======= КАТАЛОГ УГРОЗ ======= -->
   <section class="panel shape-c wide">
     <div class="panel-head">
       <div class="panel-title">
         <svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></svg>
-        <span>Шаблоны событий</span>
+        <span>Угрозы</span>
       </div>
-      <span class="tech-id">LOCAL_TEMPLATES</span>
+      <span class="tech-id">PATTERNS · PRESETS</span>
     </div>
     <div class="panel-body">
-      <div class="template-grid" id="templateGrid"></div>
+      <div class="status-line" style="margin-bottom:10px;">Готовые угрозы — по одной на каждую плашку терминала. «Свои угрозы» создаются из любого паттерна и хранятся в базе, их видят все мастера.</div>
+      <div class="threat-grid" id="threatCatalog"></div>
+      <div class="sec-sub">Свои угрозы</div>
+      <div class="threat-grid" id="threatPresets"><div class="empty-line">Загрузка...</div></div>
     </div>
   </section>
 
-  <!-- ======= ЗАПУСК СОБЫТИЯ / ТРЕВОГИ ======= -->
-  <section class="panel shape-a wide">
+  <!-- ======= НАСТРОЙКА И ЗАПУСК УГРОЗЫ ======= -->
+  <section class="panel shape-a wide" id="threatFormPanel">
     <div class="panel-head">
       <div class="panel-title">
         <svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" stroke-linejoin="round"/></svg>
-        <span id="formTitle">Запуск события</span>
+        <span id="formTitle">Запуск угрозы</span>
       </div>
       <span class="tech-id" id="formModeTag">NEW</span>
     </div>
     <div class="panel-body">
 
-      <div class="field">
-        <label>Метка (текст баннера)</label>
-        <input type="text" class="input" id="fLabel" placeholder="⚠ ОПАСНЫЙ ГАЗ СНАРУЖИ">
-      </div>
-
-      <div class="field">
-        <label>Цель</label>
-        <div class="radio-group" id="targetRadioGroup">
-          <label class="radio-chip checked"><input type="radio" name="target" value="all" checked> Все модули</label>
-          <label class="radio-chip"><input type="radio" name="target" value="module"> Конкретный модуль</label>
+      <div class="field-row">
+        <div class="field">
+          <label>Паттерн — какая плашка и какие эффекты</label>
+          <select class="input" id="thPattern"></select>
+          <div class="status-line" id="thPatternHint"></div>
+        </div>
+        <div class="field">
+          <label>Название (текст баннера на терминале)</label>
+          <input type="text" class="input" id="thTitle" placeholder="СЕЙСМИЧЕСКАЯ УГРОЗА">
         </div>
       </div>
 
-      <div class="field" id="moduleSelectField" style="display:none;">
-        <label>Модуль-цель</label>
-        <select class="input" id="fModule"></select>
+      <div class="field">
+        <label>Что делать игрокам — крупно на терминале</label>
+        <textarea class="input" id="thInstr" rows="3"></textarea>
       </div>
 
       <div class="field-row">
+        <div class="field">
+          <label>Сила угрозы — насколько сильно меняются показатели и эффекты</label>
+          <div class="duration-row" id="thSevRow">
+            <button type="button" class="duration-chip" data-sev="1">1 · слабая</button>
+            <button type="button" class="duration-chip active" data-sev="2">2 · серьёзная</button>
+            <button type="button" class="duration-chip" data-sev="3">3 · критическая</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Цвет угрозы — фон терминала и подсветка</label>
+          <div class="color-row" id="thColorRow"></div>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label id="thPeakLabel">Главный показатель на плашке (пусто — по силе угрозы)</label>
+          <input type="number" step="any" class="input" id="thPeak" placeholder="">
+        </div>
+        <div class="field">
+          <label>Текст статуса на плашке (пусто — по силе угрозы)</label>
+          <input type="text" class="input" id="thStatus" placeholder="">
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label>Цель</label>
+          <div class="radio-group" id="targetRadioGroup">
+            <label class="radio-chip checked"><input type="radio" name="target" value="all" checked> Все модули</label>
+            <label class="radio-chip"><input type="radio" name="target" value="modules"> Выбрать модули</label>
+          </div>
+          <div class="checkbox-grid" id="thModuleChecks" style="display:none; margin-top:8px;"></div>
+        </div>
         <div class="field">
           <label>Начало</label>
           <div class="radio-group">
@@ -518,40 +583,78 @@ footer.admin-footer a{ color:var(--sky); text-decoration:none; }
           </div>
           <input type="datetime-local" class="input" id="fStartAt" style="display:none; margin-top:8px;">
         </div>
+      </div>
+
+      <div class="field-row">
         <div class="field">
-          <label>Длительность</label>
+          <label>Длительность — по окончании угроза снимается сама</label>
           <div class="duration-row" id="durationRow">
+            <button type="button" class="duration-chip" data-min="1">1 мин</button>
+            <button type="button" class="duration-chip" data-min="3">3 мин</button>
             <button type="button" class="duration-chip" data-min="5">5 мин</button>
-            <button type="button" class="duration-chip" data-min="10">10 мин</button>
-            <button type="button" class="duration-chip active" data-min="15">15 мин</button>
+            <button type="button" class="duration-chip active" data-min="10">10 мин</button>
+            <button type="button" class="duration-chip" data-min="15">15 мин</button>
             <button type="button" class="duration-chip" data-min="30">30 мин</button>
             <button type="button" class="duration-chip" data-min="60">60 мин</button>
-            <button type="button" class="duration-chip" data-min="0">Без ограничения</button>
+            <button type="button" class="duration-chip" data-min="0">Пока не устранят / не снимет мастер</button>
           </div>
+          <input type="number" min="0.5" step="0.5" class="input" id="thDurCustom" placeholder="или своё время, минут" style="margin-top:8px; max-width:240px;">
+        </div>
+        <div class="field">
+          <label>Таймер обратного отсчёта на терминале</label>
+          <label class="checkbox-chip checked" style="align-self:flex-start;"><input type="checkbox" id="thTimerShow" checked> Показывать таймер до окончания угрозы</label>
+          <input type="text" class="input" id="thTimerLabel" placeholder="Подпись таймера" style="margin-top:8px;">
+          <div class="status-line" id="thTimerHint"></div>
+        </div>
+      </div>
+
+      <div class="sec-sub">Устранение игроками (после авторизации на терминале)</div>
+      <div class="field">
+        <label>QR-коды ремонта — когда в модуле отсканированы все, угроза снимается с этого модуля</label>
+        <div id="thCodes" class="code-list"></div>
+        <div class="btn-row" style="margin-top:8px;">
+          <button type="button" class="btn ghost" data-th="addCode">+ Код</button>
+          <button type="button" class="btn ghost" data-th="downloadAllCodes">⤓ Скачать все QR</button>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label class="checkbox-chip" style="align-self:flex-start;"><input type="checkbox" id="thJournal"> Запись в бортовой журнал снимает угрозу</label>
+        </div>
+        <div class="field">
+          <label>Сообщение при устранении</label>
+          <input type="text" class="input" id="thDoneMsg" placeholder="Угроза устранена. Модуль в безопасности.">
         </div>
       </div>
 
       <div class="field-row">
         <div class="field">
-          <label>Цвет тревоги — в этот цвет окрасится и замигает фон терминала</label>
-          <div class="color-row" id="colorRow">
-            <button type="button" class="color-chip active" data-color="#FF6B6B"><span class="swatch" style="background:#FF6B6B"></span>Красный</button>
-            <button type="button" class="color-chip" data-color="#FFB454"><span class="swatch" style="background:#FFB454"></span>Янтарный</button>
-            <button type="button" class="color-chip" data-color="#C084FC"><span class="swatch" style="background:#C084FC"></span>Фиолетовый</button>
-            <button type="button" class="color-chip" data-color="#38BDF8"><span class="swatch" style="background:#38BDF8"></span>Синий</button>
+          <label>Звук</label>
+          <div class="radio-group" id="thSoundMode">
+            <label class="radio-chip checked"><input type="radio" name="thSound" value="builtin" checked> Встроенный</label>
+            <label class="radio-chip"><input type="radio" name="thSound" value="file"> Свой файл</label>
+            <label class="radio-chip"><input type="radio" name="thSound" value="none"> Без звука</label>
           </div>
+          <div id="thSoundFileBox" style="display:none; margin-top:8px;">
+            <div class="sound-row">
+              <button type="button" class="btn ghost" data-action="pickAlertSound">⇪ Загрузить звук</button>
+              <button type="button" class="btn ghost" data-action="previewAlertSound" id="alertSoundPreviewBtn">▶ Прослушать</button>
+            </div>
+            <input type="file" id="alertSoundFile" accept="audio/*" style="display:none;">
+            <input type="text" class="input" id="fSoundUrl" placeholder="или вставьте URL звукового файла" style="margin-top:8px;">
+            <label class="checkbox-chip checked" style="margin-top:8px; align-self:flex-start;"><input type="checkbox" id="fSoundLoop" checked> Повторять звук, пока угроза активна</label>
+          </div>
+          <div class="status-line" id="alertSoundStatus"></div>
         </div>
         <div class="field">
-          <label>Звук тревоги (необязательно)</label>
-          <div class="sound-row">
-            <button type="button" class="btn ghost" data-action="pickAlertSound">⇪ Загрузить звук</button>
-            <button type="button" class="btn ghost" data-action="previewAlertSound" id="alertSoundPreviewBtn">▶ Прослушать</button>
-            <button type="button" class="btn ghost" data-action="clearAlertSound">✕ Без звука</button>
+          <label>Сценарий — что запустить, когда угроза закончится</label>
+          <select class="input" id="thNext"></select>
+          <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
+            <span class="status-line" style="margin:0">через</span>
+            <input type="number" min="0" class="input" id="thNextDelay" value="5" style="max-width:100px;">
+            <span class="status-line" style="margin:0">сек</span>
           </div>
-          <input type="file" id="alertSoundFile" accept="audio/*" style="display:none;">
-          <input type="text" class="input" id="fSoundUrl" placeholder="или вставьте URL звукового файла" style="margin-top:8px;">
-          <label class="checkbox-chip checked" style="margin-top:8px; align-self:flex-start;"><input type="checkbox" id="fSoundLoop" checked data-action="onScopeCheckboxChange"> Повторять звук, пока тревога активна</label>
-          <div class="status-line" id="alertSoundStatus"></div>
+          <div class="status-line">Без сценария терминал возвращается в обычный режим. Если угрозу снял мастер, сценарий не запускается.</div>
         </div>
       </div>
 
@@ -559,15 +662,10 @@ footer.admin-footer a{ color:var(--sky); text-decoration:none; }
       <div class="ok-line" id="formOk"></div>
 
       <div class="btn-row">
-        <button class="btn amber" data-action="launchNow">▸ Запустить сейчас</button>
-        <button class="btn" data-action="scheduleAlert">▸ Запланировать</button>
-        <button class="btn ghost" data-action="saveAsTemplate">Сохранить как шаблон</button>
-        <button class="btn ghost" data-action="resetForm">Очистить форму</button>
-      </div>
-
-      <div class="status-line">Тестовая тревога помогает проверить сам механизм баннера отдельно от содержания:</div>
-      <div class="btn-row">
-        <button class="btn danger" data-action="launchTest">🧪 Тестовая тревога — 2 мин, все модули</button>
+        <button class="btn amber" data-th="launch">▸ Запустить угрозу</button>
+        <button class="btn" data-th="savePreset" id="thSavePresetBtn">Сохранить как свою угрозу</button>
+        <button class="btn ghost" data-th="reset">Очистить форму</button>
+        <button class="btn danger" data-th="test">🧪 Проверка — 1 мин на всех модулях</button>
       </div>
 
     </div>
@@ -2812,6 +2910,552 @@ document.addEventListener('change', (e) => {
   }
   if (e.target.dataset && e.target.dataset.action === 'updateChoiceNext') {
     Admin.updateChoiceNext(parseInt(e.target.dataset.idx, 10), e.target.value);
+  }
+});
+
+
+/* =========================================================================
+   УГРОЗЫ — вкладка терминала мастера.
+   Каталог паттернов (по одному на каждую плашку терминала), свои угрозы
+   (threat_presets), запуск на все/выбранные модули сейчас или по расписанию,
+   таймер с подписью, устранение QR-кодами или записью в журнал, сценарии,
+   снятие угрозы с каждого модуля отдельно.
+   Ключи паттернов совпадают с THREAT_PATTERNS в terminal.html.
+   ========================================================================= */
+const THREAT_DEFS = {
+  seismic: { name: 'Сейсмическая угроза', panel: 'Сейсмо-скан', color: '#FFB454', icon: '〰',
+    title: 'СЕЙСМИЧЕСКАЯ УГРОЗА', timerLabel: 'До основного толчка',
+    instruction: 'Сядьте под стол или прижмитесь к несущей стене, накройте голову руками. Не двигайтесь до отбоя.',
+    peakLabel: 'Магнитуда толчков, M', peak: [4.4, 6.2, 7.9], status: ['НЕСТАБИЛЬНО', 'КРИТИЧНО', 'ОБРУШЕНИЕ'],
+    desc: 'Магнитуда растёт, график толчков скачет, экран трясётся, подземный гул.' },
+  bio: { name: 'Биологическое заражение', panel: 'Био-опасность', color: '#A3E635', icon: '☣',
+    title: 'БИОЛОГИЧЕСКАЯ УГРОЗА', timerLabel: 'До полного заражения модуля',
+    instruction: 'Наденьте маски или закройте лицо, не прикасайтесь к лицу и предметам, держите дистанцию. Заболевших — изолировать.',
+    peakLabel: 'Контаминация, PPM', peak: [8.5, 36, 120], status: ['2.4% [ЗАРАЖЕНИЕ]', '11.8% [ЗАРАЖЕНИЕ]', '38.5% [ЭПИДЕМИЯ]'],
+    desc: 'Контаминация и патогенный индекс ползут вверх, по экрану летят споры, щелчки дозиметра.' },
+  hull: { name: 'Разгерметизация', panel: 'Целостность модуля', color: '#FF6B6B', icon: '◎',
+    title: 'РАЗГЕРМЕТИЗАЦИЯ', timerLabel: 'До критического падения давления',
+    instruction: 'Найдите и загерметизируйте пробой. Если не успеваете — все в шлюз, закройте за собой дверь.',
+    peakLabel: 'Прочность купола, %', peak: [78, 61, 38], status: ['2 DENT DETECTED', '4 DENT DETECTED', '7 BREACH DETECTED'],
+    desc: 'Прочность купола и давление падают, загораются точки пробоев, красная пульсация, шипение воздуха.' },
+  atmo: { name: 'Отказ жизнеобеспечения', panel: 'Атмосфера модуля', color: '#C084FC', icon: '≈',
+    title: 'ОТКАЗ ЖИЗНЕОБЕСПЕЧЕНИЯ', timerLabel: 'Запас кислорода',
+    instruction: 'Не бегайте, говорите шёпотом, дышите медленно. Наденьте кислородные маски, если они есть.',
+    peakLabel: 'Кислород O₂, %', peak: [18.2, 16.1, 13.4], status: [],
+    desc: 'O₂ падает, CO₂ растёт, края экрана «дышат» темнотой, писк монитора.' },
+  power: { name: 'Перегрузка энергосистемы', panel: 'Энергосистема', color: '#FACC15', icon: 'ϟ',
+    title: 'ПЕРЕГРУЗКА ЭНЕРГОСИСТЕМЫ', timerLabel: 'До отключения питания',
+    instruction: 'Отключите все приборы и свет в модуле. Найдите аварийный рубильник.',
+    peakLabel: 'Потребление модуля, kW', peak: [78, 112, 164], status: ['118% (ПЕРЕГРЕВ)', '137% (ПЕРЕГРУЗКА)', '164% (АВАРИЯ)'],
+    desc: 'Потребление зашкаливает, накопители садятся, экран мигает и проседает, гул и треск.' },
+  meteo: { name: 'Пылевая буря', panel: 'Метеорология', color: '#93C5FD', icon: '≋',
+    title: 'ПЫЛЕВАЯ БУРЯ', timerLabel: 'До прихода фронта бури',
+    instruction: 'Закройте все входы и не выходите наружу. Всем, кто снаружи, — немедленно вернуться.',
+    peakLabel: 'Скорость ветра, m/s', peak: [38, 64, 96], status: ['ШТОРМ · УРОВЕНЬ 1', 'ШТОРМ · УРОВЕНЬ 2', 'УРАГАН · УРОВЕНЬ 3'],
+    desc: 'Ветер и мороз усиливаются, частицы вокруг купола несутся быстрее, по экрану летит пыль, вой ветра.' },
+  comms: { name: 'Потеря связи', panel: 'Связь', color: '#F472B6', icon: '⌁',
+    title: 'ПОТЕРЯ СВЯЗИ', timerLabel: 'До восстановления канала',
+    instruction: 'Связь с другими модулями недоступна. Прекратите выходы наружу и ждите восстановления канала.',
+    peakLabel: 'Потеря пакетов, %', peak: [42, 78, 100], status: ['ПОМЕХИ', 'КАНАЛ НЕСТАБИЛЕН', 'КАНАЛ ПОТЕРЯН'],
+    desc: 'Задержка и потери пакетов растут, плашки глитчат, помехи на экране, белый шум.' },
+  journal: { name: 'Запрос центра управления', panel: 'Бортовой журнал', color: '#F59E0B', icon: '✉',
+    title: 'ЗАПРОС ЦЕНТРА УПРАВЛЕНИЯ', timerLabel: 'До потери доверия центра',
+    instruction: 'Немедленно сделайте запись в бортовой журнал с докладом об обстановке в модуле.',
+    peakLabel: '', peak: [], status: ['ЗАПРОС ДОКЛАДА', 'ЗАПРОС ДОКЛАДА · СРОЧНО', 'ПОСЛЕДНЕЕ ПРЕДУПРЕЖДЕНИЕ'],
+    desc: 'Плашка журнала мигает, сигнальная волна, позывные морзе. По умолчанию снимается записью в журнал.', journal: true },
+  alert: { name: 'Простая тревога', panel: '— только баннер —', color: '#FF6B6B', icon: '⚠',
+    title: '⚠ ТРЕВОГА', timerLabel: 'До окончания тревоги', instruction: '',
+    peakLabel: '', peak: [], status: [], desc: 'Баннер и окрашенный фон без плашки и встроенного звука.' }
+};
+const THREAT_COLORS = ['#FF6B6B', '#FFB454', '#FACC15', '#A3E635', '#5EEAD4', '#93C5FD', '#38BDF8', '#C084FC', '#F472B6', '#F59E0B'];
+const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const normThreatCode = c => String(c || '').trim().toUpperCase().replace(/[\s:\-]/g, '');
+
+Object.assign(Admin, {
+  th: { pattern: 'seismic', sev: 2, color: '#FFB454', codes: [], editingPresetId: null },
+  presets: [],
+  threatProgress: [],
+
+  /* ---------- каталог ---------- */
+  renderTemplates() {
+    const cat = document.getElementById('threatCatalog');
+    cat.innerHTML = Object.entries(THREAT_DEFS).map(([k, d]) => `
+      <div class="threat-card" style="--tc:${d.color}">
+        <div class="tc-top"><span class="tc-ico">${d.icon}</span><span class="tc-name">${this.escape(d.name)}</span></div>
+        <div class="tc-panel">ПЛАШКА: ${this.escape(d.panel)}</div>
+        <div class="tc-desc">${this.escape(d.desc)}</div>
+        <div class="t-actions"><button class="btn" data-th="usePattern" data-key="${k}">Настроить и запустить</button></div>
+      </div>`).join('');
+    this.renderPresets();
+  },
+  renderPresets() {
+    const el = document.getElementById('threatPresets');
+    const meta = document.getElementById('metaTemplateCount');
+    if (meta) meta.textContent = this.presets.length;
+    if (this.presetsError) {
+      el.innerHTML = `<div class="empty-line" style="color:var(--red)">${this.escape(this.presetsError)}</div>`;
+      return;
+    }
+    el.innerHTML = this.presets.map(p => {
+      const d = THREAT_DEFS[p.pattern] || THREAT_DEFS.alert;
+      const c = p.config || {};
+      const codes = (c.resolve && c.resolve.codes || []).length;
+      const bits = [d.name, 'сила ' + (c.severity || 2), c.duration_min > 0 ? c.duration_min + ' мин' : 'без срока'];
+      if (codes) bits.push('QR: ' + codes);
+      if (c.resolve && c.resolve.journal) bits.push('журнал');
+      if (c.next_ref) bits.push('→ ' + this.nextRefName(c.next_ref));
+      return `
+        <div class="threat-card" style="--tc:${this.escape(c.color || d.color)}">
+          <div class="tc-top"><span class="tc-ico">${d.icon}</span><span class="tc-name">${this.escape(p.name)}</span></div>
+          <div class="tc-panel">${this.escape(bits.join(' · '))}</div>
+          <div class="t-actions">
+            <button class="btn" data-th="usePreset" data-id="${p.id}">Настроить и запустить</button>
+            <button class="btn danger" data-th="deletePreset" data-id="${p.id}">Удалить</button>
+          </div>
+        </div>`;
+    }).join('') + `<div class="template-card new-card" data-th="newCustom">+ СВОЯ УГРОЗА ИЗ ПАТТЕРНА</div>`;
+  },
+  async loadPresets() {
+    const { data, error } = await sb.from('threat_presets').select('*').order('created_at');
+    if (error) {
+      this.presetsError = /threat_presets/.test(error.message)
+        ? 'Нет таблицы threat_presets — выполните sql/threats.sql в Supabase (SQL Editor).'
+        : 'Ошибка загрузки своих угроз: ' + error.message;
+      this.presets = [];
+    } else { this.presetsError = null; this.presets = data || []; }
+    this.renderPresets();
+    this.renderNextSelect();
+  },
+  nextRefName(ref) {
+    if (!ref) return '';
+    const [kind, id] = ref.split(':');
+    if (kind === 'pattern') return (THREAT_DEFS[id] || {}).name || id;
+    const p = this.presets.find(x => x.id === id);
+    return p ? p.name : 'удалённая угроза';
+  },
+
+  /* ---------- форма ---------- */
+  wireForm() {
+    const sel = document.getElementById('thPattern');
+    sel.innerHTML = Object.entries(THREAT_DEFS).map(([k, d]) => `<option value="${k}">${d.icon} ${this.escape(d.name)} — ${this.escape(d.panel)}</option>`).join('');
+    sel.addEventListener('change', () => {
+      // смена паттерна: подставляем его значения, но сохраняем цель, время и коды
+      const keep = this.readConfig();
+      const d = this.defaultConfig(sel.value);
+      this.fillForm(Object.assign(d, { duration_min: keep.duration_min, resolve: Object.assign({}, keep.resolve, { journal: !!THREAT_DEFS[sel.value].journal || keep.resolve.journal }), next_ref: keep.next_ref, next_delay_sec: keep.next_delay_sec }), true);
+    });
+    document.getElementById('thColorRow').innerHTML = THREAT_COLORS.map(c =>
+      `<button type="button" class="color-chip" data-color="${c}" title="${c}"><span class="swatch" style="background:${c}"></span></button>`).join('') +
+      `<label class="color-chip" title="Свой цвет"><input type="color" id="thColorCustom" style="width:26px;height:18px;border:0;padding:0;background:none;"></label>`;
+    document.querySelectorAll('#thColorRow .color-chip[data-color]').forEach(ch => ch.addEventListener('click', () => this.setThreatColor(ch.dataset.color)));
+    document.getElementById('thColorCustom').addEventListener('input', e => this.setThreatColor(e.target.value));
+    document.querySelectorAll('#thSevRow .duration-chip').forEach(ch => ch.addEventListener('click', () => this.setSev(parseInt(ch.dataset.sev, 10))));
+    document.querySelectorAll('#durationRow .duration-chip').forEach(ch => ch.addEventListener('click', () => {
+      document.querySelectorAll('#durationRow .duration-chip').forEach(c => c.classList.remove('active'));
+      ch.classList.add('active');
+      this.selectedDurationMin = parseFloat(ch.dataset.min);
+      document.getElementById('thDurCustom').value = '';
+      this.updateTimerHint();
+    }));
+    document.getElementById('thDurCustom').addEventListener('input', () => {
+      if (document.getElementById('thDurCustom').value) document.querySelectorAll('#durationRow .duration-chip').forEach(c => c.classList.remove('active'));
+      this.updateTimerHint();
+    });
+    const chipRadio = (name, onChange) => document.querySelectorAll(`input[name="${name}"]`).forEach(r => r.addEventListener('change', () => {
+      r.closest('.radio-group').querySelectorAll('.radio-chip').forEach(c => c.classList.remove('checked'));
+      r.closest('.radio-chip').classList.add('checked');
+      onChange && onChange(r.value);
+    }));
+    chipRadio('target', v => { document.getElementById('thModuleChecks').style.display = v === 'modules' ? 'flex' : 'none'; });
+    chipRadio('startMode', v => { document.getElementById('fStartAt').style.display = v === 'scheduled' ? 'block' : 'none'; });
+    chipRadio('thSound', v => { document.getElementById('thSoundFileBox').style.display = v === 'file' ? 'block' : 'none'; });
+    document.getElementById('thTimerShow').addEventListener('change', () => this.updateTimerHint());
+    // чекбоксы-«чипы» внутри формы угрозы
+    document.getElementById('threatFormPanel').addEventListener('change', e => {
+      if (e.target.type === 'checkbox') { const chip = e.target.closest('.checkbox-chip'); if (chip) chip.classList.toggle('checked', e.target.checked); }
+    });
+    document.getElementById('thCodes').addEventListener('input', e => {
+      const i = parseInt(e.target.dataset.i, 10); if (isNaN(i)) return;
+      if (e.target.dataset.f === 'code') { e.target.value = e.target.value.toUpperCase(); this.th.codes[i].code = e.target.value; }
+      else this.th.codes[i].message = e.target.value;
+    });
+    this.renderNextSelect();
+    this.fillForm(this.defaultConfig('seismic'));
+    this.loadPresets();
+    sb.channel('admin-threat-progress')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'threat_progress' }, () => this.refreshActiveAlerts())
+      .subscribe();
+  },
+  defaultConfig(pattern) {
+    const d = THREAT_DEFS[pattern] || THREAT_DEFS.alert;
+    return {
+      pattern, title: d.title, instruction: d.instruction, severity: 2, color: d.color, peak: null, status: '',
+      duration_min: 10, timer: { show: pattern !== 'alert', label: d.timerLabel },
+      resolve: { codes: [], journal: !!d.journal, done_message: '' },
+      sound_mode: pattern === 'alert' ? 'none' : 'builtin', sound_url: null, sound_loop: true,
+      next_ref: '', next_delay_sec: 5
+    };
+  },
+  fillForm(c, keepTitleIfEdited) {
+    const d = THREAT_DEFS[c.pattern] || THREAT_DEFS.alert;
+    this.th.pattern = c.pattern;
+    document.getElementById('thPattern').value = c.pattern;
+    document.getElementById('thPatternHint').textContent = d.desc;
+    document.getElementById('thTitle').value = c.title || d.title;
+    document.getElementById('thInstr').value = c.instruction || '';
+    this.setSev(c.severity || 2);
+    this.setThreatColor(c.color || d.color);
+    document.getElementById('thPeak').value = c.peak != null ? c.peak : '';
+    document.getElementById('thStatus').value = c.status || '';
+    const dur = c.duration_min > 0 ? c.duration_min : 0;
+    const chip = [...document.querySelectorAll('#durationRow .duration-chip')].find(x => parseFloat(x.dataset.min) === dur);
+    document.querySelectorAll('#durationRow .duration-chip').forEach(x => x.classList.toggle('active', x === chip));
+    document.getElementById('thDurCustom').value = chip ? '' : dur;
+    this.selectedDurationMin = dur;
+    const tShow = document.getElementById('thTimerShow');
+    tShow.checked = !!(c.timer && c.timer.show); tShow.closest('.checkbox-chip').classList.toggle('checked', tShow.checked);
+    document.getElementById('thTimerLabel').value = (c.timer && c.timer.label) || d.timerLabel;
+    this.th.codes = ((c.resolve && c.resolve.codes) || []).map(x => ({ code: x.code, message: x.message || '' }));
+    this.renderCodes();
+    const j = document.getElementById('thJournal');
+    j.checked = !!(c.resolve && c.resolve.journal); j.closest('.checkbox-chip').classList.toggle('checked', j.checked);
+    document.getElementById('thDoneMsg').value = (c.resolve && c.resolve.done_message) || '';
+    const mode = c.sound_mode || (c.sound_url ? 'file' : (c.mute ? 'none' : 'builtin'));
+    document.querySelectorAll('input[name="thSound"]').forEach(r => { r.checked = r.value === mode; r.closest('.radio-chip').classList.toggle('checked', r.checked); });
+    document.getElementById('thSoundFileBox').style.display = mode === 'file' ? 'block' : 'none';
+    document.getElementById('fSoundUrl').value = c.sound_url || '';
+    const loop = document.getElementById('fSoundLoop');
+    loop.checked = c.sound_loop !== false; loop.closest('.checkbox-chip').classList.toggle('checked', loop.checked);
+    document.getElementById('alertSoundStatus').textContent = '';
+    this.renderNextSelect();
+    document.getElementById('thNext').value = c.next_ref || '';
+    document.getElementById('thNextDelay').value = c.next_delay_sec != null ? c.next_delay_sec : 5;
+    // подсказки показателей
+    document.getElementById('thPeakLabel').textContent = d.peakLabel ? `${d.peakLabel} (пусто — по силе: ${d.peak.join(' / ')})` : 'Главный показатель (у этого паттерна нет)';
+    document.getElementById('thPeak').disabled = !d.peakLabel;
+    document.getElementById('thStatus').placeholder = d.status.length ? d.status.join(' / ') : 'у этого паттерна нет статуса';
+    document.getElementById('thStatus').disabled = !d.status.length;
+    this.updateTimerHint();
+  },
+  setSev(s) {
+    this.th.sev = s;
+    document.querySelectorAll('#thSevRow .duration-chip').forEach(c => c.classList.toggle('active', parseInt(c.dataset.sev, 10) === s));
+  },
+  setThreatColor(c) {
+    this.th.color = c;
+    document.querySelectorAll('#thColorRow .color-chip[data-color]').forEach(x => x.classList.toggle('active', x.dataset.color.toLowerCase() === String(c).toLowerCase()));
+    const custom = document.getElementById('thColorCustom'); if (custom && /^#[0-9a-f]{6}$/i.test(c)) custom.value = c;
+    document.getElementById('threatFormPanel').style.setProperty('--tc', c);
+  },
+  durationValue() {
+    const custom = parseFloat(document.getElementById('thDurCustom').value);
+    return custom > 0 ? custom : (this.selectedDurationMin || 0);
+  },
+  updateTimerHint() {
+    const show = document.getElementById('thTimerShow').checked;
+    document.getElementById('thTimerHint').textContent = show && !this.durationValue()
+      ? '⚠ Таймер считает время до окончания угрозы — выберите длительность.' : '';
+  },
+  renderModuleSelect() {
+    const el = document.getElementById('thModuleChecks');
+    if (!el) return;
+    const sel = new Set([...el.querySelectorAll('input:checked')].map(i => i.value));
+    el.innerHTML = this.modules.length ? this.modules.map(m => `
+      <label class="checkbox-chip ${sel.has(m.id) ? 'checked' : ''}"><input type="checkbox" value="${m.id}" ${sel.has(m.id) ? 'checked' : ''}> ${this.escape(m.name || m.access_code || 'МОДУЛЬ')}</label>`).join('')
+      : '<div class="empty-line">Нет модулей в базе.</div>';
+  },
+  renderNextSelect() {
+    const sel = document.getElementById('thNext'); if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">— ничего, вернуть обычный режим —</option>' +
+      '<optgroup label="Готовые угрозы (настройки по умолчанию)">' +
+      Object.entries(THREAT_DEFS).map(([k, d]) => `<option value="pattern:${k}">${d.icon} ${this.escape(d.name)}</option>`).join('') + '</optgroup>' +
+      (this.presets.length ? '<optgroup label="Свои угрозы">' + this.presets.filter(p => p.id !== this.th.editingPresetId)
+        .map(p => `<option value="preset:${p.id}">${this.escape(p.name)}</option>`).join('') + '</optgroup>' : '');
+    sel.value = cur;
+  },
+
+  /* ---------- QR-коды устранения ---------- */
+  renderCodes() {
+    const el = document.getElementById('thCodes');
+    if (!this.th.codes.length) { el.innerHTML = '<div class="status-line">Кодов нет — угроза не снимается сканированием.</div>'; return; }
+    el.innerHTML = this.th.codes.map((c, i) => `
+      <div class="code-row">
+        <input class="input code-in" data-i="${i}" data-f="code" value="${this.escape(c.code)}" maxlength="24">
+        <input class="input" data-i="${i}" data-f="msg" value="${this.escape(c.message)}" placeholder="Сообщение при сканировании: «Опора №${i + 1} укреплена»">
+        <button type="button" class="btn ghost" data-th="codeQr" data-i="${i}" title="Скачать QR">⤓ QR</button>
+        <button type="button" class="btn danger" data-th="delCode" data-i="${i}">✕</button>
+      </div>`).join('');
+  },
+  newCode() {
+    const used = new Set([...this.th.codes.map(c => normThreatCode(c.code)), ...(this.contentItems || []).map(x => normThreatCode(x.trigger_code)), ...(this.characters || []).map(x => normThreatCode(x.qr_code))]);
+    let code;
+    do { code = 'R' + Array.from({ length: 5 }, () => CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)]).join(''); } while (used.has(code));
+    return code;
+  },
+  downloadCodeQr(i) {
+    const c = this.th.codes[i]; if (!c || !c.code) return;
+    const holder = document.createElement('div');
+    new QRCode(holder, { text: normThreatCode(c.code), width: 480, height: 480, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.H });
+    setTimeout(() => {
+      const src = holder.querySelector('canvas') || holder.querySelector('img');
+      const cv = document.createElement('canvas'); cv.width = 600; cv.height = 700;
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 600, 700);
+      ctx.drawImage(src, 60, 60, 480, 480);
+      ctx.fillStyle = '#000'; ctx.textAlign = 'center';
+      ctx.font = 'bold 40px monospace'; ctx.fillText(normThreatCode(c.code), 300, 595);
+      ctx.font = '22px sans-serif'; ctx.fillText((document.getElementById('thTitle').value || '').slice(0, 40), 300, 640);
+      const a = document.createElement('a');
+      a.href = cv.toDataURL('image/png'); a.download = `THREAT-${normThreatCode(c.code)}.png`; a.click();
+    }, 60);
+  },
+
+  /* ---------- сбор настроек ---------- */
+  readConfig() {
+    const pattern = document.getElementById('thPattern').value;
+    const peakRaw = document.getElementById('thPeak').value;
+    const mode = (document.querySelector('input[name="thSound"]:checked') || {}).value || 'builtin';
+    return {
+      pattern,
+      title: document.getElementById('thTitle').value.trim() || THREAT_DEFS[pattern].title,
+      instruction: document.getElementById('thInstr').value.trim(),
+      severity: this.th.sev,
+      color: this.th.color,
+      peak: peakRaw === '' ? null : parseFloat(peakRaw),
+      status: document.getElementById('thStatus').value.trim(),
+      duration_min: this.durationValue() || null,
+      timer: { show: document.getElementById('thTimerShow').checked, label: document.getElementById('thTimerLabel').value.trim() },
+      resolve: {
+        codes: this.th.codes.filter(c => normThreatCode(c.code)).map(c => ({ code: normThreatCode(c.code), message: (c.message || '').trim() })),
+        journal: document.getElementById('thJournal').checked,
+        done_message: document.getElementById('thDoneMsg').value.trim()
+      },
+      sound_mode: mode,
+      sound_url: mode === 'file' ? (document.getElementById('fSoundUrl').value.trim() || null) : null,
+      sound_loop: document.getElementById('fSoundLoop').checked,
+      mute: mode === 'none',
+      next_ref: document.getElementById('thNext').value || '',
+      next_delay_sec: Math.max(0, parseInt(document.getElementById('thNextDelay').value, 10) || 0)
+    };
+  },
+  // следующая угроза сценария «замораживается» в параметрах при запуске (до 5 шагов)
+  resolveNext(ref, delay, depth) {
+    if (!ref || depth > 5) return null;
+    const [kind, id] = ref.split(':');
+    let cfg = null;
+    if (kind === 'pattern' && THREAT_DEFS[id]) cfg = this.defaultConfig(id);
+    if (kind === 'preset') { const p = this.presets.find(x => x.id === id); if (p) cfg = Object.assign(this.defaultConfig(p.pattern), p.config); }
+    if (!cfg) return null;
+    const next = this.resolveNext(cfg.next_ref, cfg.next_delay_sec, depth + 1);
+    return { delay_sec: delay || 0, config: this.paramsFromConfig(cfg, next) };
+  },
+  paramsFromConfig(cfg, next) {
+    const p = Object.assign({}, cfg);
+    delete p.next_ref; delete p.next_delay_sec; delete p.sound_mode;
+    p.next = next || null;
+    return p;
+  },
+  buildThreatRow(cfg, startsAt, target) {
+    const dur = cfg.duration_min > 0 ? cfg.duration_min : null;
+    const params = this.paramsFromConfig(cfg, this.resolveNext(cfg.next_ref, cfg.next_delay_sec, 1));
+    const ids = target.all ? null : target.ids;
+    return {
+      target_type: target.all ? 'all' : 'module',
+      target_module_id: target.all ? null : ids[0],
+      target_module_ids: ids,
+      label: cfg.title,
+      starts_at: startsAt.toISOString(),
+      ends_at: dur ? new Date(startsAt.getTime() + dur * 60000).toISOString() : null,
+      active: true,
+      color: cfg.color,
+      sound_url: cfg.sound_url || null,
+      sound_loop: cfg.sound_loop !== false,
+      threat_type: cfg.pattern === 'alert' ? null : cfg.pattern,
+      params
+    };
+  },
+
+  async launchThreat() {
+    const cfg = this.readConfig();
+    const targetAll = document.querySelector('input[name="target"]:checked').value === 'all';
+    const ids = [...document.querySelectorAll('#thModuleChecks input:checked')].map(i => i.value);
+    if (!targetAll && !ids.length) return this.showError('Выберите хотя бы один модуль.');
+    const scheduled = document.querySelector('input[name="startMode"]:checked').value === 'scheduled';
+    let startsAt = new Date();
+    if (scheduled) {
+      const v = document.getElementById('fStartAt').value;
+      if (!v) return this.showError('Укажите время начала.');
+      startsAt = new Date(v);
+      if (startsAt.getTime() < Date.now() - 60000) return this.showError('Время начала уже прошло.');
+    }
+    if (cfg.timer.show && !cfg.duration_min) return this.showError('Таймер считает время до окончания угрозы — выберите длительность или выключите таймер.');
+    if (cfg.sound_mode === 'file' && !cfg.sound_url) return this.showError('Загрузите звуковой файл или выберите «Встроенный».');
+    const dup = cfg.resolve.codes.map(c => c.code).filter((c, i, a) => a.indexOf(c) !== i);
+    if (dup.length) return this.showError('Повторяются QR-коды: ' + dup.join(', '));
+    const row = this.buildThreatRow(cfg, startsAt, { all: targetAll, ids });
+    const { error } = await sb.from('alerts').insert(row);
+    if (error) return this.showError('Ошибка записи в базу: ' + error.message);
+    this.showOk(scheduled ? `Угроза запланирована на ${startsAt.toLocaleString()}.` : 'Угроза запущена.');
+    await this.refreshActiveAlerts();
+  },
+  async launchTest() {
+    const cfg = this.readConfig();
+    cfg.title = 'ПРОВЕРКА: ' + cfg.title;
+    cfg.duration_min = 1; cfg.next_ref = '';
+    cfg.timer = { show: true, label: cfg.timer.label || 'Проверка закончится через' };
+    const row = this.buildThreatRow(cfg, new Date(), { all: true });
+    const { error } = await sb.from('alerts').insert(row);
+    if (error) return this.showError('Ошибка записи в базу: ' + error.message);
+    this.showOk('Проверка запущена на 1 минуту на всех модулях — посмотрите на терминалы.');
+    await this.refreshActiveAlerts();
+  },
+  async savePreset() {
+    const cfg = this.readConfig();
+    const name = cfg.title;
+    const row = { name, pattern: cfg.pattern, config: cfg, updated_at: new Date().toISOString() };
+    const q = this.th.editingPresetId
+      ? sb.from('threat_presets').update(row).eq('id', this.th.editingPresetId)
+      : sb.from('threat_presets').insert(row);
+    const { error } = await q;
+    if (error) return this.showError('Не удалось сохранить: ' + error.message + (/threat_presets/.test(error.message) ? ' — выполните sql/threats.sql.' : ''));
+    this.showOk(this.th.editingPresetId ? 'Своя угроза обновлена.' : 'Своя угроза сохранена — она появилась в каталоге.');
+    await this.loadPresets();
+  },
+  resetForm() {
+    this.th.editingPresetId = null;
+    document.getElementById('formTitle').textContent = 'Запуск угрозы';
+    document.getElementById('formModeTag').textContent = 'NEW';
+    document.getElementById('thSavePresetBtn').textContent = 'Сохранить как свою угрозу';
+    document.querySelectorAll('input[name="target"]').forEach(r => { r.checked = r.value === 'all'; r.closest('.radio-chip').classList.toggle('checked', r.checked); });
+    document.getElementById('thModuleChecks').style.display = 'none';
+    document.querySelectorAll('input[name="startMode"]').forEach(r => { r.checked = r.value === 'now'; r.closest('.radio-chip').classList.toggle('checked', r.checked); });
+    document.getElementById('fStartAt').style.display = 'none';
+    this.fillForm(this.defaultConfig(document.getElementById('thPattern').value || 'seismic'));
+    this.showOk('');
+  },
+  scrollToForm() { document.getElementById('threatFormPanel').scrollIntoView({ behavior: 'smooth', block: 'start' }); },
+
+  /* ---------- активные угрозы: по модулям, прогресс, снятие ---------- */
+  alertModuleIds(a) {
+    if (a.target_type === 'all') return this.modules.map(m => m.id);
+    return (a.target_module_ids && a.target_module_ids.length) ? a.target_module_ids : (a.target_module_id ? [a.target_module_id] : []);
+  },
+  async refreshActiveAlerts() {
+    const { data, error } = await sb.from('alerts').select('*').eq('active', true).order('starts_at', { ascending: false });
+    if (error) { console.error(error); return; }
+    const nowMs = Date.now();
+    const list = (data || []).filter(a => !(a.ends_at && new Date(a.ends_at).getTime() < nowMs - 5 * 60000));
+    document.getElementById('metaAlertCount').textContent = list.filter(a => !(a.ends_at && new Date(a.ends_at).getTime() < nowMs)).length;
+    const ids = list.map(a => a.id);
+    this.threatProgress = [];
+    if (ids.length) {
+      const pr = await sb.from('threat_progress').select('alert_id,module_id,code').in('alert_id', ids);
+      if (!pr.error) this.threatProgress = pr.data || [];
+    }
+    const el = document.getElementById('activeAlertsList');
+    if (!list.length) { el.innerHTML = '<div class="empty-line">Активных угроз нет.</div>'; return; }
+    const modName = id => { const m = this.modules.find(x => x.id === id); return m ? (m.name || m.access_code) : 'удалён'; };
+    el.innerHTML = list.map(a => {
+      const d = THREAT_DEFS[a.threat_type] || THREAT_DEFS.alert;
+      const prm = a.params || {};
+      const started = new Date(a.starts_at).getTime();
+      const isFuture = started > nowMs;
+      const isExpired = a.ends_at && new Date(a.ends_at).getTime() < nowMs;
+      const pill = isExpired ? '<span class="pill off">ЗАКОНЧИЛАСЬ</span>' : isFuture ? '<span class="pill amber">ЗАПЛАНИРОВАНА</span>' : '<span class="pill warn">ИДЁТ</span>';
+      const codes = (prm.resolve && prm.resolve.codes) || [];
+      const excluded = new Set(a.excluded_module_ids || []);
+      const chips = this.alertModuleIds(a).map(mid => {
+        const off = excluded.has(mid);
+        const got = codes.length ? new Set(this.threatProgress.filter(p => p.alert_id === a.id && p.module_id === mid).map(p => normThreatCode(p.code))) : null;
+        const prog = got ? ` · ${codes.filter(c => got.has(normThreatCode(c.code))).length}/${codes.length}` : '';
+        return `<span class="mod-chip ${off ? 'off' : ''}">${this.escape(modName(mid))}${prog}${off ? ' · СНЯТА' :
+          ` <button type="button" class="mod-x" data-th="excludeHere" data-id="${a.id}" data-mod="${mid}" title="Снять угрозу с этого модуля">✕</button>`}</span>`;
+      }).join('');
+      const until = a.ends_at ? new Date(a.ends_at).toLocaleTimeString() : 'без срока';
+      const extras = [prm.severity ? 'СИЛА ' + prm.severity : '', prm.next ? '→ ' + (THREAT_DEFS[prm.next.config.pattern] || {}).name : '', prm.chain_from ? 'из сценария' : ''].filter(Boolean).join(' · ');
+      return `
+        <div class="row-item threat-row" style="--tc:${this.escape(a.color || d.color)}">
+          <div class="main">
+            <span class="name"><span class="swatch" style="background:var(--tc);width:9px;height:9px;"></span> ${d.icon} ${this.escape(a.label)}</span>
+            <span class="meta">${this.escape(d.name).toUpperCase()} · С ${new Date(a.starts_at).toLocaleString()} · ДО ${until}${extras ? ' · ' + this.escape(extras) : ''}</span>
+            <div class="mod-chips">${chips || '<span class="meta">нет модулей</span>'}</div>
+          </div>
+          <div class="actions">${pill}<button class="btn ghost" data-action="deactivateAlert" data-id="${a.id}">Снять везде</button></div>
+        </div>`;
+    }).join('');
+  },
+  async excludeHere(alertId, moduleId) {
+    const { data } = await sb.from('alerts').select('excluded_module_ids').eq('id', alertId).maybeSingle();
+    const set = new Set((data && data.excluded_module_ids) || []); set.add(moduleId);
+    const { error } = await sb.from('alerts').update({ excluded_module_ids: [...set] }).eq('id', alertId);
+    if (error) return this.showError('Ошибка: ' + error.message);
+    await this.refreshActiveAlerts();
+  },
+  // «Снять везде» снимает и уже запущенные продолжения сценария этой угрозы
+  async deactivateAlert(id) {
+    const { error } = await sb.from('alerts').update({ active: false }).eq('id', id);
+    if (error) { console.error(error); return; }
+    await sb.from('alerts').update({ active: false }).eq('params->>chain_from', id).gt('starts_at', new Date().toISOString());
+    await this.refreshActiveAlerts();
+  }
+});
+
+// модуль в редакторе модуля: учитываем угрозы на нескольких модулях
+Object.assign(Admin, {
+  async loadModuleAlerts(moduleId) {
+    const el = document.getElementById('moduleAlertList');
+    el.innerHTML = '<div class="empty-line">Загрузка...</div>';
+    const { data, error } = await sb.from('alerts').select('*').eq('active', true).order('created_at', { ascending: false });
+    if (error) { el.innerHTML = `<div class="empty-line" style="color:var(--red)">Ошибка загрузки: ${this.escape(error.message)}</div>`; return; }
+    this.moduleAlerts = (data || []).filter(a => {
+      if ((a.excluded_module_ids || []).includes(moduleId)) return false;
+      return a.target_type === 'all' || a.target_module_id === moduleId || (a.target_module_ids || []).includes(moduleId);
+    }).map(a => Object.assign({}, a, { target_type: (a.target_type === 'all' || (a.target_module_ids || []).length > 1) ? 'all' : 'module' }));
+    this.renderModuleAlertList();
+  }
+});
+
+// кнопки вкладки «Угрозы»
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-th]');
+  if (!el) return;
+  const A = Admin, act = el.dataset.th, i = parseInt(el.dataset.i, 10);
+  switch (act) {
+    case 'usePattern':
+      A.th.editingPresetId = null;
+      A.resetForm();
+      A.fillForm(A.defaultConfig(el.dataset.key));
+      document.getElementById('formTitle').textContent = 'Запуск угрозы — ' + THREAT_DEFS[el.dataset.key].name;
+      A.scrollToForm(); break;
+    case 'newCustom':
+      A.resetForm();
+      document.getElementById('formTitle').textContent = 'Своя угроза — выберите паттерн, настройте и сохраните';
+      A.scrollToForm(); break;
+    case 'usePreset': {
+      const p = A.presets.find(x => x.id === el.dataset.id); if (!p) return;
+      A.resetForm();
+      A.th.editingPresetId = p.id;
+      A.fillForm(Object.assign(A.defaultConfig(p.pattern), p.config));
+      document.getElementById('formTitle').textContent = 'Своя угроза — ' + p.name;
+      document.getElementById('formModeTag').textContent = 'PRESET';
+      document.getElementById('thSavePresetBtn').textContent = 'Сохранить изменения';
+      A.scrollToForm(); break;
+    }
+    case 'deletePreset': {
+      const p = A.presets.find(x => x.id === el.dataset.id); if (!p) return;
+      if (!confirm(`Удалить свою угрозу «${p.name}»?`)) return;
+      sb.from('threat_presets').delete().eq('id', p.id).then(() => A.loadPresets()); break;
+    }
+    case 'addCode': A.th.codes.push({ code: A.newCode(), message: '' }); A.renderCodes(); break;
+    case 'delCode': A.th.codes.splice(i, 1); A.renderCodes(); break;
+    case 'codeQr': A.downloadCodeQr(i); break;
+    case 'downloadAllCodes': A.th.codes.forEach((c, k) => setTimeout(() => A.downloadCodeQr(k), k * 400)); break;
+    case 'launch': A.launchThreat(); break;
+    case 'savePreset': A.savePreset(); break;
+    case 'reset': A.resetForm(); break;
+    case 'test': A.launchTest(); break;
+    case 'excludeHere': A.excludeHere(el.dataset.id, el.dataset.mod); break;
   }
 });
 
