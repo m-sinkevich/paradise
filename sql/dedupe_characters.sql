@@ -2,6 +2,10 @@
 --  УДАЛЕНИЕ ДУБЛИКАТОВ ПЕРСОНАЖЕЙ
 --  Дубликаты — персонажи с одинаковым именем (без учёта регистра и
 --  пробелов по краям). Из каждой группы остаётся созданный ПОЗДНЕЕ всех.
+--  В таблице characters нет даты создания, поэтому порядок берётся из
+--  служебного номера транзакции строки (xmin): чем он больше, тем позже
+--  строка была записана. Если старого персонажа потом редактировали,
+--  он считается «более поздним» — проверьте это в ШАГЕ 1.
 --  Записи журнала, лога, сообщения и доступы удалённых дублей
 --  переносятся на оставшегося персонажа — история не теряется.
 --
@@ -10,15 +14,15 @@
 
 -- ШАГ 1. Что будет сделано (ничего не меняет)
 with ranked as (
-  select id, name, badge_id, qr_code, created_at,
+  select id, name, badge_id, qr_code, xmin::text::bigint as tx,
          first_value(id) over w as keep_id,
          row_number()    over w as rn,
          count(*)        over (partition by lower(btrim(name))) as cnt
   from characters
   where coalesce(btrim(name), '') <> ''
-  window w as (partition by lower(btrim(name)) order by created_at desc nulls last, id desc)
+  window w as (partition by lower(btrim(name)) order by xmin::text::bigint desc, id desc)
 )
-select name, badge_id, qr_code, created_at,
+select name, badge_id, qr_code, tx as "порядок записи",
        case when rn = 1 then 'ОСТАНЕТСЯ' else 'будет удалён' end as "действие"
 from ranked
 where cnt > 1
@@ -33,7 +37,7 @@ declare
   map_sql constant text :=
     '(select id, keep_id from (
         select id, first_value(id) over (partition by lower(btrim(name))
-                                         order by created_at desc nulls last, id desc) as keep_id
+                                         order by xmin::text::bigint desc, id desc) as keep_id
         from characters where coalesce(btrim(name), '''') <> '''') r
       where id <> keep_id)';
 begin
@@ -60,3 +64,7 @@ end $$;
 select lower(btrim(name)) as name, count(*) from characters
 where coalesce(btrim(name), '') <> ''
 group by 1 having count(*) > 1;
+
+-- ШАГ 3 (необязательно). Добавить дату создания, чтобы дальше порядок был точным.
+-- У уже существующих персонажей будет одинаковая дата — момента выполнения.
+alter table characters add column if not exists created_at timestamptz not null default now();
