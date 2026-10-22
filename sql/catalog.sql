@@ -2,6 +2,7 @@
 --  КАТАЛОГ ПЕРСОНАЖЕЙ И БЕЙДЖИ: новые поля + данные 16 персонажей
 --  Supabase → SQL Editor → выполнить целиком. Можно запускать повторно.
 --  QR-коды персонажей становятся такими же, как на напечатанных бейджах.
+--  Легенды и «кратко» перезаписываются текстами из этого файла.
 -- =====================================================================
 
 alter table characters add column if not exists photo_url  text;     -- фото (путь в репозитории или URL)
@@ -13,6 +14,28 @@ alter table characters add column if not exists catalog_visible boolean not null
 alter table characters add column if not exists catalog_order int;
 alter table modules    add column if not exists description   text;  -- описание модуля для каталога
 alter table modules    add column if not exists catalog_order int;
+
+-- Удалить персонажей, которых нет в игре: Елена Рязина, Инженер Рю Тан, Медик Э. Вейл.
+-- Ссылки на них в журнале, логе, сообщениях обнуляются (или удаляются строки, где ссылка обязательна).
+do $$
+declare
+  col record; n int;
+  del constant text := '(select id from characters where lower(name) like ''%рязина%'' or lower(name) like ''%рю тан%'' or lower(name) like ''%вейл%'')';
+begin
+  for col in
+    select table_name, column_name, is_nullable from information_schema.columns
+    where table_schema = 'public' and table_name <> 'characters' and column_name like '%character_id' and data_type = 'uuid'
+  loop
+    if col.is_nullable = 'YES' then
+      execute format('update public.%I set %I = null where %I in %s', col.table_name, col.column_name, col.column_name, del);
+    else
+      execute format('delete from public.%I where %I in %s', col.table_name, col.column_name, del);
+    end if;
+  end loop;
+  execute 'delete from characters where id in ' || del;
+  get diagnostics n = row_count;
+  raise notice 'Удалено лишних персонажей: %', n;
+end $$;
 
 do $$
 declare
@@ -46,7 +69,7 @@ begin
   end if;
   update characters set name = $t$Гиорги Гхвиношвили$t$, qr_code = 'MK8XYW', badge_id = coalesce(nullif('PG-CAP-01', ''), badge_id),
     photo_url = 'catalog/photos/giorgi.jpg', badge_url = 'badges/giorgi.jpg',
-    tagline = $t$Капитан первой экспедиции, винодел$t$, legend = $t$Глава первой официальной экспедиции на планету, капитан, старый мудрый человек, непосредственно с Земли. Изначально специалист по сельскому хозяйству и ветеринар. Именно он разработал технологию производства вина в этих условиях, хотя Арсен говорит всем, что первое вино было его производства.$t$,
+    tagline = $t$Капитан первой экспедиции, винодел$t$, legend = $t$Глава первой официальной экспедиции на планету, капитан, старый мудрый человек, непосредственно с Сол-2. Изначально специалист по сельскому хозяйству и ветеринар. Именно он разработал технологию производства вина в этих условиях, хотя Арсен говорит всем, что первое вино было его производства.$t$,
     home_module_id = coalesce(mid, home_module_id), catalog_order = 1,
     module_access = case when mid is null or mid = any(coalesce(module_access, '{}')) then module_access else array_append(coalesce(module_access, '{}'), mid) end
   where id = cid;
@@ -61,14 +84,14 @@ begin
   end if;
   update characters set name = $t$Арсен Серосян$t$, qr_code = 'UNMCH3', badge_id = coalesce(nullif('PG-XO-02', ''), badge_id),
     photo_url = 'catalog/photos/arsen.jpg', badge_url = 'badges/arsen.jpg',
-    tagline = $t$Старпом, мастер на все руки$t$, legend = $t$Старпом колонизационного корабля а теперь второй человек в модуле, мастер на все руки, но ничего не умеет делать прямо отлично. Родился и вырос на космической станции - это его первая поверхность.$t$,
+    tagline = $t$Старпом, мастер на все руки$t$, legend = $t$Арсен Серосян — харизматичный практик и мастер импровизации, умеющий собрать рабочее решение из подручных средств. Лёгкий в общении и инициативный, он часто берёт на себя бытовые и технические вызовы.$t$,
     home_module_id = coalesce(mid, home_module_id), catalog_order = 2,
     module_access = case when mid is null or mid = any(coalesce(module_access, '{}')) then module_access else array_append(coalesce(module_access, '{}'), mid) end
   where id = cid;
 
   -- Степан Рязин
   select id into mid from modules where lower(btrim(name)) like 'пирвел%' or lower(name) like '%pirvel%' or lower(access_code) like '%pirvel%' order by name limit 1;
-  select id into cid from characters where lower(btrim(name)) in ('степан рязин', 'елена рязина') order by xmin::text::bigint desc limit 1;
+  select id into cid from characters where lower(btrim(name)) in ('степан рязин') order by xmin::text::bigint desc limit 1;
   update characters set qr_code = qr_code || '-OLD' where upper(qr_code) = 'PN68AC' and id is distinct from cid;
   if cid is null then
     insert into characters (name, qr_code, active, module_access) values ($t$Степан Рязин$t$, 'PN68AC', true, case when mid is null then null else array[mid] end) returning id into cid;
@@ -76,7 +99,7 @@ begin
   end if;
   update characters set name = $t$Степан Рязин$t$, qr_code = 'PN68AC', badge_id = coalesce(nullif('PG-ENG-03', ''), badge_id),
     photo_url = 'catalog/photos/stepan.jpg', badge_url = 'badges/stepan.jpg',
-    tagline = $t$Инженер, без которого миссия бы не выжила$t$, legend = $t$Инженер. Может сделать из грунта и кусков древесины почти все что угодно, миссия выжила скорее всего лишь благодаря ему. Умеет принимать решения в условиях стресса и жутких дедлайнов.$t$,
+    tagline = $t$Инженер, без которого миссия бы не выжила$t$, legend = $t$Степан Рязин — главный инженер-практик, на котором держатся ремонт, надёжность и выживание модуля. Немногословный и прагматичный, он предпочитает доказывать всё результатом.$t$,
     home_module_id = coalesce(mid, home_module_id), catalog_order = 3,
     module_access = case when mid is null or mid = any(coalesce(module_access, '{}')) then module_access else array_append(coalesce(module_access, '{}'), mid) end
   where id = cid;
@@ -106,7 +129,7 @@ begin
   end if;
   update characters set name = $t$Эндрю Воллас$t$, qr_code = 'YK5V65', badge_id = coalesce(nullif('', ''), badge_id),
     photo_url = 'catalog/photos/andrew.jpg', badge_url = 'badges/andrew.jpg',
-    tagline = $t$Страховой магнат и прирождённый лидер$t$, legend = $t$Ранее, владелец сети страховых компаний, ушлый, скользкий, считает себя главным в модуле, ничего не умеет но обладает очень выраженными лидерскими качествами и каким-то образом умудряется делегировать всё, и люди его даже слушаются$t$,
+    tagline = $t$Страховой магнат и прирождённый лидер$t$, legend = $t$Эндрю Воллас — влиятельный предприниматель и сильный переговорщик, умеющий превращать ресурсы и связи в рабочие договорённости. Амбициозный и расчётливый, он всегда ищет возможности для роста команды и себя.$t$,
     home_module_id = coalesce(mid, home_module_id), catalog_order = 5,
     module_access = case when mid is null or mid = any(coalesce(module_access, '{}')) then module_access else array_append(coalesce(module_access, '{}'), mid) end
   where id = cid;
@@ -121,7 +144,7 @@ begin
   end if;
   update characters set name = $t$Антуан Зиппер$t$, qr_code = 'WS5NEX', badge_id = coalesce(nullif('', ''), badge_id),
     photo_url = 'catalog/photos/antoine.jpg', badge_url = 'badges/antoine.jpg',
-    tagline = $t$Изобретатель мгновенной связи$t$, legend = $t$Инженер, который стоял у истоков изобретения мгновенной межпланетной связи, что сделало его сказочно богатым. Его брат занимался всем менеджментом, поэтому Антуан лишь реализовывал проекты, которые ему были по душе. Как и в остальных модулях - выживание без инженера скорее всего было бы невозможно. Гик, задрот, аутист в отношениях.$t$,
+    tagline = $t$Изобретатель мгновенной связи$t$, legend = $t$Антуан Зиппер — гениальный инженер и физик, блестяще разбирающийся в технологиях и сложных системах. В общении может быть неловким, но в научных задачах незаменим и предан делу.$t$,
     home_module_id = coalesce(mid, home_module_id), catalog_order = 6,
     module_access = case when mid is null or mid = any(coalesce(module_access, '{}')) then module_access else array_append(coalesce(module_access, '{}'), mid) end
   where id = cid;
@@ -136,7 +159,7 @@ begin
   end if;
   update characters set name = $t$Магда Берт$t$, qr_code = 'EYRT3M', badge_id = coalesce(nullif('', ''), badge_id),
     photo_url = 'catalog/photos/magda.jpg', badge_url = 'badges/magda.jpg',
-    tagline = $t$Звезда кино, вживается в роль$t$, legend = $t$Известная актриса, которой предложили роль в фильме про колонизаторов, и она полетела на эту планету чтобы вжиться в роль. Чтож, вживается. Но надо отдать должное, она действительно старается сделать всё что от нее зависит чтобы улучшить жизнь в модуле.$t$,
+    tagline = $t$Звезда кино, вживается в роль$t$, legend = $t$Магда Берт — известная актриса, которая всерьёз включилась в жизнь экспедиции и старается быть полезной команде. Открытая и обаятельная, она умеет работать с вниманием людей и атмосферой в группе.$t$,
     home_module_id = coalesce(mid, home_module_id), catalog_order = 7,
     module_access = case when mid is null or mid = any(coalesce(module_access, '{}')) then module_access else array_append(coalesce(module_access, '{}'), mid) end
   where id = cid;
@@ -151,7 +174,7 @@ begin
   end if;
   update characters set name = $t$Алиссия Тёрнер$t$, qr_code = 'TRD6W3', badge_id = coalesce(nullif('', ''), badge_id),
     photo_url = 'catalog/photos/alissia.jpg', badge_url = 'badges/alissia.jpg',
-    tagline = $t$Наследница миллиардов, психолог$t$, legend = $t$Молодая девушка, которая унаследовала состояние от отца и не знала что ним делать. Хорошие манеры, лучшее образование, психолог. Действительно помогает команде справляться со стрессом.$t$,
+    tagline = $t$Наследница миллиардов, психолог$t$, legend = $t$Алиссия Тёрнер — образованная и эмпатичная наследница крупной династии, хорошо разбирающаяся в людях и психологической поддержке. Деликатная и выдержанная, она помогает команде сохранять внутреннюю устойчивость.$t$,
     home_module_id = coalesce(mid, home_module_id), catalog_order = 8,
     module_access = case when mid is null or mid = any(coalesce(module_access, '{}')) then module_access else array_append(coalesce(module_access, '{}'), mid) end
   where id = cid;
@@ -166,7 +189,7 @@ begin
   end if;
   update characters set name = $t$Дилан Бэтч$t$, qr_code = 'PH2GAD', badge_id = coalesce(nullif('', ''), badge_id),
     photo_url = 'catalog/photos/dylan.jpg', badge_url = 'badges/dylan.jpg',
-    tagline = $t$Полковник, глава спасательной экспедиции$t$, legend = $t$Глава экспидиции, Полковник. Суровый вояка, участвовал во множестве военных операций как между людьми так и с дикой природой на отдаленных планетах. Полковник скорее по выслуге лет, чем за умение управлять людьми. Все время смотрит на Еву для подтверждения своих решений, а та лишь слегка кивает или склоняет голову.$t$,
+    tagline = $t$Полковник, глава спасательной экспедиции$t$, legend = $t$Дилан Бэтч — опытный полковник и руководитель спасательной экспедиции, привыкший к дисциплине, приказам и ответственности за людей. Сдержанный и жёсткий в работе, он остаётся надёжной опорой команды в кризисе.$t$,
     home_module_id = coalesce(mid, home_module_id), catalog_order = 9,
     module_access = case when mid is null or mid = any(coalesce(module_access, '{}')) then module_access else array_append(coalesce(module_access, '{}'), mid) end
   where id = cid;
@@ -196,7 +219,7 @@ begin
   end if;
   update characters set name = $t$Нателла Исайро$t$, qr_code = 'BN533Q', badge_id = coalesce(nullif('', ''), badge_id),
     photo_url = 'catalog/photos/natella.jpg', badge_url = 'badges/natella.jpg',
-    tagline = $t$Фронтовой медик$t$, legend = $t$Медик, но не тот который в тылу, а настоящий, фронтовой. Нателла может вытащить раненого с поля боя и без жалости добить безнадежного, проведя триаж прямо в гуще событий. Знает всё о современных медикаментах, и благо именно модуль Фридом напичкан всем необходимым для того, чтобы добивать приходилось реже. Знает многое о болезнях, ядах и токсинах разных планет.$t$,
+    tagline = $t$Фронтовой медик$t$, legend = $t$Нателла Исайро — фронтовой хирург с огромным полевым опытом, для которой главное — спасать жизни здесь и сейчас. Прямая и собранная, она уверенно действует даже под максимальным давлением.$t$,
     home_module_id = coalesce(mid, home_module_id), catalog_order = 11,
     module_access = case when mid is null or mid = any(coalesce(module_access, '{}')) then module_access else array_append(coalesce(module_access, '{}'), mid) end
   where id = cid;
@@ -211,7 +234,7 @@ begin
   end if;
   update characters set name = $t$Ганеш Шарма$t$, qr_code = '9KH93X', badge_id = coalesce(nullif('', ''), badge_id),
     photo_url = 'catalog/photos/ganesh.jpg', badge_url = 'badges/ganesh.jpg',
-    tagline = $t$Ксенобиолог, ветеран экспедиций$t$, legend = $t$Ксенобиолог. Правительство предполагает, что проблема может быть не технического характера, поэтому в команде был отправлен Ганеш. Несмотря на его сильный акцент, Ганеш является наверное самым образованным членом команды, участвовал в десятках экспедиций на планеты с неизвестными формами жизни. Считает что разумные формы жизни не могут существовать без круговорота сансары, который происходит только с человеческой расой.$t$,
+    tagline = $t$Ксенобиолог, ветеран экспедиций$t$, legend = $t$Ганеш Шарма — ксенобиолог и глубокий исследователь, внимательный к деталям и необычным формам жизни. Спокойный и доброжелательный, он ищет в происходящем как научный, так и философский смысл.$t$,
     home_module_id = coalesce(mid, home_module_id), catalog_order = 12,
     module_access = case when mid is null or mid = any(coalesce(module_access, '{}')) then module_access else array_append(coalesce(module_access, '{}'), mid) end
   where id = cid;
@@ -226,7 +249,7 @@ begin
   end if;
   update characters set name = $t$Отец Матео Альварес$t$, qr_code = '22HUJR', badge_id = coalesce(nullif('CH-0020', ''), badge_id),
     photo_url = 'catalog/photos/mateo.jpg', badge_url = 'badges/mateo.jpg',
-    tagline = $t$Капеллан, двадцать лет с заключёнными$t$, legend = $t$Капеллан, работает с заключенными более 20 лет. Он не лезет в политику, судебную систему и причины, почему тот или иной человек оказался в заключении, а лишь пытается найти свет в их душах и направить в нужное русло. Имеет огромные связи, поскольку помог пережить каторжные тяготы многим сильным мира сего, но что значат его связи когда нет связи?$t$,
+    tagline = $t$Капеллан, двадцать лет с заключёнными$t$, legend = $t$Отец Матео Альварес — капеллан и душепопечитель, который помогает людям проходить через внутренние кризисы и моральные дилеммы. Спокойный и внимательный, он удерживает человеческий фокус в самых тяжёлых обстоятельствах.$t$,
     home_module_id = coalesce(mid, home_module_id), catalog_order = 13,
     module_access = case when mid is null or mid = any(coalesce(module_access, '{}')) then module_access else array_append(coalesce(module_access, '{}'), mid) end
   where id = cid;
@@ -256,7 +279,7 @@ begin
   end if;
   update characters set name = $t$Линь Цзинь$t$, qr_code = '9DQMDT', badge_id = coalesce(nullif('C-1187', ''), badge_id),
     photo_url = 'catalog/photos/lin.jpg', badge_url = 'badges/lin.jpg',
-    tagline = $t$Хакер: преступница или героиня?$t$, legend = $t$Осуждена за финансовые махинации, отмывание денег, взлом крупнейших банков. В оппозиционных новостях освещается как героиня, вскрывшая коррупционные схемы правительства, причем в один день в разных системах. До обвинения - специалист по компьютерной безопасности при правительстве Сола.$t$,
+    tagline = $t$Хакер: преступница или героиня?$t$, legend = $t$Линь Цзинь — талантливая специалистка по кибербезопасности с острым умом и независимым характером. Ироничная и смелая, она особенно сильна там, где нужно быстрое решение в цифровой среде.$t$,
     home_module_id = coalesce(mid, home_module_id), catalog_order = 15,
     module_access = case when mid is null or mid = any(coalesce(module_access, '{}')) then module_access else array_append(coalesce(module_access, '{}'), mid) end
   where id = cid;
@@ -271,7 +294,7 @@ begin
   end if;
   update characters set name = $t$Тамара Орлова$t$, qr_code = 'FJKTZD', badge_id = coalesce(nullif('A-7324', ''), badge_id),
     photo_url = 'catalog/photos/tamara.jpg', badge_url = 'badges/tamara.jpg',
-    tagline = $t$Осуждена за гибель крейсера «Филадельфия»$t$, legend = $t$Осуждена за терроризм и измену правительству Сола. Неоднократно выступала за снижение власти Сола в уже развитых колониях, повышения уровня их автономности. Однако пол года назад была осуждена за взрыв крейсера “Филадельфия” в системе Бетельгейзе. “Филадельфия” была отправлена на устранение мятежа и сепаратистских настроений на Бетельгейзе 2-1 (луна, пригодная для жизни и богатая как органическими так и минеральными ресурсами).$t$,
+    tagline = $t$Осуждена за гибель крейсера «Филадельфия»$t$, legend = $t$Тамара Орлова — принципиальная и волевая участница с сильным чувством справедливости и высокой личной ответственностью. Не боится сложных решений и готова отстаивать свою позицию до конца.$t$,
     home_module_id = coalesce(mid, home_module_id), catalog_order = 16,
     module_access = case when mid is null or mid = any(coalesce(module_access, '{}')) then module_access else array_append(coalesce(module_access, '{}'), mid) end
   where id = cid;

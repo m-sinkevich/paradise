@@ -17,7 +17,7 @@
     --safe-b: env(safe-area-inset-bottom, 0px);
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html { scroll-padding-top: 128px; }
+  html { scroll-padding-top: 170px; }
   html, body { overflow-x: clip; }
   body {
     margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 17px; line-height: 1.4;
@@ -54,12 +54,17 @@
   .search input:focus { border-color: rgba(94, 234, 212, .55); }
   .search .clear { position: absolute; right: 4px; top: 4px; width: 36px; height: 36px; border: 0; background: none; color: var(--ink3); font-size: 20px; cursor: pointer; display: none; }
   .search.has .clear { display: block; }
-  .chips { display: flex; gap: 8px; overflow-x: auto; padding: 10px 0 2px; scrollbar-width: none; }
-  .chips::-webkit-scrollbar { display: none; }
-  .chip { flex: none; height: 34px; padding: 0 14px; border-radius: 17px; border: 1px solid var(--line); background: var(--bg2); color: var(--ink2); font-family: var(--font-head); font-size: 14px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; display: flex; align-items: center; gap: 7px; }
-  .chip i { width: 8px; height: 8px; border-radius: 50%; background: var(--c, var(--cyan)); }
-  .chip.on { color: #06101C; background: var(--c, var(--cyan)); border-color: transparent; }
-  .chip.on i { background: #06101C; }
+  .chips { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr); gap: 8px; padding: 10px 0 2px; }
+  .chip { min-width: 0; height: 40px; padding: 0 10px 0 5px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg2); color: var(--ink2); font-family: var(--font-head); font-size: 14px; letter-spacing: .6px; text-transform: uppercase; cursor: pointer; display: flex; align-items: center; gap: 8px; text-align: left; }
+  .chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chip .ci { flex: none; width: 30px; height: 30px; border-radius: 7px; background: var(--c, var(--cyan)); display: grid; place-items: center; }
+  .chip .ci svg { width: 18px; height: 18px; }
+  .chip.all { grid-row: span 2; height: auto; flex-direction: column; justify-content: center; gap: 4px; padding: 0 12px; }
+  .chip.all .ci { background: rgba(94, 234, 212, .16); }
+  .chip.all .ci svg { stroke: var(--cyan); fill: none; stroke-width: 2; }
+  .chip.on { color: var(--ink); background: color-mix(in srgb, var(--c, var(--cyan)) 22%, var(--bg2)); border-color: var(--c, var(--cyan)); }
+  @media (max-width: 380px) { .chip { font-size: 12.5px; letter-spacing: .3px; gap: 6px; padding-right: 6px; } .chip .ci { width: 26px; height: 26px; } .chip .ci svg { width: 16px; height: 16px; } .chip.all { padding: 0 8px; } }
+  .chip.all.on .ci { background: var(--cyan); } .chip.all.on .ci svg { stroke: #06101C; }
 
   /* ---------- модули ---------- */
   main { max-width: 1100px; margin: 0 auto; padding: 8px 16px calc(40px + var(--safe-b)); }
@@ -236,8 +241,8 @@
   }
 
   function renderChips() {
-    $('chips').innerHTML = `<button class="chip ${filter === 'all' ? 'on' : ''}" data-f="all">Все</button>` +
-      modules.map(m => `<button class="chip ${filter === m.id ? 'on' : ''}" data-f="${m.id}" style="--c:${themeOf(m).c}"><i></i>${esc(m.name)}</button>`).join('');
+    $('chips').innerHTML = `<button class="chip all ${filter === 'all' ? 'on' : ''}" data-f="all"><span class="ci"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1"/></svg></span><span>Все</span></button>` +
+      modules.map(m => { const th = themeOf(m); return `<button class="chip ${filter === m.id ? 'on' : ''}" data-f="${m.id}" style="--c:${th.c}"><span class="ci">${th.ico || ''}</span><span>${esc(m.name)}</span></button>`; }).join('');
   }
 
   function hl(text) {
