@@ -1154,7 +1154,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       (function () {
         var timeEl = document.getElementById('tui-clock-time');
         var dateEl = document.getElementById('tui-clock-date');
-        var YEAR_OFFSET = 172; // «фантастический» сдвиг года колонии
+        var GAME_YEAR = '4073 С.Э.'; // год по лору: 4073 Соланской эры
         function pad(n) { return n < 10 ? '0' + n : '' + n; }
         function tick() {
           var now = new Date();
@@ -1162,7 +1162,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
             timeEl.textContent = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
           }
           if (dateEl) {
-            dateEl.textContent = pad(now.getDate()) + '.' + pad(now.getMonth() + 1) + '.' + (now.getFullYear() + YEAR_OFFSET);
+            dateEl.textContent = pad(now.getDate()) + '.' + pad(now.getMonth() + 1) + '.' + GAME_YEAR;
           }
         }
         tick();
@@ -3056,7 +3056,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       let html = `<div style="white-space:pre-wrap">${esc(hit.message || 'Код принят.')}</div>` +
                  `<div style="margin-top:10px;opacity:.8">Выполнено: ${done} из ${codes.length}</div>`;
       if (all) html += `<div style="margin-top:12px;color:var(--tui-cyan);white-space:pre-wrap">${esc((a.params.resolve && a.params.resolve.done_message) || 'Угроза устранена. Модуль в безопасности.')}</div>`;
-      App.renderGate('УСТРАНЕНИЕ УГРОЗЫ', 'код ' + code, html);
+      App.renderGate('УСТРАНЕНИЕ УГРОЗЫ', 'данные считаны', html);
       if (all) await this.resolveHere('qr');
       return true;
     },
@@ -3891,7 +3891,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
             octx.closePath();
             octx.stroke();
 
-            readout.textContent = "✓ Считано: " + code.data;
+            readout.textContent = "✓ Данные успешно считаны";
             readout.classList.add('visible');
 
             setTimeout(() => this.confirmScan(code.data), 400);

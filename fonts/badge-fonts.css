@@ -1,0 +1,99 @@
+/* oswald-latin-500-normal */
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url(oswald-latin-500-normal.woff2) format('woff2');
+}/* oswald-cyrillic-500-normal */
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url(oswald-cyrillic-500-normal.woff2) format('woff2');
+}/* oswald-latin-600-normal */
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url(oswald-latin-600-normal.woff2) format('woff2');
+}/* oswald-cyrillic-600-normal */
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url(oswald-cyrillic-600-normal.woff2) format('woff2');
+}/* oswald-latin-700-normal */
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url(oswald-latin-700-normal.woff2) format('woff2');
+}/* oswald-cyrillic-700-normal */
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url(oswald-cyrillic-700-normal.woff2) format('woff2');
+}/* sofia-sans-condensed-latin-500-normal */
+@font-face {
+  font-family: 'Sofia Sans Condensed';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url(sofia-sans-condensed-latin-500-normal.woff2) format('woff2');
+}/* sofia-sans-condensed-cyrillic-500-normal */
+@font-face {
+  font-family: 'Sofia Sans Condensed';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url(sofia-sans-condensed-cyrillic-500-normal.woff2) format('woff2');
+}/* sofia-sans-condensed-latin-600-normal */
+@font-face {
+  font-family: 'Sofia Sans Condensed';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url(sofia-sans-condensed-latin-600-normal.woff2) format('woff2');
+}/* sofia-sans-condensed-cyrillic-600-normal */
+@font-face {
+  font-family: 'Sofia Sans Condensed';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url(sofia-sans-condensed-cyrillic-600-normal.woff2) format('woff2');
+}/* sofia-sans-condensed-latin-700-normal */
+@font-face {
+  font-family: 'Sofia Sans Condensed';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url(sofia-sans-condensed-latin-700-normal.woff2) format('woff2');
+}/* sofia-sans-condensed-cyrillic-700-normal */
+@font-face {
+  font-family: 'Sofia Sans Condensed';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url(sofia-sans-condensed-cyrillic-700-normal.woff2) format('woff2');
+}/* sofia-sans-condensed-latin-800-normal */
+@font-face {
+  font-family: 'Sofia Sans Condensed';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 800;
+  src: url(sofia-sans-condensed-latin-800-normal.woff2) format('woff2');
+}/* sofia-sans-condensed-cyrillic-800-normal */
+@font-face {
+  font-family: 'Sofia Sans Condensed';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 800;
+  src: url(sofia-sans-condensed-cyrillic-800-normal.woff2) format('woff2');
+}
