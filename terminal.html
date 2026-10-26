@@ -2400,10 +2400,13 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       this.moduleRow.last_seen_at = nowIso;
     },
 
+    // код со сканера: без пробелов, в верхнем регистре; несколько строк с одним кодом (дубли) не ломают вход
     async findCharacterByQR(code) {
-      const { data, error } = await sb.from('characters').select('*').eq('qr_code', code).eq('active', true).maybeSingle();
+      const c = String(code || '').trim().toUpperCase();
+      let { data, error } = await sb.from('characters').select('*').eq('qr_code', c).limit(5);
+      if (!error && !(data || []).length) ({ data, error } = await sb.from('characters').select('*').ilike('qr_code', c).limit(5));
       if (error) { console.error(error); return null; }
-      return data;
+      return (data || []).find(x => x.active !== false) || null;
     },
 
     async findContentByTrigger(code) {

@@ -6,7 +6,8 @@
 
 Правила (так сделаны все существующие коды):
 - содержимое: 6 символов из алфавита без 0/O/1/I;
-- коррекция ошибок: запрошена 'q', segno сам повышает до 'H' (версия 1, 21×21 модуль);
+- коррекция ошибок H, обычный QR версии 1 (21×21). ВАЖНО: micro=False — иначе segno выдаёт Micro QR 17×17,
+  который ZXing читает, а телефоны и терминал (jsQR) — нет;
 - SVG: scale=10, border=3, прозрачный фон (light=None) — фон даёт белая/светлая плашка на бейдже;
 - цвета модулей по модулю колонии (data / угловые квадраты):
     Пирвели     #3B1E0C / #A0501A   плашка #FBF5EA
@@ -49,7 +50,7 @@ def make(slug, theme, code=None):
     while code is None or code in USED:
         code = "".join(rng.choice(ALPHA) for _ in range(6))
     USED.add(code)
-    q = segno.make(code, error="q")
+    q = segno.make(code, error="h", micro=False)   # micro=False: Micro QR не читается телефонами и терминалом (jsQR)
     q.save(f"qr-{slug}.svg", scale=10, border=3, dark=dark, finder_dark=finder, light=None, xmldecl=False)
     q.save(f"_check-{slug}.png", scale=5, border=3, dark=dark, finder_dark=finder, light=plate)
     res = zxingcpp.read_barcodes(Image.open(f"_check-{slug}.png").convert("RGB"))
