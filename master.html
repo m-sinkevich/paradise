@@ -530,6 +530,39 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
 .co-msg .btn{ margin-top:6px; padding:5px 10px; }
 .co-prev{ border:1px dashed var(--edge); padding:10px; margin-top:10px; display:flex; flex-direction:column; gap:8px; }
 .co-prev audio{ width:100%; }
+/* контент: markdown и варианты */
+.md-hint{ font-size:10.5px; color:var(--ink-400); margin-top:6px; display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+.md-hint code{ font-family:var(--font-mono); color:var(--cyan); background:rgba(94,234,212,.07); padding:0 4px; }
+.md-hint .btn{ padding:3px 8px; margin-left:auto; }
+.md-preview{ border:1px solid var(--edge); background:rgba(2,8,16,.6); padding:14px; margin-top:8px; font-size:13px; line-height:1.7; color:var(--ink-100); }
+.md-preview p{ margin:0 0 10px; } .md-preview ul,.md-preview ol{ margin:0 0 10px; padding-left:22px; }
+.md-preview h3,.md-preview h4,.md-preview h5{ color:var(--cyan); margin:12px 0 6px; letter-spacing:1px; }
+.md-preview strong{ color:#fff; } .md-preview em{ color:var(--amber); font-style:normal; }
+.md-preview blockquote{ margin:0 0 10px; padding:6px 12px; border-left:3px solid var(--amber); background:rgba(255,180,84,.06); }
+.md-preview code{ color:var(--cyan); } .md-preview hr{ border:0; border-top:1px dashed var(--edge); }
+.vr-item{ border:1px solid var(--edge); border-left:3px solid #A78BFA; padding:10px; margin-top:8px; display:flex; flex-direction:column; gap:8px; }
+.vr-head{ display:flex; justify-content:space-between; align-items:center; font-size:10px; letter-spacing:1.5px; color:#C4B5FD; text-transform:uppercase; }
+.vr-head .btn{ padding:3px 8px; }
+.vr-chars{ display:flex; flex-wrap:wrap; gap:5px; max-height:120px; overflow-y:auto; }
+.vr-chars button{ background:transparent; border:1px solid var(--edge); color:var(--ink-100); font-family:var(--font-mono); font-size:10.5px; padding:4px 8px; cursor:pointer; }
+.vr-chars button.on{ border-color:#A78BFA; background:rgba(167,139,250,.18); color:#E9E3FF; }
+/* каналы v2 */
+.co-sel{ border-color:var(--cyan) !important; background:rgba(94,234,212,.06); }
+.co-spy, .mod-chip.spy{ color:#C4B5FD; border-color:rgba(196,181,253,.5); }
+.co-thread-head{ margin-bottom:10px; font-size:12px; color:var(--ink-100); }
+.co-thread-head .btn{ padding:3px 8px; margin-left:8px; }
+.co-msg.in-ch{ border-left-color:var(--cyan); }
+.co-msg.from-master{ border-left-color:#A78BFA; }
+.co-mem-pick{ max-height:300px; overflow-y:auto; border:1px solid var(--edge); padding:8px; }
+.co-mem-h{ font-size:9.5px; letter-spacing:1.5px; color:var(--ink-400); text-transform:uppercase; margin:8px 0 5px; }
+.co-mem-row{ display:flex; flex-wrap:wrap; gap:6px; }
+.co-mchip{ display:inline-flex; border:1px solid var(--edge); }
+.co-mchip button{ background:transparent; border:0; color:var(--ink-100); font-family:var(--font-mono); font-size:11px; padding:5px 9px; cursor:pointer; }
+.co-mchip.on{ border-color:var(--cyan); background:rgba(94,234,212,.12); }
+.co-mchip.on button{ color:var(--cyan); }
+.co-mchip .hid{ border-left:1px solid var(--edge); opacity:.45; padding:5px 7px; }
+.co-mchip.spy{ border-color:#C4B5FD; background:rgba(196,181,253,.12); }
+.co-mchip.spy .hid{ opacity:1; background:rgba(196,181,253,.25); }
 #coRecBtn.rec{ border-color:var(--red); color:var(--red); animation:pulseOp 1.1s ease-in-out infinite; }
   audio { color-scheme: dark; }
 /* ---- персонажи: фото и бейдж ---- */
@@ -614,28 +647,33 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
       <button class="btn amber" data-co="newCh">+ Канал</button>
     </div>
     <div class="panel-body scroll">
-      <div class="status-line" style="margin-bottom:10px;">Канал — куда можно писать (модуль, персонаж или центр управления). Писать по каналу может тот, кому выдан доступ: мастером или сканом QR-кода канала.</div>
+      <div class="status-line" style="margin-bottom:10px;">Канал — общий чат: участники — модули и персонажи. Мастер видит все каналы, включая созданные игроками и скрытые (🕶 — скрытый участник-хакер).</div>
       <div class="row-list" id="coChList"><div class="empty-line">Загрузка...</div></div>
     </div>
   </section>
 
   <section class="panel shape-b">
     <div class="panel-head">
-      <div class="panel-title"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z M4 7l8 6 8-6" stroke-linejoin="round"/></svg><span>Сообщения</span></div>
-      <select class="input" id="coFilter" style="max-width:200px;padding:6px 8px;"></select>
+      <div class="panel-title"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z M4 7l8 6 8-6" stroke-linejoin="round"/></svg><span>Переписка</span></div>
+      <select class="input" id="coFilter" style="max-width:230px;padding:6px 8px;"></select>
     </div>
     <div class="panel-body scroll">
+      <div class="co-thread-head" id="coThreadHead"></div>
       <div class="co-feed" id="coFeed"><div class="empty-line">Загрузка...</div></div>
     </div>
   </section>
 
   <section class="panel shape-c wide" id="coCompose">
     <div class="panel-head">
-      <div class="panel-title"><svg viewBox="0 0 24 24"><path d="M3 20 21 12 3 4v6l12 2-12 2z" stroke-linejoin="round"/></svg><span id="coComposeTitle">Сообщение от центра управления</span></div>
+      <div class="panel-title"><svg viewBox="0 0 24 24"><path d="M3 20 21 12 3 4v6l12 2-12 2z" stroke-linejoin="round"/></svg><span id="coComposeTitle">Написать</span></div>
       <button class="btn ghost" data-co="cancelReply" id="coCancelReply" style="display:none">Отменить ответ</button>
     </div>
     <div class="panel-body">
       <div class="field-row">
+        <div class="field"><label>Куда</label><select class="input" id="coTarget"></select></div>
+        <div class="field" id="coFromWrap" style="display:none"><label>От кого (так увидят участники канала)</label><input class="input" id="coFromLabel" placeholder="Центр управления" maxlength="60"></div>
+      </div>
+      <div class="field-row" id="coDirectWrap">
         <div class="field"><label>Модуль</label><select class="input" id="coToMod"></select></div>
         <div class="field"><label>Лично персонажу (необязательно)</label><select class="input" id="coToChar"></select></div>
       </div>
@@ -645,7 +683,7 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
         <button class="btn ghost" data-co="rec" id="coRecBtn">● Голос с микрофона</button>
         <button class="btn ghost" data-co="pickPhoto">🖼 Фото / картинка</button>
         <input type="file" id="coPhotoFile" accept="image/*" style="display:none">
-        <label class="checkbox-chip checked"><input type="checkbox" id="coAllowReply" checked> Можно ответить</label>
+        <label class="checkbox-chip checked" id="coAllowReplyWrap"><input type="checkbox" id="coAllowReply" checked> Можно ответить</label>
         <span class="snd-timer" id="coTimer"></span>
       </div>
       <div class="co-prev" id="coPrevBox" style="display:none">
@@ -663,39 +701,33 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
   <div class="modal-box">
     <div class="modal-head"><span class="modal-title" id="coChTitle">Канал связи</span><button class="modal-close" data-co="closeCh">✕</button></div>
     <div class="editor-section">
-      <div class="field"><label>Название канала (так его увидят игроки)</label><input class="input" id="coChName" placeholder="Например: Связь с Фридомом"></div>
-      <div class="field-row">
-        <div class="field"><label>Куда пишут</label><select class="input" id="coChMod"></select></div>
-        <div class="field"><label>Лично персонажу (необязательно)</label><select class="input" id="coChChar"></select></div>
-      </div>
+      <div class="field"><label>Название канала (так его увидят игроки)</label><input class="input" id="coChName" placeholder="Например: Связь Фридом — Пирвели"></div>
+      <div class="status-line" id="coChCreator"></div>
       <div class="field"><label>Что можно отправлять</label>
         <div class="checkbox-grid">
           <label class="checkbox-chip checked"><input type="checkbox" id="coChText" checked> Текст</label>
           <label class="checkbox-chip checked"><input type="checkbox" id="coChVoice" checked> Голос</label>
           <label class="checkbox-chip checked"><input type="checkbox" id="coChPhoto" checked> Фото с камеры</label>
-          <label class="checkbox-chip checked"><input type="checkbox" id="coChTwo" checked> Адресат может ответить</label>
           <label class="checkbox-chip checked"><input type="checkbox" id="coChActive" checked> Канал работает</label>
         </div>
       </div>
     </div>
     <div class="editor-section">
+      <div class="sec-title">Участники <span class="meta" id="coMemCount"></span></div>
+      <div class="status-line">Нажмите, чтобы добавить или убрать. У выбранного персонажа 🕶 делает его скрытым участником: остальные его не видят.</div>
+      <input class="input" id="coMemSearch" placeholder="Найти модуль или персонажа" style="margin:8px 0">
+      <div id="coMemPick" class="co-mem-pick"></div>
+    </div>
+    <div class="editor-section">
       <div class="sec-title">QR-код, открывающий канал (необязательно)</div>
       <div class="trigger-row">
-        <div class="field"><label>Код</label><input class="input" id="coChCode" placeholder="без QR — доступ выдаёт только мастер" style="text-transform:uppercase;letter-spacing:2px"></div>
+        <div class="field"><label>Код</label><input class="input" id="coChCode" placeholder="без QR — участников выбирает мастер" style="text-transform:uppercase;letter-spacing:2px"></div>
         <button class="btn ghost" data-co="genCode">⟳ Сгенерировать</button>
         <button class="btn ghost" data-co="dlCode">⤓ QR</button>
       </div>
       <div class="radio-group" id="coChScope">
-        <label class="radio-chip checked"><input type="radio" name="coScope" value="module" checked> Скан открывает канал модулю, где отсканирован</label>
-        <label class="radio-chip"><input type="radio" name="coScope" value="character"> Скан открывает канал персонажу, который сканировал</label>
-      </div>
-    </div>
-    <div class="editor-section" id="coGrantSec">
-      <div class="sec-title">Кто может писать по каналу</div>
-      <div class="mod-chips" id="coGrants"></div>
-      <div class="field-row" style="margin-top:10px">
-        <div class="field"><label>Выдать доступ модулю</label><div style="display:flex;gap:6px"><select class="input" id="coGrantMod"></select><button class="btn" data-co="grantMod">+</button></div></div>
-        <div class="field"><label>…или персонажу</label><div style="display:flex;gap:6px"><select class="input" id="coGrantChar"></select><button class="btn" data-co="grantChar">+</button></div></div>
+        <label class="radio-chip checked"><input type="radio" name="coScope" value="module" checked> Скан добавляет в канал модуль, где отсканирован</label>
+        <label class="radio-chip"><input type="radio" name="coScope" value="character"> Скан добавляет персонажа, который сканировал</label>
       </div>
     </div>
     <div class="error-line" id="coChErr"></div>
@@ -965,7 +997,10 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
       <div class="panel-body">
         <div class="content-toolbar">
           <input type="text" class="input content-search" id="contentSearch" placeholder="Поиск по коду или тексту...">
-          <button class="btn amber" data-action="openContentEditor">+ Новый объект контента</button>
+          <div class="btn-row" style="margin:0">
+            <button class="btn ghost" data-vr="qrPdf" id="qrPdfBtn" title="Все QR-коды контента с кодом и кратким описанием — для печати">⤓ Все QR в PDF</button>
+            <button class="btn amber" data-action="openContentEditor">+ Новый объект контента</button>
+          </div>
         </div>
         <div class="content-table" id="contentTable">
           <div class="empty-line">Загрузка...</div>
@@ -1090,6 +1125,14 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
       <div class="field">
         <label id="eBodyLabel">Текст</label>
         <textarea class="input" id="eBody" rows="5" placeholder="Текст, который увидит игрок. Переносы строк сохраняются."></textarea>
+        <div class="md-hint">Форматирование (Markdown): <code>**жирный**</code> <code>*курсив*</code> <code># Заголовок</code> <code>- список</code> <code>1. список</code> <code>&gt; цитата</code> <code>---</code> линия <code>`код`</code>
+          <button type="button" class="btn ghost" data-vr="preview">👁 Как увидит игрок</button></div>
+        <div class="md-preview" id="eBodyPreview" style="display:none"></div>
+      </div>
+      <div class="field" id="eVariantsField">
+        <label>Варианты текста для конкретных персонажей — если на терминале вошёл один из выбранных, он видит свой вариант вместо основного</label>
+        <div id="eVariants"></div>
+        <button type="button" class="btn ghost" data-vr="add" style="align-self:flex-start;margin-top:6px">+ Вариант для персонажей</button>
       </div>
       <div class="field" id="eMediaField" style="display:none;">
         <label id="eMediaLabel">Медиафайл</label>
@@ -1304,6 +1347,16 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
         </div>
       </div>
       <div class="status-line">Каталог для игроков: <a href="catalog.html" target="_blank" style="color:var(--sky)">catalog.html</a></div>
+    </div>
+
+    <!-- ---- Способности ---- -->
+    <div class="editor-section">
+      <div class="sec-title">Способности связи</div>
+      <div class="checkbox-grid">
+        <label class="checkbox-chip"><input type="checkbox" id="cCanCreate"> Может создавать каналы связи</label>
+        <label class="checkbox-chip"><input type="checkbox" id="cHacker"> 🕶 Хакер — может создавать скрытые каналы</label>
+      </div>
+      <div class="status-line">Канал создаётся на терминале любого модуля, куда у персонажа есть доступ: «Связь» → «+ Создать канал». В скрытом канале хакер — невидимый участник, может писать анонимно. Хакер умеет и обычные каналы.</div>
     </div>
 
     <!-- ---- Статус ---- -->
@@ -1561,6 +1614,43 @@ const Templates = {
 /* =========================================================================
    ПАНЕЛЬ МАСТЕРА
    ========================================================================= */
+  /* =========================================================================
+     MARKDOWN для текста контента: заголовки #, **жирный**, *курсив*, `код`,
+     списки (- / 1.), цитаты >, линия ---, ссылки [текст](url), переносы строк.
+     ========================================================================= */
+  function mdToHtml(src) {
+    const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const inline = t => esc(t.replace(/\\([-.!#*_()[\]>+`])/g, '\u0000$1'))
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/__(.+?)__/g, '<strong>$1</strong>')
+      .replace(/(^|[^*\w])\*([^*\n]+)\*/g, '$1<em>$2</em>').replace(/(^|[^_\w])_([^_\n]+)_/g, '$1<em>$2</em>')
+      .replace(/~~(.+?)~~/g, '<del>$1</del>')
+      .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+      .replace(/\u0000/g, '');
+    const out = []; let list = null, para = [], quote = [];
+    const flushP = () => { if (para.length) { out.push('<p>' + para.map(inline).join('<br>') + '</p>'); para = []; } };
+    const flushL = () => { if (list) { out.push(`<${list.t}>` + list.items.map(x => '<li>' + x.map(inline).join('<br>') + '</li>').join('') + `</${list.t}>`); list = null; } };
+    const flushQ = () => { if (quote.length) { out.push('<blockquote>' + quote.map(inline).join('<br>') + '</blockquote>'); quote = []; } };
+    const flush = () => { flushP(); flushL(); flushQ(); };
+    String(src || '').replace(/\r/g, '').split('\n').forEach(raw => {
+      const t = raw.trim(); let m;
+      if (!t) { flush(); return; }
+      if (/^(-{3,}|\*{3,}|_{3,})$/.test(t)) { flush(); out.push('<hr>'); return; }
+      if ((m = t.match(/^(#{1,3})\s+(.*)$/))) { flush(); out.push(`<h${m[1].length + 2}>${inline(m[2])}</h${m[1].length + 2}>`); return; }
+      if ((m = t.match(/^>\s?(.*)$/))) { flushP(); flushL(); quote.push(m[1]); return; }
+      if ((m = t.match(/^(\d+)[.)]\s+(.*)$/)) || (m = t.match(/^[-*•+]\s+(.*)$/))) {
+        flushP(); flushQ(); const ordered = /^\d/.test(t), txt = ordered ? m[2] : m[1];
+        if (!list || list.t !== (ordered ? 'ol' : 'ul')) { flushL(); list = { t: ordered ? 'ol' : 'ul', items: [] }; }
+        list.items.push([txt]); return;
+      }
+      if (list && /^\s{2,}/.test(raw)) { list.items[list.items.length - 1].push(t); return; }
+      flushL(); flushQ(); para.push(t);
+    });
+    flush();
+    return out.join('');
+  }
+  
+
 const Admin = {
   modules: [],
   templates: [],
@@ -2442,6 +2532,10 @@ const Admin = {
     this.renderRequiresPreviousCheckboxes(item ? item.requires_previous : [], this.editingContentId);
 
     this.choiceOptions = (item && item.choice_options) ? JSON.parse(JSON.stringify(item.choice_options)) : [];
+    this.variants = (item && Array.isArray(item.variants)) ? JSON.parse(JSON.stringify(item.variants)) : [];
+    document.getElementById('eBodyPreview').style.display = 'none';
+    document.getElementById('eVariantsField').style.display = (!this.contentItems.length || 'variants' in this.contentItems[0]) ? '' : 'none';
+    this.renderVariants();
 
     this.onTypeChange();
     this.onUnlockTypeChange();
@@ -2501,6 +2595,8 @@ const Admin = {
       interrupt_behavior: interrupt,
       updated_at: new Date().toISOString()
     };
+    if (!this.contentItems.length || 'variants' in this.contentItems[0])
+      row.variants = (this.variants || []).filter(v => (v.character_ids || []).length && (v.body || '').trim()).map(v => ({ character_ids: v.character_ids, body: v.body }));
 
     let error;
     if (this.editingContentId) {
@@ -2574,13 +2670,66 @@ const Admin = {
         <span class="pill ${c.active === false ? 'off' : ''}">${c.active === false ? 'НЕАКТИВЕН' : 'АКТИВЕН'}</span>
         <div class="info">
           <span class="preview">${this.escape(c.name || '(без имени)')}</span>
-          <span class="meta">${c.badge_id ? 'БЕЙДЖ: ' + this.escape(c.badge_id) + ' · ' : ''}МОДУЛИ: ${this.escape(this.moduleNamesFor(c.module_access))}</span>
+          <span class="meta">${c.badge_id ? 'БЕЙДЖ: ' + this.escape(c.badge_id) + ' · ' : ''}МОДУЛИ: ${this.escape(this.moduleNamesFor(c.module_access))}${c.is_hacker ? ' · <span style="color:#C4B5FD">🕶 ХАКЕР</span>' : c.can_create_channels ? ' · <span style="color:var(--cyan)">⌁ СОЗДАЁТ КАНАЛЫ</span>' : ''}</span>
         </div>
         <div class="actions">
           ${c.badge_url ? `<button class="btn ghost" data-cat="badge" data-id="${c.id}" title="Открыть картинку бейджа">🪪 Бейдж</button>` : ''}
           <button class="btn ghost" data-action="openCharacterEditor" data-id="${c.id}">Изменить</button>
         </div>
       </div>`).join('');
+  },
+  /* ---------- контент: варианты по персонажам, предпросмотр, PDF всех QR ---------- */
+  renderVariants() {
+    const el = document.getElementById('eVariants'); if (!el) return;
+    const chars = (this.characters || []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ru'));
+    el.innerHTML = (this.variants || []).map((v, i) => `
+      <div class="vr-item">
+        <div class="vr-head"><span>Вариант ${i + 1} · ${(v.character_ids || []).length ? (v.character_ids || []).map(id => this.escape((chars.find(c => c.id === id) || {}).name || '?')).join(', ') : 'выберите персонажей'}</span>
+          <button type="button" class="btn ghost" data-vr="del" data-i="${i}">✕ Удалить</button></div>
+        <div class="vr-chars">${chars.map(c => `<button type="button" class="${(v.character_ids || []).includes(c.id) ? 'on' : ''}" data-vr="toggle" data-i="${i}" data-id="${c.id}">${this.escape(c.name)}</button>`).join('') || '<span class="meta">Нет персонажей</span>'}</div>
+        <textarea class="input" rows="4" data-vr-body="${i}" placeholder="Текст для выбранных персонажей (Markdown)">${this.escape(v.body || '')}</textarea>
+      </div>`).join('');
+  },
+  async exportContentQrPdf() {
+    const btn = document.getElementById('qrPdfBtn'); const old = btn.textContent; btn.textContent = 'Готовлю PDF…'; btn.disabled = true;
+    try {
+      if (!window.jspdf) await new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'; sc.onload = res; sc.onerror = () => rej(new Error('не загрузилась библиотека PDF')); document.head.appendChild(sc); });
+      const items = this.contentItems.filter(c => c.trigger_code).slice().sort((a, b) => a.trigger_code.localeCompare(b.trigger_code));
+      if (!items.length) throw new Error('нет объектов контента');
+      const W = 1240, H = 1754, COLS = 3, ROWS = 4, M = 70, TOP = 130, cw = (W - 2 * M) / COLS, chh = (H - TOP - M) / ROWS;
+      const TYPES = { text: 'ТЕКСТ', image: 'КАРТИНКА', audio: 'АУДИО', video: 'ВИДЕО', event: 'СОБЫТИЕ' };
+      const plain = t => String(t || '').replace(/[#*_`>~]+/g, ' ').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/\s+/g, ' ').trim();
+      const wrap = (ctx, text, maxW, maxLines) => { const words = text.split(' '), lines = []; let ln = '';
+        for (const w of words) { const t = ln ? ln + ' ' + w : w; if (ctx.measureText(t).width > maxW && ln) { lines.push(ln); ln = w; if (lines.length === maxLines) break; } else ln = t; }
+        if (lines.length < maxLines && ln) lines.push(ln);
+        if (lines.length === maxLines && words.join(' ').length > lines.join(' ').length) lines[maxLines - 1] = lines[maxLines - 1].replace(/.{0,2}$/, '…');
+        return lines; };
+      const qrCanvas = code => { const h = document.createElement('div'); new QRCode(h, { text: code, width: 300, height: 300, colorDark: '#000', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.H }); return h.querySelector('canvas'); };
+      const pdf = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+      const pages = Math.ceil(items.length / (COLS * ROWS));
+      for (let p = 0; p < pages; p++) {
+        const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const ctx = cv.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = '#000';
+        ctx.font = 'bold 34px sans-serif'; ctx.fillText('QR-коды контента', M, 80);
+        ctx.font = '22px sans-serif'; ctx.fillStyle = '#555'; ctx.textAlign = 'right'; ctx.fillText(`лист ${p + 1} из ${pages} · ${items.length} шт.`, W - M, 80); ctx.textAlign = 'left';
+        items.slice(p * COLS * ROWS, (p + 1) * COLS * ROWS).forEach((it, k) => {
+          const x = M + (k % COLS) * cw, y = TOP + Math.floor(k / COLS) * chh;
+          ctx.strokeStyle = '#bbb'; ctx.setLineDash([8, 6]); ctx.strokeRect(x + 6, y + 6, cw - 12, chh - 12); ctx.setLineDash([]);
+          const q = qrCanvas(it.trigger_code); if (q) ctx.drawImage(q, x + (cw - 260) / 2, y + 22, 260, 260);
+          ctx.fillStyle = '#000'; ctx.textAlign = 'center'; ctx.font = 'bold 34px monospace'; ctx.fillText(it.trigger_code, x + cw / 2, y + 320);
+          ctx.font = 'bold 17px sans-serif'; ctx.fillStyle = '#444';
+          const mods = (it.module_scope || []).map(id => (this.modules.find(m => m.id === id) || {}).name).filter(Boolean).join(', ');
+          ctx.fillText((TYPES[it.type] || it.type || '').toUpperCase() + (mods ? ' · ' + mods : ''), x + cw / 2, y + 346);
+          ctx.font = '17px sans-serif'; ctx.fillStyle = '#222';
+          wrap(ctx, plain(it.body) || '(без текста)', cw - 40, 2).forEach((ln, i) => ctx.fillText(ln, x + cw / 2, y + 370 + i * 21));
+          ctx.textAlign = 'left';
+        });
+        if (p) pdf.addPage();
+        pdf.addImage(cv.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 210, 297);
+      }
+      pdf.save('content_qr.pdf');
+    } catch (e) { tuiShowErrorToast('PDF не создан: ' + (e.message || e)); }
+    btn.textContent = old; btn.disabled = false;
   },
   /* ---------- фото / бейджи персонажей ---------- */
   mediaUrl(p) { return !p ? '' : /^(https?:|data:)/.test(p) || /^(catalog|badges)\//.test(p) ? p : sb.storage.from(MEDIA_BUCKET).getPublicUrl(p).data.publicUrl; },
@@ -2653,6 +2802,9 @@ const Admin = {
     document.getElementById('cSessionTimeout').value = (item && item.session_timeout_minutes != null) ? item.session_timeout_minutes : '';
     document.getElementById('cInactivityTimeout').value = (item && item.inactivity_timeout_minutes != null) ? item.inactivity_timeout_minutes : '';
     document.getElementById('cCatalogHint').style.display = this.hasCatalogCols() ? 'none' : '';
+    [['cCanCreate', item && item.can_create_channels], ['cHacker', item && item.is_hacker]].forEach(([id, v]) => {
+      document.getElementById(id).checked = !!v; document.getElementById(id).closest('.checkbox-chip').classList.toggle('checked', !!v);
+    });
     document.getElementById('cPhotoUrl').value = (item && item.photo_url) || '';
     document.getElementById('cTagline').value = (item && item.tagline) || '';
     document.getElementById('cLegend').value = (item && item.legend) || '';
@@ -2831,6 +2983,10 @@ const Admin = {
       badge_url: document.getElementById('cBadgeUrl').value.trim() || null,
       home_module_id: document.getElementById('cHomeModule').value || null,
       catalog_visible: document.getElementById('cCatalogVisible').checked
+    });
+    if (!this.characters.length || 'can_create_channels' in this.characters[0]) Object.assign(row, {
+      can_create_channels: document.getElementById('cCanCreate').checked || document.getElementById('cHacker').checked,
+      is_hacker: document.getElementById('cHacker').checked
     });
 
     let error;
@@ -3390,6 +3546,20 @@ document.addEventListener('click', (e) => {
 });
 
 document.addEventListener('click', (e) => {
+  const v = e.target.closest('[data-vr]'); if (!v) return;
+  const a = v.dataset.vr, i = parseInt(v.dataset.i, 10);
+  if (a === 'add') { Admin.variants = Admin.variants || []; Admin.variants.push({ character_ids: [], body: document.getElementById('eBody').value }); Admin.renderVariants(); }
+  if (a === 'del') { Admin.variants.splice(i, 1); Admin.renderVariants(); }
+  if (a === 'toggle') { const ids = Admin.variants[i].character_ids = Admin.variants[i].character_ids || []; const k = ids.indexOf(v.dataset.id); k < 0 ? ids.push(v.dataset.id) : ids.splice(k, 1); Admin.renderVariants(); }
+  if (a === 'preview') { const p = document.getElementById('eBodyPreview'); const on = p.style.display === 'none'; p.style.display = on ? '' : 'none'; if (on) p.innerHTML = mdToHtml(document.getElementById('eBody').value) || '<span class="meta">Пусто</span>'; }
+  if (a === 'qrPdf') Admin.exportContentQrPdf();
+});
+document.addEventListener('input', (e) => {
+  if (e.target.dataset && e.target.dataset.vrBody !== undefined) Admin.variants[parseInt(e.target.dataset.vrBody, 10)].body = e.target.value;
+  if (e.target.id === 'eBody') { const p = document.getElementById('eBodyPreview'); if (p && p.style.display !== 'none') p.innerHTML = mdToHtml(e.target.value); }
+});
+
+document.addEventListener('click', (e) => {
   const b = e.target.closest('[data-cat]');
   if (b) {
     const a = b.dataset.cat;
@@ -3420,7 +3590,7 @@ document.addEventListener('input', (e) => {
 
 document.addEventListener('change', (e) => {
   if (e.target.id === 'cPhotoFile' && e.target.files && e.target.files[0]) { Admin.uploadCharPhoto(e.target.files[0]); e.target.value = ''; }
-  if (e.target.id === 'cCatalogVisible') e.target.closest('.checkbox-chip').classList.toggle('checked', e.target.checked);
+  if (['cCatalogVisible', 'cCanCreate', 'cHacker'].includes(e.target.id)) e.target.closest('.checkbox-chip').classList.toggle('checked', e.target.checked);
   if (e.target.id === 'alertSoundFile' && e.target.files && e.target.files[0]) Admin.uploadAlertSound(e.target.files[0]);
   if (e.target.id === 'eType') Admin.onTypeChange();
   if (e.target.id === 'eUnlockType') Admin.onUnlockTypeChange();
@@ -4346,104 +4516,158 @@ document.addEventListener('click', e => {
    сообщения от центра управления и ответы.
    ========================================================================= */
 const Co = {
-  channels: [], grants: [], msgs: [], editId: null, replyTo: null, pending: null, rec: null,
-  sel: 'id,channel_id,from_master,from_module_id,from_character_id,to_master,to_module_id,to_character_id,kind,text,media_path,reply_to,allow_reply,read_at,created_at,' +
-       'from_char:characters!from_character_id(name),to_char:characters!to_character_id(name)',
+  channels: [], members: [], msgs: [], editId: null, replyTo: null, pending: null, rec: null, memSel: new Map(),
+  DEFAULT_SEEN: '2026-10-26T00:00:00Z',
+  sel: 'id,channel_id,from_master,from_label,anon,from_module_id,from_character_id,to_master,to_module_id,to_character_id,kind,text,media_path,reply_to,allow_reply,read_at,created_at',
   $: id => document.getElementById(id),
   esc: s => Admin.escape(s),
   modName(id) { const m = Admin.modules.find(x => x.id === id); return m ? (m.name || m.access_code) : '—'; },
   charName(id) { const c = (Admin.characters || []).find(x => x.id === id); return c ? c.name : 'персонаж'; },
   url(p) { return /^https?:/.test(p) ? p : sb.storage.from(MEDIA_BUCKET).getPublicUrl(p).data.publicUrl; },
+  chName(id) { const c = this.channels.find(x => x.id === id); return c ? c.name : 'канал'; },
 
   async init() {
     sb.channel('admin-comms')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'comm_messages' }, () => this.loadMsgs())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'comm_grants' }, () => this.loadChannels())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'comm_members' }, () => this.loadChannels())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'comm_channels' }, () => this.loadChannels())
       .subscribe();
     this.fillSelects();
     await Promise.all([this.loadChannels(), this.loadMsgs()]);
     setInterval(() => this.loadMsgs(), 30000);
     document.addEventListener('change', e => {
-      if (e.target.id === 'coFilter') this.renderFeed();
+      if (e.target.id === 'coFilter') { this.renderFeed(); this.syncTargetFromFilter(); }
+      if (e.target.id === 'coTarget') this.applyTarget();
       if (e.target.id === 'coToMod') this.fillCharSelect('coToChar', e.target.value);
-      if (e.target.id === 'coChMod') this.fillCharSelect('coChChar', e.target.value);
       if (e.target.id === 'coPhotoFile' && e.target.files[0]) this.preview({ blob: e.target.files[0], ext: (e.target.files[0].name.split('.').pop() || 'jpg').toLowerCase(), kind: 'photo' });
       if (e.target.closest && e.target.closest('#coChModal, #coCompose') && e.target.type === 'checkbox') e.target.closest('.checkbox-chip').classList.toggle('checked', e.target.checked);
       if (e.target.name === 'coScope') document.querySelectorAll('#coChScope .radio-chip').forEach(c => c.classList.toggle('checked', c.querySelector('input').checked));
     });
+    document.addEventListener('input', e => { if (e.target.id === 'coMemSearch') this.renderMemPick(); });
   },
   fillSelects() {
-    const mods = Admin.modules.map(m => `<option value="${m.id}">${this.esc(m.name || m.access_code)}</option>`).join('');
-    this.$('coToMod').innerHTML = mods;
-    this.$('coChMod').innerHTML = mods + '<option value="">⌂ Центр управления (мастер)</option>';
-    this.$('coGrantMod').innerHTML = mods;
-    this.$('coGrantChar').innerHTML = (Admin.characters || []).map(c => `<option value="${c.id}">${this.esc(c.name)}</option>`).join('');
-    this.$('coFilter').innerHTML = '<option value="">Все модули</option><option value="master">✉ Центру управления</option>' + mods;
+    const mods = Admin.modules.filter(m => !m.is_master_terminal).map(m => `<option value="${m.id}">${this.esc(m.name || m.access_code)}</option>`).join('');
+    const cur = this.$('coToMod').value;
+    this.$('coToMod').innerHTML = mods; if (cur) this.$('coToMod').value = cur;
     this.fillCharSelect('coToChar', this.$('coToMod').value);
+    this.fillFilter(); this.fillTarget();
+  },
+  fillFilter() {
+    const el = this.$('coFilter'), cur = el.value;
+    el.innerHTML = '<option value="">Все сообщения</option><option value="center">✉ Центр управления ↔ модули</option>' +
+      (this.channels.length ? '<optgroup label="Каналы">' + this.channels.map(c => `<option value="ch:${c.id}">#${this.esc(c.name)}</option>`).join('') + '</optgroup>' : '') +
+      '<optgroup label="Модули">' + Admin.modules.filter(m => !m.is_master_terminal).map(m => `<option value="mod:${m.id}">▣ ${this.esc(m.name || m.access_code)}</option>`).join('') + '</optgroup>';
+    if ([...el.options].some(o => o.value === cur)) el.value = cur;
+  },
+  fillTarget() {
+    const el = this.$('coTarget'), cur = el.value;
+    el.innerHTML = '<option value="direct">✉ Модулю / персонажу от центра управления</option>' + this.channels.filter(c => c.active).map(c => `<option value="ch:${c.id}">В канал #${this.esc(c.name)}</option>`).join('');
+    if ([...el.options].some(o => o.value === cur)) el.value = cur;
+    this.applyTarget();
+  },
+  applyTarget() {
+    const ch = this.$('coTarget').value.startsWith('ch:');
+    this.$('coFromWrap').style.display = ch ? '' : 'none';
+    this.$('coDirectWrap').style.display = ch ? 'none' : '';
+    this.$('coAllowReplyWrap').style.display = ch ? 'none' : '';
+    if (ch) this.cancelReply(true);
+  },
+  syncTargetFromFilter() {
+    const f = this.$('coFilter').value;
+    if (f.startsWith('ch:') && [...this.$('coTarget').options].some(o => o.value === f)) { this.$('coTarget').value = f; this.applyTarget(); }
+    else if (f.startsWith('mod:')) { this.$('coTarget').value = 'direct'; this.applyTarget(); this.$('coToMod').value = f.slice(4); this.fillCharSelect('coToChar', f.slice(4)); }
   },
   fillCharSelect(id, moduleId) {
-    const list = (Admin.characters || []).filter(c => !moduleId || !c.module_access || !c.module_access.length || c.module_access.includes(moduleId));
+    const list = (Admin.characters || []).filter(c => !moduleId || c.home_module_id === moduleId || (!c.home_module_id && (!c.module_access || !c.module_access.length || c.module_access.includes(moduleId))));
     this.$(id).innerHTML = '<option value="">— всем на модуле —</option>' + list.map(c => `<option value="${c.id}">${this.esc(c.name)}</option>`).join('');
   },
 
   /* ---------- каналы ---------- */
   async loadChannels() {
-    const [c, g] = await Promise.all([sb.from('comm_channels').select('*').order('created_at'), sb.from('comm_grants').select('*')]);
-    if (c.error) { this.$('coChList').innerHTML = `<div class="empty-line" style="color:var(--red)">${this.esc(c.error.message)}${/comm_/.test(c.error.message) ? ' — выполните sql/comms.sql в Supabase' : ''}</div>`; return; }
-    this.channels = c.data || []; this.grants = g.data || [];
-    this.renderChannels();
-    if (this.editId) this.renderGrants();
+    const [c, m] = await Promise.all([sb.from('comm_channels').select('*').order('created_at'), sb.from('comm_members').select('*')]);
+    if (c.error || m.error) {
+      const msg = (c.error || m.error).message;
+      this.$('coChList').innerHTML = `<div class="empty-line" style="color:var(--red)">${this.esc(msg)}${/comm_/.test(msg) ? ' — выполните sql/comms.sql и sql/channels_v2.sql в Supabase' : ''}</div>`; return;
+    }
+    this.channels = c.data || []; this.members = m.data || [];
+    this.renderChannels(); this.fillFilter(); this.fillTarget(); this.renderFeed();
   },
-  targetLabel(c) { return c.target_module_id ? this.modName(c.target_module_id) + (c.target_character_id ? ' · лично ' + this.charName(c.target_character_id) : '') : 'Центр управления'; },
-  grantLabel(g) { return g.module_id ? '▣ ' + this.modName(g.module_id) : '◉ ' + this.charName(g.character_id); },
+  membersOf(id) { return this.members.filter(x => x.channel_id === id); },
+  memLabel(x) { return (x.module_id ? '▣ ' + this.modName(x.module_id) : '◉ ' + this.charName(x.character_id)) + (x.hidden ? ' 🕶' : ''); },
+  seen(id) { try { return localStorage.getItem('co_seen_' + id) || this.DEFAULT_SEEN; } catch (e) { return this.DEFAULT_SEEN; } },
+  markSeen(id) { try { localStorage.setItem('co_seen_' + id, new Date().toISOString()); } catch (e) {} },
+  unreadIn(id) { const s = this.seen(id); return this.msgs.filter(m => m.channel_id === id && !m.from_master && m.created_at > s).length; },
   renderChannels() {
-    const el = this.$('coChList');
-    if (!this.channels.length) { el.innerHTML = '<div class="empty-line">Каналов пока нет. Нажмите «+ Канал».</div>'; return; }
-    el.innerHTML = this.channels.map(c => {
-      const gs = this.grants.filter(g => g.channel_id === c.id);
-      const what = [c.allow_text && 'текст', c.allow_voice && 'голос', c.allow_photo && 'фото'].filter(Boolean).join(', ');
-      return `<div class="row-item clickable-row" data-co="editCh" data-id="${c.id}" style="${c.active ? '' : 'opacity:.5'}">
+    const el = this.$('coChList'), f = this.$('coFilter').value;
+    const centerUn = this.msgs.filter(m => !m.channel_id && m.to_master && !m.read_at).length;
+    const head = `<div class="row-item clickable-row ${f === 'center' ? 'co-sel' : ''}" data-co="pickThread" data-id="center">
+        <div class="main"><span class="name">✉ Центр управления ↔ модули</span><span class="meta">личные сообщения мастеров и ответы игроков</span></div>
+        <div class="actions">${centerUn ? `<b class="tab-badge">${centerUn}</b>` : ''}</div></div>`;
+    el.innerHTML = head + (this.channels.length ? this.channels.map(c => {
+      const ms = this.membersOf(c.id), un = this.unreadIn(c.id);
+      const what = [c.allow_text !== false && 'текст', c.allow_voice !== false && 'голос', c.allow_photo !== false && 'фото'].filter(Boolean).join(', ');
+      const by = c.created_by_character_id ? ' · создал ' + this.charName(c.created_by_character_id) + (ms.some(x => x.hidden) ? ' (скрыто)' : '') : '';
+      return `<div class="row-item clickable-row ${f === 'ch:' + c.id ? 'co-sel' : ''}" data-co="pickThread" data-id="${c.id}" style="${c.active ? '' : 'opacity:.5'}">
         <div class="main">
-          <span class="name">${this.esc(c.name)}</span>
-          <span class="meta">→ ${this.esc(this.targetLabel(c))} · ${what || 'ничего'}${c.two_way ? ' · с ответом' : ''}${c.unlock_code ? ' · QR ' + this.esc(c.unlock_code) : ''}</span>
-          <div class="mod-chips">${gs.map(g => `<span class="mod-chip">${this.esc(this.grantLabel(g))}${g.source === 'qr' ? ' · QR' : ''}</span>`).join('') || '<span class="meta">доступа пока ни у кого нет</span>'}</div>
+          <span class="name">#${this.esc(c.name)}${ms.some(x => x.hidden) ? ' <span class="co-spy">🕶</span>' : ''}</span>
+          <span class="meta">${what || 'ничего'}${c.unlock_code ? ' · QR ' + this.esc(c.unlock_code) : ''}${this.esc(by)}</span>
+          <div class="mod-chips">${ms.map(x => `<span class="mod-chip ${x.hidden ? 'spy' : ''}">${this.esc(this.memLabel(x))}${x.source === 'qr' ? ' · QR' : ''}</span>`).join('') || '<span class="meta">участников нет</span>'}</div>
         </div>
-        <div class="actions">${c.active ? '' : '<span class="pill off">ВЫКЛ</span>'}</div>
+        <div class="actions">${un ? `<b class="tab-badge">${un}</b>` : ''}${c.active ? '' : '<span class="pill off">ВЫКЛ</span>'}<button class="btn ghost" data-co="editCh" data-id="${c.id}" title="Настроить канал">✎</button></div>
       </div>`;
-    }).join('');
+    }).join('') : '<div class="empty-line">Каналов пока нет. Нажмите «+ Канал».</div>');
   },
+  pickThread(id) {
+    this.$('coFilter').value = id === 'center' ? 'center' : 'ch:' + id;
+    this.renderFeed(); this.syncTargetFromFilter(); this.renderChannels();
+    if (id === 'center') this.$('coTarget').value = 'direct', this.applyTarget();
+  },
+
+  /* ---------- окно канала ---------- */
   openCh(id) {
     const c = id ? this.channels.find(x => x.id === id) : null;
     this.editId = c ? c.id : null;
     this.$('coChTitle').textContent = c ? 'Канал: ' + c.name : 'Новый канал связи';
     this.$('coChName').value = c ? c.name : '';
-    this.$('coChMod').value = c ? (c.target_module_id || '') : (Admin.modules[0] || {}).id || '';
-    this.fillCharSelect('coChChar', this.$('coChMod').value);
-    this.$('coChChar').value = c && c.target_character_id ? c.target_character_id : '';
+    this.$('coChCreator').textContent = c && c.created_by_character_id ? `Создан игроком: ${this.charName(c.created_by_character_id)}${c.created_from_module_id ? ' (терминал ' + this.modName(c.created_from_module_id) + ')' : ''}` : '';
     const cb = (id, v) => { this.$(id).checked = v; this.$(id).closest('.checkbox-chip').classList.toggle('checked', v); };
-    cb('coChText', c ? c.allow_text !== false : true); cb('coChVoice', c ? c.allow_voice !== false : true);
-    cb('coChPhoto', c ? c.allow_photo !== false : true); cb('coChTwo', c ? c.two_way !== false : true); cb('coChActive', c ? c.active !== false : true);
+    cb('coChText', !c || c.allow_text !== false); cb('coChVoice', !c || c.allow_voice !== false); cb('coChPhoto', !c || c.allow_photo !== false);
+    cb('coChActive', !c || c.active !== false);
     this.$('coChCode').value = c && c.unlock_code ? c.unlock_code : '';
-    const scope = c && c.unlock_scope === 'character' ? 'character' : 'module';
-    document.querySelectorAll('input[name="coScope"]').forEach(r => { r.checked = r.value === scope; r.closest('.radio-chip').classList.toggle('checked', r.checked); });
-    this.$('coGrantSec').style.display = c ? '' : 'none';
+    const sc = (c && c.unlock_scope) || 'module';
+    document.querySelectorAll('input[name="coScope"]').forEach(r => { r.checked = r.value === sc; r.closest('.radio-chip').classList.toggle('checked', r.checked); });
+    this.memSel = new Map((c ? this.membersOf(c.id) : []).map(x => [x.module_id ? 'm:' + x.module_id : 'c:' + x.character_id, !!x.hidden]));
+    this.$('coMemSearch').value = '';
+    this.renderMemPick();
     this.$('coChDel').style.display = c ? '' : 'none';
-    this.$('coChErr').textContent = c ? '' : 'Сохраните канал, затем выдайте доступ модулям или персонажам.';
-    this.renderGrants();
+    this.$('coChErr').textContent = '';
     this.$('coChModal').classList.add('open');
   },
-  renderGrants() {
-    const gs = this.grants.filter(g => g.channel_id === this.editId);
-    this.$('coGrants').innerHTML = gs.map(g => `<span class="mod-chip">${this.esc(this.grantLabel(g))}${g.source === 'qr' ? ' · по QR' : ''}
-      <button type="button" class="mod-x" data-co="ungrant" data-id="${g.id}" title="Забрать доступ">✕</button></span>`).join('') || '<span class="meta">Пока ни у кого.</span>';
+  renderMemPick() {
+    const q = (this.$('coMemSearch').value || '').toLowerCase().replace(/ё/g, 'е');
+    const ok = s => !q || (s || '').toLowerCase().replace(/ё/g, 'е').includes(q);
+    const chip = (key, label) => {
+      const on = this.memSel.has(key), hid = on && this.memSel.get(key);
+      return `<span class="co-mchip ${on ? 'on' : ''} ${hid ? 'spy' : ''}"><button type="button" data-co="memToggle" data-k="${key}">${this.esc(label)}</button>${on && key[0] === 'c' ? `<button type="button" class="hid" data-co="memHide" data-k="${key}" title="Скрытый участник">🕶</button>` : ''}</span>`;
+    };
+    const mods = Admin.modules.filter(m => !m.is_master_terminal && ok(m.name));
+    const groups = new Map();
+    (Admin.characters || []).filter(c => ok(c.name)).forEach(c => {
+      const h = c.home_module_id || ((c.module_access || []).length === 1 ? c.module_access[0] : '');
+      if (!groups.has(h)) groups.set(h, []); groups.get(h).push(c);
+    });
+    this.$('coMemPick').innerHTML =
+      `<div class="co-mem-h">Модули целиком</div><div class="co-mem-row">${mods.map(m => chip('m:' + m.id, '▣ ' + (m.name || m.access_code))).join('') || '<span class="meta">—</span>'}</div>` +
+      [...groups.entries()].map(([h, list]) => `<div class="co-mem-h">${this.esc(h ? this.modName(h) : 'Без модуля')}</div><div class="co-mem-row">${list.map(c => chip('c:' + c.id, c.name)).join('')}</div>`).join('');
+    this.$('coMemCount').textContent = `· выбрано ${this.memSel.size}`;
   },
+  memToggle(k) { this.memSel.has(k) ? this.memSel.delete(k) : this.memSel.set(k, false); this.renderMemPick(); },
+  memHide(k) { if (this.memSel.has(k)) this.memSel.set(k, !this.memSel.get(k)); this.renderMemPick(); },
   async saveCh() {
     const row = {
       name: this.$('coChName').value.trim(),
-      target_module_id: this.$('coChMod').value || null,
-      target_character_id: this.$('coChMod').value ? (this.$('coChChar').value || null) : null,
       allow_text: this.$('coChText').checked, allow_voice: this.$('coChVoice').checked, allow_photo: this.$('coChPhoto').checked,
-      two_way: this.$('coChTwo').checked, active: this.$('coChActive').checked,
+      active: this.$('coChActive').checked,
       unlock_code: normThreatCode(this.$('coChCode').value) || null,
       unlock_scope: (document.querySelector('input[name="coScope"]:checked') || {}).value || 'module'
     };
@@ -4451,26 +4675,29 @@ const Co = {
     const q = this.editId ? sb.from('comm_channels').update(row).eq('id', this.editId).select('id') : sb.from('comm_channels').insert(row).select('id');
     const { data, error } = await q;
     if (error) return (this.$('coChErr').textContent = 'Ошибка: ' + error.message);
-    this.editId = (data && data[0] && data[0].id) || this.editId;
+    const id = (data && data[0] && data[0].id) || this.editId; this.editId = id;
+    // участники: удалить снятых, добавить новых, обновить «скрыт»
+    const have = this.membersOf(id), want = this.memSel;
+    const keyOf = x => x.module_id ? 'm:' + x.module_id : 'c:' + x.character_id;
+    const del = have.filter(x => !want.has(keyOf(x))).map(x => x.id);
+    const add = [...want.entries()].filter(([k]) => !have.some(x => keyOf(x) === k))
+      .map(([k, h]) => ({ channel_id: id, module_id: k[0] === 'm' ? k.slice(2) : null, character_id: k[0] === 'c' ? k.slice(2) : null, hidden: k[0] === 'c' && h, source: 'master' }));
+    const upd = have.filter(x => want.has(keyOf(x)) && !!x.hidden !== !!want.get(keyOf(x)));
+    const ops = [];
+    if (del.length) ops.push(sb.from('comm_members').delete().in('id', del));
+    if (add.length) ops.push(sb.from('comm_members').insert(add));
+    upd.forEach(x => ops.push(sb.from('comm_members').update({ hidden: !!want.get(keyOf(x)) }).eq('id', x.id)));
+    const res = await Promise.all(ops); const bad = res.find(r => r && r.error);
+    if (bad) return (this.$('coChErr').textContent = 'Ошибка участников: ' + bad.error.message);
     await this.loadChannels();
-    this.openCh(this.editId);
-    this.$('coChErr').textContent = '';
+    this.$('coChModal').classList.remove('open'); this.editId = null;
   },
   async delCh() {
     const c = this.channels.find(x => x.id === this.editId); if (!c) return;
-    if (!confirm(`Удалить канал «${c.name}»? Отправленные сообщения останутся.`)) return;
+    if (!confirm(`Удалить канал «${c.name}»? Сообщения канала останутся в общей ленте.`)) return;
     await sb.from('comm_channels').delete().eq('id', c.id);
     this.$('coChModal').classList.remove('open'); this.editId = null; this.loadChannels();
   },
-  async grant(kind) {
-    const v = this.$(kind === 'mod' ? 'coGrantMod' : 'coGrantChar').value; if (!v || !this.editId) return;
-    const row = { channel_id: this.editId, source: 'master' }; row[kind === 'mod' ? 'module_id' : 'character_id'] = v;
-    if (this.grants.some(g => g.channel_id === this.editId && (g.module_id === row.module_id && row.module_id || g.character_id === row.character_id && row.character_id))) return;
-    const { error } = await sb.from('comm_grants').insert(row);
-    if (error) return (this.$('coChErr').textContent = 'Ошибка: ' + error.message);
-    this.loadChannels();
-  },
-  async ungrant(id) { await sb.from('comm_grants').delete().eq('id', id); this.loadChannels(); },
   genCode() { this.$('coChCode').value = 'C' + Array.from({ length: 5 }, () => CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)]).join(''); },
   dlCode() {
     const code = normThreatCode(this.$('coChCode').value); if (!code) return (this.$('coChErr').textContent = 'Сначала задайте код.');
@@ -4486,53 +4713,73 @@ const Co = {
     }, 60);
   },
 
-  /* ---------- лента сообщений ---------- */
+  /* ---------- лента ---------- */
   async loadMsgs() {
-    const { data, error } = await sb.from('comm_messages').select(this.sel).order('created_at', { ascending: false }).limit(250);
-    if (error) { this.$('coFeed').innerHTML = `<div class="empty-line" style="color:var(--red)">${this.esc(error.message)}${/comm_/.test(error.message) ? ' — выполните sql/comms.sql' : ''}</div>`; return; }
+    const { data, error } = await sb.from('comm_messages').select(this.sel).order('created_at', { ascending: false }).limit(400);
+    if (error) { this.$('coFeed').innerHTML = `<div class="empty-line" style="color:var(--red)">${this.esc(error.message)}${/comm_|from_label|anon/.test(error.message) ? ' — выполните sql/channels_v2.sql' : ''}</div>`; return; }
     this.msgs = data || [];
-    this.renderFeed();
-    const unMaster = this.msgs.filter(m => m.to_master && !m.read_at).length;
-    this.$('tabBtn-comms').innerHTML = 'Связь' + (unMaster ? ` <b class="tab-badge">${unMaster}</b>` : '');
+    this.renderFeed(); this.renderChannels(); this.renderBadge();
     if (Admin.modules && Admin.modules.length) { Admin.renderModuleList(); Admin.renderModuleTable(); }
   },
-  unreadFor(moduleId) { return this.msgs.filter(m => m.to_module_id === moduleId && !m.read_at).length; },
-  who(m, side) {
-    if (side === 'from') return m.from_master ? 'Центр управления' : this.modName(m.from_module_id) + (m.from_char && m.from_char.name ? ' · ' + m.from_char.name : '');
-    return m.to_master ? 'Центр управления' : this.modName(m.to_module_id) + (m.to_char && m.to_char.name ? ' · лично ' + m.to_char.name : '');
+  renderBadge() {
+    const n = this.msgs.filter(m => !m.channel_id && m.to_master && !m.read_at).length + this.channels.reduce((s, c) => s + this.unreadIn(c.id), 0);
+    this.$('tabBtn-comms').innerHTML = 'Связь' + (n ? ` <b class="tab-badge">${n}</b>` : '');
+  },
+  unreadFor(moduleId) { return this.msgs.filter(m => !m.channel_id && m.to_module_id === moduleId && !m.read_at).length; },
+  fromName(m) {
+    if (m.from_master) return (m.from_label || 'Центр управления') + (m.from_label ? ' (мастер)' : '');
+    const real = this.modName(m.from_module_id) + (m.from_character_id ? ' · ' + this.charName(m.from_character_id) : '');
+    return m.anon ? 'Аноним 🕶 — ' + real : real;
+  },
+  toName(m) {
+    if (m.channel_id) return '#' + this.chName(m.channel_id);
+    if (m.to_master) return 'Центр управления';
+    return this.modName(m.to_module_id) + (m.to_character_id ? ' · лично ' + this.charName(m.to_character_id) : '');
   },
   renderFeed() {
     const f = this.$('coFilter').value, el = this.$('coFeed');
-    const list = this.msgs.filter(m => !f || (f === 'master' ? m.to_master : (m.to_module_id === f || m.from_module_id === f)));
+    const list = this.msgs.filter(m => !f ? true : f === 'center' ? !m.channel_id : f.startsWith('ch:') ? m.channel_id === f.slice(3) :
+      f.startsWith('mod:') ? (m.to_module_id === f.slice(4) || m.from_module_id === f.slice(4) || (m.channel_id && this.membersOf(m.channel_id).some(x => x.module_id === f.slice(4)))) : true);
+    const head = this.$('coThreadHead');
+    if (f.startsWith('ch:')) {
+      const c = this.channels.find(x => x.id === f.slice(3));
+      head.innerHTML = c ? `<b>#${this.esc(c.name)}</b> <button class="btn ghost" data-co="editCh" data-id="${c.id}">✎ Настроить</button><div class="mod-chips">${this.membersOf(c.id).map(x => `<span class="mod-chip ${x.hidden ? 'spy' : ''}">${this.esc(this.memLabel(x))}</span>`).join('')}</div>` : '';
+      if (c) { this.markSeen(c.id); setTimeout(() => { this.renderChannels(); this.renderBadge(); }, 0); }
+    } else head.innerHTML = '';
     if (!list.length) { el.innerHTML = '<div class="empty-line">Сообщений нет.</div>'; return; }
-    el.innerHTML = list.map(m => `<div class="co-msg ${m.to_master ? 'to-master' : ''} ${!m.read_at ? 'unread' : ''}">
-      <div class="co-meta"><b>${this.esc(this.who(m, 'from'))}</b> → <b>${this.esc(this.who(m, 'to'))}</b>
+    el.innerHTML = list.map(m => {
+      const unread = m.channel_id ? (!m.from_master && m.created_at > this.seen(m.channel_id)) : (m.to_master && !m.read_at);
+      return `<div class="co-msg ${m.to_master ? 'to-master' : ''} ${m.channel_id ? 'in-ch' : ''} ${m.from_master ? 'from-master' : ''} ${unread ? 'unread' : ''}">
+      <div class="co-meta"><b>${this.esc(this.fromName(m))}</b> → <b>${this.esc(this.toName(m))}</b>
         <span class="co-time">${new Date(m.created_at).toLocaleString()}</span>
-        <span class="co-st">${m.read_at ? '✓ прочитано' : '● не прочитано'}</span></div>
+        ${m.channel_id ? '' : `<span class="co-st">${m.read_at ? '✓ прочитано' : '● не прочитано'}</span>`}</div>
       ${m.text ? `<div class="co-text">${this.esc(m.text)}</div>` : ''}
       ${m.kind === 'audio' && m.media_path ? `<audio controls preload="none" src="${this.esc(this.url(m.media_path))}"></audio>` : ''}
-      ${m.kind === 'photo' && m.media_path ? `<img class="co-photo" data-cam="view" data-url="${this.esc(this.url(m.media_path))}" data-cap="${this.esc(this.who(m, 'from'))}" src="${this.esc(this.url(m.media_path))}" alt="">` : ''}
-      ${m.to_master && (m.from_module_id) ? `<button class="btn ghost" data-co="reply" data-id="${m.id}">↩ Ответить</button>` : ''}
-    </div>`).join('');
-    // сообщения центру управления, показанные мастеру, — прочитаны
-    const ids = list.filter(m => m.to_master && !m.read_at).map(m => m.id);
+      ${m.kind === 'photo' && m.media_path ? `<img class="co-photo" data-cam="view" data-url="${this.esc(this.url(m.media_path))}" data-cap="${this.esc(this.fromName(m))}" src="${this.esc(this.url(m.media_path))}" alt="">` : ''}
+      ${!m.channel_id && m.to_master && m.from_module_id ? `<button class="btn ghost" data-co="reply" data-id="${m.id}">↩ Ответить</button>` : ''}
+      ${m.channel_id ? `<button class="btn ghost" data-co="pickThread" data-id="${m.channel_id}">В канал →</button>` : ''}
+    </div>`; }).join('');
+    const ids = list.filter(m => !m.channel_id && m.to_master && !m.read_at).map(m => m.id);
     if (ids.length && Admin.currentTab === 'comms') sb.from('comm_messages').update({ read_at: new Date().toISOString() }).in('id', ids).then(() => {});
   },
 
-  /* ---------- отправка от центра управления ---------- */
+  /* ---------- отправка ---------- */
   reply(id) {
     const m = this.msgs.find(x => x.id === id); if (!m) return;
     this.replyTo = m;
+    this.$('coTarget').value = 'direct'; this.applyTarget();
     this.$('coToMod').value = m.from_module_id; this.fillCharSelect('coToChar', m.from_module_id);
     this.$('coToChar').value = m.from_character_id || '';
-    this.$('coComposeTitle').textContent = 'Ответ: ' + this.who(m, 'from');
+    this.$('coComposeTitle').textContent = 'Ответ: ' + this.fromName(m);
     this.$('coCancelReply').style.display = '';
     this.$('coCompose').scrollIntoView({ behavior: 'smooth' }); this.$('coText').focus();
   },
-  cancelReply() { this.replyTo = null; this.$('coComposeTitle').textContent = 'Сообщение от центра управления'; this.$('coCancelReply').style.display = 'none'; },
+  cancelReply() { this.replyTo = null; this.$('coComposeTitle').textContent = 'Написать'; this.$('coCancelReply').style.display = 'none'; },
   async send(kind, blob, ext) {
     const text = this.$('coText').value.trim();
     if (kind === 'text' && !text) return (this.$('coErr').textContent = 'Введите текст.');
+    const tgt = this.$('coTarget').value;
+    if (tgt === 'direct' && !this.$('coToMod').value) return (this.$('coErr').textContent = 'Выберите модуль.');
     this.$('coErr').textContent = ''; this.$('coOk').textContent = 'Отправка…';
     let media_path = null;
     if (blob) {
@@ -4540,8 +4787,10 @@ const Co = {
       const up = await sb.storage.from(MEDIA_BUCKET).upload(media_path, blob, { contentType: blob.type || 'application/octet-stream' });
       if (up.error) { this.$('coOk').textContent = ''; return (this.$('coErr').textContent = 'Ошибка загрузки: ' + up.error.message); }
     }
-    const row = { from_master: true, to_module_id: this.$('coToMod').value, to_character_id: this.$('coToChar').value || null,
-      kind, text: text || null, media_path, allow_reply: this.$('coAllowReply').checked, reply_to: this.replyTo ? this.replyTo.id : null };
+    const row = tgt.startsWith('ch:')
+      ? { from_master: true, from_label: this.$('coFromLabel').value.trim() || null, channel_id: tgt.slice(3), kind, text: text || null, media_path }
+      : { from_master: true, to_module_id: this.$('coToMod').value, to_character_id: this.$('coToChar').value || null,
+          kind, text: text || null, media_path, allow_reply: this.$('coAllowReply').checked, reply_to: this.replyTo ? this.replyTo.id : null };
     const { error } = await sb.from('comm_messages').insert(row);
     if (error) { this.$('coOk').textContent = ''; return (this.$('coErr').textContent = 'Ошибка: ' + error.message); }
     this.$('coText').value = ''; this.discard(); this.cancelReply();
@@ -4577,7 +4826,8 @@ document.addEventListener('click', e => {
   const a = el.dataset.co;
   ({
     newCh: () => Co.openCh(null), editCh: () => Co.openCh(el.dataset.id), closeCh: () => { Co.$('coChModal').classList.remove('open'); Co.editId = null; },
-    saveCh: () => Co.saveCh(), delCh: () => Co.delCh(), grantMod: () => Co.grant('mod'), grantChar: () => Co.grant('char'), ungrant: () => Co.ungrant(el.dataset.id),
+    saveCh: () => Co.saveCh(), delCh: () => Co.delCh(), memToggle: () => Co.memToggle(el.dataset.k), memHide: () => Co.memHide(el.dataset.k),
+    pickThread: () => Co.pickThread(el.dataset.id),
     genCode: () => Co.genCode(), dlCode: () => Co.dlCode(), reply: () => Co.reply(el.dataset.id), cancelReply: () => Co.cancelReply(),
     sendText: () => Co.send('text'), rec: () => Co.toggleRec(), pickPhoto: () => Co.$('coPhotoFile').click(),
     sendPending: () => Co.pending && Co.send(Co.pending.kind, Co.pending.blob, Co.pending.ext), discard: () => Co.discard()
