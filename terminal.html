@@ -3074,10 +3074,14 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       if (!a || !DB.moduleRow) return;
       this.ended = true;
       const moduleId = DB.moduleRow.id;
-      const { data } = await sb.from('alerts').select('excluded_module_ids').eq('id', a.id).maybeSingle();
+      const { data } = await sb.from('alerts').select('excluded_module_ids,target_type,target_module_id,target_module_ids').eq('id', a.id).maybeSingle();
       const ex = new Set((data && data.excluded_module_ids) || []);
       ex.add(moduleId);
-      const { error } = await sb.from('alerts').update({ excluded_module_ids: Array.from(ex) }).eq('id', a.id);
+      // угроза только на модулях, и все они уже справились — гасим её целиком (иначе висит у мастера в активных)
+      const targets = data && data.target_type !== 'all' ? ((data.target_module_ids || []).length ? data.target_module_ids : [data.target_module_id].filter(Boolean)) : [];
+      const upd = { excluded_module_ids: Array.from(ex) };
+      if (targets.length && targets.every(id => ex.has(id))) upd.active = false;
+      const { error } = await sb.from('alerts').update(upd).eq('id', a.id);
       if (error) console.error(error);
       await this.finish(reason);
     },

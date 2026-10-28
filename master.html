@@ -3724,7 +3724,9 @@ const Admin = {
     const current = (alert && alert.excluded_module_ids) || [];
     if (current.includes(moduleId)) return;
     const updated = [...current, moduleId];
-    const { error } = await sb.from('alerts').update({ excluded_module_ids: updated }).eq('id', alertId);
+    const upd = { excluded_module_ids: updated };
+    if (alert && this.allExcluded(alert, updated)) upd.active = false;
+    const { error } = await sb.from('alerts').update(upd).eq('id', alertId);
     if (error) {
       document.getElementById('moduleEditorError').textContent =
         'Ошибка: ' + error.message + ' (возможно, в таблице alerts ещё нет колонки excluded_module_ids — см. SQL в примечании).';
@@ -4611,7 +4613,10 @@ Object.assign(Admin, {
     const { data, error } = await sb.from('alerts').select('*').eq('active', true).order('starts_at', { ascending: false });
     if (error) { console.error(error); return; }
     const nowMs = Date.now();
-    const list = (data || []).filter(a => !(a.ends_at && new Date(a.ends_at).getTime() < nowMs - 5 * 60000));
+    // угроза на конкретных модулях, снятая со всех них, закончена — гасим её, чтобы не висела в активных
+    const done = (data || []).filter(a => this.allExcluded(a));
+    if (done.length) await sb.from('alerts').update({ active: false }).in('id', done.map(a => a.id));
+    const list = (data || []).filter(a => !this.allExcluded(a) && !(a.ends_at && new Date(a.ends_at).getTime() < nowMs - 5 * 60000));
     this.activeAlertsCache = list;
     this.renderModuleTable();
     document.getElementById('metaAlertCount').textContent = list.filter(a => !(a.ends_at && new Date(a.ends_at).getTime() < nowMs)).length;
@@ -4653,10 +4658,18 @@ Object.assign(Admin, {
         </div>`;
     }).join('');
   },
+  allExcluded(a, ex) {
+    if (a.target_type === 'all') return false;
+    const ids = (a.target_module_ids && a.target_module_ids.length) ? a.target_module_ids : (a.target_module_id ? [a.target_module_id] : []);
+    const set = new Set(ex || a.excluded_module_ids || []);
+    return ids.length > 0 && ids.every(id => set.has(id));
+  },
   async excludeHere(alertId, moduleId) {
-    const { data } = await sb.from('alerts').select('excluded_module_ids').eq('id', alertId).maybeSingle();
+    const { data } = await sb.from('alerts').select('*').eq('id', alertId).maybeSingle();
     const set = new Set((data && data.excluded_module_ids) || []); set.add(moduleId);
-    const { error } = await sb.from('alerts').update({ excluded_module_ids: [...set] }).eq('id', alertId);
+    const upd = { excluded_module_ids: [...set] };
+    if (data && this.allExcluded(data, set)) upd.active = false;
+    const { error } = await sb.from('alerts').update(upd).eq('id', alertId);
     if (error) return this.showError('Ошибка: ' + error.message);
     await this.refreshActiveAlerts();
   },
