@@ -750,6 +750,24 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 
     .tui-content-tag { align-self: flex-start; font-size: 9.5px; letter-spacing: 1px; padding: 3px 8px; border: 1px solid var(--tui-edge); color: var(--tui-ink-400); text-transform: uppercase; }
     .tui-content-body { border: 1px solid var(--tui-edge); background: rgba(2, 8, 16, 0.6); padding: 16px; font-size: 13px; line-height: 1.75; color: var(--tui-ink-100); min-height: 90px; white-space: pre-wrap; }
+    .cb-page{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px 16px; align-items:start; }
+    .cb.full{ grid-column: 1 / -1; } .cb.half{ grid-column: span 1; }
+    @media (max-width: 620px){ .cb.half{ grid-column: 1 / -1; } }
+    .cb{ margin:0; min-width:0; }
+    .cb img, .cb video{ width:100%; display:block; border:1px solid rgba(56,189,248,.3); background:#000; }
+    .cb img[data-zoom]{ cursor: zoom-in; }
+    .cb audio{ width:100%; color-scheme: dark; }
+    .cb-cap{ font-size: 11.5px; opacity: .75; margin-top: 5px; letter-spacing: .3px; }
+    .cb-gal-grid{ display:grid; gap:6px; grid-template-columns: repeat(2, 1fr); }
+    .cb-gal-grid.n1{ grid-template-columns: 1fr; } .cb-gal-grid.n3{ grid-template-columns: repeat(3, 1fr); }
+    .cb-gal-grid img{ aspect-ratio: 4 / 3; object-fit: cover; } .cb-img img{ max-height: 60vh; object-fit: contain; }
+    .cb-text.st-note{ border-left: 3px solid #5EEAD4; background: rgba(94,234,212,.07); padding: 10px 14px; }
+    .cb-text.st-alert{ border-left: 3px solid #FF6B6B; background: rgba(255,107,107,.08); padding: 10px 14px; }
+    .cb-hr{ border:0; border-top: 1px dashed rgba(56,189,248,.35); margin: 4px 0; }
+    .cb-zoom{ position:fixed; inset:0; z-index: 9999; background: rgba(0,0,0,.9); display:flex; align-items:center; justify-content:center; cursor: zoom-out; }
+    .cb-zoom img{ max-width: 96vw; max-height: 94vh; border: 1px solid rgba(94,234,212,.5); }
+    #contentModal .tui-modal-box { max-width: min(880px, 94vw); max-height: 92vh; }
+    #contentModal .tui-modal-box > * { flex-shrink: 0; }
     .tui-content-body.md { white-space: normal; }
     .tui-content-body.md p { margin: 0 0 10px; }
     .tui-content-body.md h3, .tui-content-body.md h4, .tui-content-body.md h5 { font-family: var(--tui-font-ui); color: var(--tui-cyan); letter-spacing: 1.5px; margin: 14px 0 8px; font-weight: 400; }
@@ -3354,6 +3372,37 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     return out.join('');
   }
   window.tuiMd = tuiMd;
+  /* =========================================================================
+     СБОРНЫЙ КОНТЕНТ: страница из блоков (content_items.blocks)
+     { type: 'text', md, style: 'plain'|'note'|'alert', width: 'full'|'half' }
+     { type: 'image', url, caption, width }    { type: 'gallery', urls: [], caption, width }
+     { type: 'video', url, caption, width }    { type: 'audio', url, caption, width }
+     { type: 'divider' }
+     Половинные блоки, идущие подряд, встают в ряд.
+     ========================================================================= */
+  function contentBlocksHtml(blocks, md) {
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const cap = b => b.caption ? `<div class="cb-cap">${esc(b.caption)}</div>` : '';
+    return '<div class="cb-page">' + (blocks || []).map(b => {
+      const w = b.width === 'half' ? 'half' : 'full';
+      if (b.type === 'text') return `<div class="cb cb-text ${w} st-${esc(b.style || 'plain')}">${md(b.md || '')}</div>`;
+      if (b.type === 'image') return b.url ? `<figure class="cb cb-img ${w}"><img src="${esc(b.url)}" alt="" data-zoom="${esc(b.url)}">${cap(b)}</figure>` : '';
+      if (b.type === 'gallery') { const u = (b.urls || []).filter(Boolean); return u.length ? `<figure class="cb cb-gal ${w}"><div class="cb-gal-grid n${Math.min(u.length, 4)}">${u.map(x => `<img src="${esc(x)}" alt="" data-zoom="${esc(x)}">`).join('')}</div>${cap(b)}</figure>` : ''; }
+      if (b.type === 'video') return b.url ? `<figure class="cb cb-video ${w}"><video controls playsinline preload="metadata" src="${esc(b.url)}"></video>${cap(b)}</figure>` : '';
+      if (b.type === 'audio') return b.url ? `<figure class="cb cb-audio ${w}"><audio controls preload="metadata" src="${esc(b.url)}"></audio>${cap(b)}</figure>` : '';
+      if (b.type === 'divider') return '<hr class="cb cb-hr full">';
+      return '';
+    }).join('') + '</div>';
+  }
+  // старый объект (тип + текст + медиа) как страница из блоков
+  function contentToBlocks(item) {
+    if (Array.isArray(item.blocks) && item.blocks.length) return item.blocks;
+    const out = [];
+    if (item.media_url && ['image', 'video', 'audio'].includes(item.type)) out.push({ type: item.type, url: item.media_url, width: 'full' });
+    if ((item.body || '').trim()) out.push({ type: 'text', md: item.body, width: 'full' });
+    return out;
+  }
+
 
   /* =========================================================================
      ПРИЛОЖЕНИЕ
@@ -3870,7 +3919,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       if (depth > 1) {
         navRow.style.display = 'flex';
         backBtn.style.display = 'inline-block';
-        stepLabel.textContent = `ШАГ ${depth} ИЗ ≤8`;
+        stepLabel.textContent = `ШАГ ${depth}`;
       } else if (depth === 1) {
         navRow.style.display = 'flex';
         backBtn.style.display = 'none';
@@ -3897,15 +3946,21 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 
       const bodyEl = document.getElementById('contentBody');
       bodyEl.textContent = "";
-      this.typeHtml(bodyEl, tuiMd(this.variantBody(item)));
+      if (Array.isArray(item.blocks) && item.blocks.length) {
+        // сборная страница: вариант персонажа заменяет первый текстовый блок
+        mediaArea.innerHTML = "";
+        const vb = this.variantBody(item), blocks = item.blocks.map(b => Object.assign({}, b));
+        if (vb !== (item.body || '')) { const t = blocks.find(b => b.type === 'text'); if (t) t.md = vb; else blocks.unshift({ type: 'text', md: vb }); }
+        this.typeHtml(bodyEl, contentBlocksHtml(blocks, tuiMd));
+      } else this.typeHtml(bodyEl, tuiMd(this.variantBody(item)));
 
       const choiceArea = document.getElementById('choiceArea');
       choiceArea.innerHTML = "";
       if (item.choice_options && item.choice_options.length) {
-        if (this.contentHistory.length >= 8) {
+        if (this.contentHistory.length >= 40) {
           const warn = document.createElement('div');
           warn.className = 'tui-status-line';
-          warn.textContent = "Достигнута максимальная глубина ветвления (8). Дальнейший выбор недоступен.";
+          warn.textContent = "Достигнута максимальная глубина ветвления. Дальнейший выбор недоступен.";
           choiceArea.appendChild(warn);
         } else {
           item.choice_options.forEach(opt => {
@@ -4674,6 +4729,10 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   }, true));
 
   // авторизованный оператор: клик по плашке «Бортовой журнал» открывает запись в журнал
+  document.addEventListener('click', (e) => {
+    const z = e.target.closest('[data-zoom]');
+    if (z) { const d = document.createElement('div'); d.className = 'cb-zoom'; d.innerHTML = `<img src="${z.dataset.zoom}" alt="">`; d.onclick = () => d.remove(); document.body.appendChild(d); return; }
+  });
   document.getElementById('tui-panel-journal').addEventListener('click', () => {
     if (App.currentCharacter) App.goJournal();
   });

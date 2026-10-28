@@ -351,6 +351,7 @@ footer.admin-footer a{ color:var(--sky); text-decoration:none; }
 .content-row .type-pill{ font-size:8.5px; padding:2px 7px; border:1px solid var(--sky); color:var(--sky); text-align:center; text-transform:uppercase; }
 .content-row .type-pill.image{ border-color:#c084fc; color:#c084fc; }
 .content-row .type-pill.event{ border-color: var(--red); color: var(--red); }
+.content-row .type-pill.page{ border-color: var(--cyan); color: var(--cyan); }
 .content-row .type-pill.audio{ border-color: var(--amber); color: var(--amber); }
 .content-row .info{ min-width:0; display:flex; flex-direction:column; gap:3px; }
 .content-row .info .preview{ color:var(--ink-100); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -572,6 +573,113 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
 .vr-chars{ display:flex; flex-wrap:wrap; gap:5px; max-height:120px; overflow-y:auto; }
 .vr-chars button{ background:transparent; border:1px solid var(--edge); color:var(--ink-100); font-family:var(--font-mono); font-size:10.5px; padding:4px 8px; cursor:pointer; }
 .vr-chars button.on{ border-color:#A78BFA; background:rgba(167,139,250,.18); color:#E9E3FF; }
+/* сборная страница контента */
+.cb-page{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px 16px; align-items:start; }
+.cb.full{ grid-column: 1 / -1; } .cb.half{ grid-column: span 1; }
+@media (max-width: 620px){ .cb.half{ grid-column: 1 / -1; } }
+.cb{ margin:0; min-width:0; }
+.cb img, .cb video{ width:100%; display:block; border:1px solid rgba(56,189,248,.3); background:#000; }
+.cb img[data-zoom]{ cursor: zoom-in; }
+.cb audio{ width:100%; color-scheme: dark; }
+.cb-cap{ font-size: 11.5px; opacity: .75; margin-top: 5px; letter-spacing: .3px; }
+.cb-gal-grid{ display:grid; gap:6px; grid-template-columns: repeat(2, 1fr); }
+.cb-gal-grid.n1{ grid-template-columns: 1fr; } .cb-gal-grid.n3{ grid-template-columns: repeat(3, 1fr); }
+.cb-gal-grid img{ aspect-ratio: 4 / 3; object-fit: cover; } .cb-img img{ max-height: 60vh; object-fit: contain; }
+.cb-text.st-note{ border-left: 3px solid var(--cyan); background: rgba(94,234,212,.07); padding: 10px 14px; }
+.cb-text.st-alert{ border-left: 3px solid #FF6B6B; background: rgba(255,107,107,.08); padding: 10px 14px; }
+.cb-hr{ border:0; border-top: 1px dashed rgba(56,189,248,.35); margin: 4px 0; }
+.cb-zoom{ position:fixed; inset:0; z-index: 9999; background: rgba(0,0,0,.9); display:flex; align-items:center; justify-content:center; cursor: zoom-out; }
+.cb-zoom img{ max-width: 96vw; max-height: 94vh; border: 1px solid rgba(94,234,212,.5); }
+
+.md-preview .cb-page{ font-size:13px; }
+.bl-list{ display:flex; flex-direction:column; gap:8px; }
+.bl-item{ border:1px solid var(--edge); border-left:3px solid var(--sky); background:rgba(255,255,255,.015); padding:8px 10px; display:flex; flex-direction:column; gap:6px; }
+.bl-item.t-text{ border-left-color:var(--cyan); } .bl-item.t-image,.bl-item.t-gallery{ border-left-color:#c084fc; } .bl-item.t-video{ border-left-color:var(--red); } .bl-item.t-audio{ border-left-color:var(--amber); } .bl-item.t-divider{ border-left-color:var(--ink-600); }
+.bl-head{ display:flex; align-items:center; gap:6px; font-size:10px; letter-spacing:1.2px; text-transform:uppercase; color:var(--ink-400); }
+.bl-head b{ color:var(--ink-100); font-weight:500; margin-right:auto; }
+.bl-head select{ background:transparent; border:1px solid var(--edge); color:var(--ink-100); font-family:var(--font-mono); font-size:10px; padding:2px 4px; }
+.bl-head button{ background:transparent; border:1px solid var(--edge); color:var(--ink-400); width:24px; height:22px; cursor:pointer; font-size:11px; }
+.bl-head button:hover{ color:var(--cyan); border-color:var(--cyan); }
+.bl-item textarea{ min-height:90px; }
+.bl-row{ display:flex; gap:6px; align-items:center; }
+.bl-row .input{ flex:1; }
+.bl-row .meta{ font-size:10px; color:var(--ink-600); }
+.bl-thumbs{ display:flex; flex-wrap:wrap; gap:6px; }
+.bl-thumbs span{ position:relative; } .bl-thumbs img{ width:72px; height:54px; object-fit:cover; border:1px solid var(--edge); display:block; }
+.bl-thumbs button{ position:absolute; top:-6px; right:-6px; width:18px; height:18px; border-radius:50%; border:1px solid var(--red); background:#1a0505; color:var(--red); font-size:10px; cursor:pointer; padding:0; }
+.bl-prev{ max-height:120px; max-width:220px; border:1px solid var(--edge); }
+.bl-add{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:10px; color:var(--ink-400); letter-spacing:1px; text-transform:uppercase; margin-top:4px; }
+.bl-add .btn{ padding:4px 9px; }
+.bl-st{ font-size:10px; color:var(--amber); }
+/* контент: фильтры и цепочки */
+.cf-bar{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; flex:1; }
+.cf-sel{ max-width:190px; padding:7px 8px; }
+.cf-view{ display:flex; border:1px solid var(--edge); }
+.cf-view button{ background:transparent; border:0; color:var(--ink-400); font-family:var(--font-mono); font-size:11px; padding:7px 11px; cursor:pointer; }
+.cf-view button.on{ background:rgba(94,234,212,.12); color:var(--cyan); }
+.ch-tree{ display:flex; flex-direction:column; gap:14px; }
+.ch-root{ border:1px solid var(--edge); padding:10px 12px; background:rgba(255,255,255,.015); }
+.ch-root-h{ font-size:10px; letter-spacing:1.5px; color:var(--ink-400); text-transform:uppercase; margin-bottom:8px; }
+.ch-node{ display:flex; flex-direction:column; gap:6px; }
+.ch-kids{ display:flex; flex-direction:column; gap:6px; margin-left:22px; padding-left:14px; border-left:1px dashed rgba(94,234,212,.35); }
+.ch-edge{ font-size:10.5px; color:var(--amber); margin-top:2px; }
+.ch-chip{ display:inline-flex; gap:10px; align-items:center; border:1px solid rgba(56,189,248,.3); padding:6px 10px; cursor:pointer; background:rgba(3,7,18,.5); max-width:100%; }
+.ch-chip:hover{ border-color:var(--cyan); }
+.ch-chip.hit{ border-color:var(--cyan); box-shadow:0 0 0 1px rgba(94,234,212,.3); }
+.ch-chip .code{ font-family:var(--font-mono); color:var(--cyan); font-weight:600; letter-spacing:1px; font-size:11.5px; }
+.ch-chip .t{ font-size:11px; color:var(--ink-100); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:520px; }
+.ch-chip .d{ font-size:9.5px; color:var(--ink-600); }
+.ch-loop{ font-size:10.5px; color:#C4B5FD; }
+.ch-miss{ font-size:10.5px; color:var(--red); }
+.ce-crumb{ font-size:10.5px; color:var(--amber); letter-spacing:.5px; }
+.choice-item .ch-new{ white-space:nowrap; }
+/* персонажи: панели модулей и досье */
+.cp-grid{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:14px; }
+@media (max-width: 980px){ .cp-grid{ grid-template-columns: 1fr; } }
+.cp-mod{ border:1px solid rgba(56,189,248,.18); border-top:3px solid var(--mc); background:linear-gradient(170deg, color-mix(in srgb, var(--mc) 7%, transparent), transparent 60%); padding:10px 12px 12px; }
+.cp-mod.wide{ grid-column: 1 / -1; }
+.cp-mod-h{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.cp-ico{ width:30px; height:30px; background:var(--mc); display:grid; place-items:center; flex:none; }
+.cp-ico svg{ width:18px; height:18px; }
+.cp-mod-h b{ font-family:var(--font-display); font-size:13px; letter-spacing:2px; text-transform:uppercase; color:var(--ink-100); font-weight:500; }
+.cp-mod-h span{ margin-left:auto; font-size:10px; color:var(--ink-400); letter-spacing:1px; }
+.cp-cards{ display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:8px; }
+.cp-card{ display:flex; gap:10px; align-items:center; border:1px solid rgba(56,189,248,.16); background:rgba(3,7,18,.45); padding:6px; cursor:pointer; text-align:left; min-width:0; }
+.cp-card:hover{ border-color: color-mix(in srgb, var(--mc) 70%, transparent); }
+.cp-card.sel{ border-color:var(--mc); box-shadow: 0 0 0 1px var(--mc) inset; }
+.cp-card.off{ opacity:.5; }
+.cp-card img, .cp-card .none{ width:44px; height:55px; object-fit:cover; object-position:50% 25%; flex:none; background:#0B1626; }
+.cp-card .none{ display:grid; place-items:center; color:var(--ink-600); }
+.cp-card .nm{ font-size:12px; color:var(--ink-100); line-height:1.25; }
+.cp-card .sub{ font-size:10px; color:var(--ink-400); font-family:var(--font-mono); margin-top:2px; }
+.cp-card .fl{ font-size:10px; margin-top:2px; }
+.cp-detail{ margin-top:12px; border:1px solid color-mix(in srgb, var(--mc) 60%, transparent); background:rgba(3,7,18,.6); padding:14px; display:grid; grid-template-columns: 190px minmax(0, 1fr) minmax(0, 1.25fr); gap:18px; max-height: calc(100vh - 230px); min-height: 380px; }
+@media (max-width: 1100px){ .cp-detail{ grid-template-columns: 170px 1fr; max-height:none; } .cp-act{ grid-column: 1 / -1; } }
+.cp-photo img, .cp-photo .none{ width:100%; aspect-ratio: 4 / 5; object-fit:cover; object-position:50% 25%; border:1px solid var(--edge); display:block; background:#0B1626; }
+.cp-photo .none{ display:grid; place-items:center; font-size:40px; color:var(--ink-600); }
+.cp-detail > div:first-child{ overflow-y:auto; min-height:0; }
+.cp-badge{ margin-top:8px; cursor:zoom-in; border:1px solid var(--edge); max-width:100%; max-height:170px; display:block; }
+.cp-photo img, .cp-photo .none{ max-height:210px; }
+.cp-btns{ display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+.cp-btns .btn{ text-align:center; }
+.cp-info{ overflow-y:auto; display:flex; flex-direction:column; gap:7px; font-size:11.5px; padding-right:6px; }
+.cp-info h3{ margin:0; font-family:var(--font-display); font-size:16px; letter-spacing:2px; color:var(--ink-100); font-weight:500; }
+.cp-kv{ display:grid; grid-template-columns: 110px 1fr; gap:4px 10px; }
+.cp-kv span{ color:var(--ink-400); font-size:10px; letter-spacing:1px; text-transform:uppercase; padding-top:2px; }
+.cp-kv b{ color:var(--ink-100); font-weight:500; }
+.cp-legend{ color:var(--ink-100); line-height:1.55; white-space:pre-wrap; border-left:2px solid var(--mc); padding-left:10px; }
+.cp-act{ display:flex; flex-direction:column; min-height:0; }
+.cp-tabs{ display:flex; gap:4px; margin-bottom:8px; }
+.cp-tabs button{ flex:1; background:transparent; border:1px solid var(--edge); color:var(--ink-400); font-family:var(--font-mono); font-size:11px; padding:7px 6px; cursor:pointer; }
+.cp-tabs button.on{ border-color:var(--cyan); color:var(--cyan); background:rgba(94,234,212,.08); }
+.cp-list{ overflow-y:auto; display:flex; flex-direction:column; gap:6px; min-height:0; flex:1; padding-right:4px; }
+.cp-it{ border-left:2px solid var(--sky); background:rgba(255,255,255,.02); padding:7px 10px; font-size:11.5px; }
+.cp-it.out{ border-left-color:var(--cyan); } .cp-it.jr{ border-left-color:var(--amber); } .cp-it.ct{ border-left-color:#c084fc; cursor:pointer; } .cp-it.ct:hover{ background:rgba(192,132,252,.08); }
+.cp-it .m{ display:flex; flex-wrap:wrap; gap:6px; font-size:10px; color:var(--ink-400); margin-bottom:3px; }
+.cp-it .m b{ color:var(--cyan); font-weight:500; } .cp-it .m i{ margin-left:auto; color:var(--amber); font-style:normal; }
+.cp-it .x{ white-space:pre-wrap; color:var(--ink-100); line-height:1.45; }
+.cp-it audio{ width:100%; height:32px; margin-top:4px; }
+.cp-it img{ max-width:100%; max-height:160px; margin-top:4px; border:1px solid var(--edge); cursor:zoom-in; }
 /* каналы v2 */
 .co-sel{ border-color:var(--cyan) !important; background:rgba(94,234,212,.06); }
 .co-spy, .mod-chip.spy{ color:#C4B5FD; border-color:rgba(196,181,253,.5); }
@@ -1022,7 +1130,12 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
       </div>
       <div class="panel-body">
         <div class="content-toolbar">
-          <input type="text" class="input content-search" id="contentSearch" placeholder="Поиск по коду или тексту...">
+          <div class="cf-bar">
+            <input type="text" class="input content-search" id="contentSearch" placeholder="Поиск по коду, описанию, тексту...">
+            <select class="input cf-sel" id="cfModule"><option value="">Все модули</option></select>
+            <select class="input cf-sel" id="cfChar"><option value="">Все игроки</option></select>
+            <div class="cf-view"><button type="button" class="on" data-cv="list">☰ Список</button><button type="button" data-cv="tree">⑂ Цепочки</button></div>
+          </div>
           <div class="btn-row" style="margin:0">
             <button class="btn ghost" data-vr="qrPdf" id="qrPdfBtn" title="Все QR-коды контента с кодом и кратким описанием — для печати">⤓ Все QR в PDF</button>
             <button class="btn amber" data-action="openContentEditor">+ Новый объект контента</button>
@@ -1111,6 +1224,7 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
   <div class="modal-box ce-box">
     <div class="modal-head">
       <span class="modal-title" id="editorTitle">Новый объект контента</span>
+      <span class="ce-crumb" id="ceCrumb"></span>
       <button class="modal-close" data-action="closeContentEditor">✕</button>
     </div>
 
@@ -1125,19 +1239,30 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
       <div class="field">
         <label>Тип контента</label>
         <select class="input" id="eType">
-          <option value="text">Текст</option>
-          <option value="image">Изображение</option>
-          <option value="audio">Аудио</option>
-          <option value="video">Видео</option>
+          <option value="text">Страница — текст, картинки, видео, аудио</option>
           <option value="event">Событие (для мастера)</option>
         </select>
       </div>
-      <div class="field">
-        <label id="eBodyLabel">Текст</label>
-        <textarea class="input" id="eBody" rows="5" placeholder="Текст, который увидит игрок. Переносы строк сохраняются."></textarea>
-        <div class="md-hint">Форматирование (Markdown): <code>**жирный**</code> <code>*курсив*</code> <code># Заголовок</code> <code>- список</code> <code>1. список</code> <code>&gt; цитата</code> <code>---</code> линия <code>`код`</code>
+      <div class="field" id="eBodyField" style="display:none">
+        <label id="eBodyLabel">Текст события</label>
+        <textarea class="input" id="eBody" rows="5" placeholder="Текст события"></textarea>
+      </div>
+      <div class="field" id="eBlocksField">
+        <label>Страница — блоки сверху вниз. «Половина» — два блока подряд встают в ряд</label>
+        <div id="eBlocks" class="bl-list"></div>
+        <div class="bl-add">
+          <span>Добавить:</span>
+          <button type="button" class="btn ghost" data-bl="add" data-t="text">¶ Текст</button>
+          <button type="button" class="btn ghost" data-bl="add" data-t="image">🖼 Картинка</button>
+          <button type="button" class="btn ghost" data-bl="add" data-t="gallery">▦ Несколько картинок</button>
+          <button type="button" class="btn ghost" data-bl="add" data-t="video">▶ Видео</button>
+          <button type="button" class="btn ghost" data-bl="add" data-t="audio">♪ Аудио</button>
+          <button type="button" class="btn ghost" data-bl="add" data-t="divider">— Линия</button>
+        </div>
+        <div class="md-hint">Текст — Markdown: <code>**жирный**</code> <code>*курсив*</code> <code># Заголовок</code> <code>- список</code> <code>1. список</code> <code>&gt; цитата</code> <code>---</code> <code>`код`</code>
           <button type="button" class="btn ghost" data-vr="preview">👁 Как увидит игрок</button></div>
         <div class="md-preview" id="eBodyPreview" style="display:none"></div>
+        <input type="file" id="blFile" style="display:none">
       </div>
       <div class="field" id="eVariantsField">
         <label>Варианты текста для конкретных персонажей — если на терминале вошёл один из выбранных, он видит свой вариант вместо основного</label>
@@ -1427,6 +1552,15 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
   </div>
 </div>
 
+<!-- ======= ПРОСМОТР КОНТЕНТА (как увидит игрок) ======= -->
+<div class="modal-veil" id="cpViewModal">
+  <div class="modal-box" style="max-width:min(860px,94vw)">
+    <div class="modal-head"><span class="modal-title" id="cpViewTitle">Контент</span><button class="modal-close" data-cp="closeView">✕</button></div>
+    <div class="md-preview" id="cpViewBody" style="margin:0"></div>
+    <div class="btn-row"><button class="btn ghost" id="cpViewEdit" data-cp="editContent">✎ Открыть в редакторе</button></div>
+  </div>
+</div>
+
 <!-- ======= ПРОСМОТР БЕЙДЖА ======= -->
 <div class="modal-veil" id="badgeModal">
   <div class="modal-box" style="max-width:520px">
@@ -1696,6 +1830,36 @@ const Templates = {
   }
   
 
+  /* =========================================================================
+     СБОРНЫЙ КОНТЕНТ: страница из блоков (content_items.blocks)
+     { type: 'text', md, style: 'plain'|'note'|'alert', width: 'full'|'half' }
+     { type: 'image', url, caption, width }    { type: 'gallery', urls: [], caption, width }
+     { type: 'video', url, caption, width }    { type: 'audio', url, caption, width }
+     { type: 'divider' }
+     Половинные блоки, идущие подряд, встают в ряд.
+     ========================================================================= */
+  function contentBlocksHtml(blocks, md) {
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const cap = b => b.caption ? `<div class="cb-cap">${esc(b.caption)}</div>` : '';
+    return '<div class="cb-page">' + (blocks || []).map(b => {
+      const w = b.width === 'half' ? 'half' : 'full';
+      if (b.type === 'text') return `<div class="cb cb-text ${w} st-${esc(b.style || 'plain')}">${md(b.md || '')}</div>`;
+      if (b.type === 'image') return b.url ? `<figure class="cb cb-img ${w}"><img src="${esc(b.url)}" alt="" data-zoom="${esc(b.url)}">${cap(b)}</figure>` : '';
+      if (b.type === 'gallery') { const u = (b.urls || []).filter(Boolean); return u.length ? `<figure class="cb cb-gal ${w}"><div class="cb-gal-grid n${Math.min(u.length, 4)}">${u.map(x => `<img src="${esc(x)}" alt="" data-zoom="${esc(x)}">`).join('')}</div>${cap(b)}</figure>` : ''; }
+      if (b.type === 'video') return b.url ? `<figure class="cb cb-video ${w}"><video controls playsinline preload="metadata" src="${esc(b.url)}"></video>${cap(b)}</figure>` : '';
+      if (b.type === 'audio') return b.url ? `<figure class="cb cb-audio ${w}"><audio controls preload="metadata" src="${esc(b.url)}"></audio>${cap(b)}</figure>` : '';
+      if (b.type === 'divider') return '<hr class="cb cb-hr full">';
+      return '';
+    }).join('') + '</div>';
+  }
+  // старый объект (тип + текст + медиа) как страница из блоков
+  function contentToBlocks(item) {
+    if (Array.isArray(item.blocks) && item.blocks.length) return item.blocks;
+    const out = [];
+    if (item.media_url && ['image', 'video', 'audio'].includes(item.type)) out.push({ type: item.type, url: item.media_url, width: 'full' });
+    if ((item.body || '').trim()) out.push({ type: 'text', md: item.body, width: 'full' });
+    return out;
+  }
 const Admin = {
   modules: [],
   templates: [],
@@ -2239,14 +2403,13 @@ const Admin = {
     const searchEl = document.getElementById('contentSearch');
     const search = searchEl ? searchEl.value.trim().toLowerCase() : '';
     const el = document.getElementById('contentTable');
-    let list = this.contentItems;
-    if (search) {
-      list = list.filter(c =>
-        (c.trigger_code || '').toLowerCase().includes(search) ||
-        (c.summary || '').toLowerCase().includes(search) ||
-        (c.body || '').toLowerCase().includes(search)
-      );
-    }
+    this.fillContentFilters();
+    const fm = document.getElementById('cfModule').value, fc = document.getElementById('cfChar').value;
+    const match = c => (!search || (c.trigger_code || '').toLowerCase().includes(search) || (c.summary || '').toLowerCase().includes(search) || (c.body || '').toLowerCase().includes(search))
+      && (!fm || !(c.module_scope || []).length || c.module_scope.includes(fm))
+      && (!fc || !(c.character_scope || []).length || c.character_scope.includes(fc) || (c.variants || []).some(v => (v.character_ids || []).includes(fc)));
+    let list = this.contentItems.filter(match);
+    if (this.contentView === 'tree') return this.renderContentTree(match);
     if (!list.length) {
       el.innerHTML = '<div class="empty-line">Объектов контента не найдено.</div>';
       return;
@@ -2266,7 +2429,7 @@ const Admin = {
       return `
         <div class="content-row clickable" data-action="openContentEditor" data-id="${c.id}" title="Открыть">
           <span class="code">${this.escape(c.trigger_code)}</span>
-          <span class="type-pill ${this.escape(c.type)}">${this.escape(TYPES[c.type] || c.type)}</span>
+          <span class="type-pill ${(c.blocks || []).length > 1 ? 'page' : this.escape(c.type)}">${(c.blocks || []).length > 1 ? 'страница · ' + c.blocks.length : this.escape(TYPES[c.type] || c.type)}</span>
           <div class="info">
             ${c.summary ? `<span class="sum">${this.escape(c.summary)}</span><span class="preview dim">${this.escape(preview)}</span>` : `<span class="preview">${this.escape(preview)}</span>`}
             <div class="scope">${mods.length ? mods.map(n => `<span class="mod">▣ ${this.escape(n)}</span>`).join('') : '<span class="all">все модули</span>'}${chars.length ? chars.map(n => `<span class="chr">◉ ${this.escape(n)}</span>`).join('') : '<span class="all">все игроки</span>'}</div>
@@ -2277,6 +2440,38 @@ const Admin = {
           </div>
         </div>`;
     }).join('');
+  },
+  fillContentFilters() {
+    const m = document.getElementById('cfModule'), c = document.getElementById('cfChar'); if (!m) return;
+    const mv = m.value, cv = c.value;
+    m.innerHTML = '<option value="">Все модули</option>' + this.modules.filter(x => !x.is_master_terminal).map(x => `<option value="${x.id}">▣ ${this.escape(x.name || x.access_code)}</option>`).join('');
+    c.innerHTML = '<option value="">Все игроки</option>' + (this.characters || []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ru')).map(x => `<option value="${x.id}">◉ ${this.escape(x.name)}</option>`).join('');
+    m.value = mv; c.value = cv;
+  },
+  // цепочки ветвлений: от объектов, на которые никто не ссылается, вниз по вариантам выбора
+  renderContentTree(match) {
+    const el = document.getElementById('contentTable'), items = this.contentItems, byId = new Map(items.map(c => [c.id, c]));
+    const kids = c => (c.choice_options || []).filter(o => o.nextContentId);
+    const targets = new Set(items.flatMap(c => kids(c).map(o => o.nextContentId)));
+    let roots = items.filter(c => kids(c).length && !targets.has(c.id));
+    const seen = new Set();
+    const walk = (c, path) => { if (!c || path.has(c.id)) return; seen.add(c.id); const p2 = new Set(path).add(c.id); kids(c).forEach(o => walk(byId.get(o.nextContentId), p2)); };
+    roots.forEach(r => walk(r, new Set()));
+    items.forEach(c => { if (kids(c).length && !seen.has(c.id)) { roots.push(c); walk(c, new Set()); } });   // кольца без начала
+    const anyHit = (c, path) => !!c && !path.has(c.id) && (match(c) || kids(c).some(o => anyHit(byId.get(o.nextContentId), new Set(path).add(c.id))));
+    roots = roots.filter(r => anyHit(r, new Set()));
+    let maxDepth = 0;
+    const chip = (c, d) => { maxDepth = Math.max(maxDepth, d); return `<span class="ch-chip ${match(c) ? 'hit' : ''}" data-action="openContentEditor" data-id="${c.id}"><span class="code">${this.escape(c.trigger_code)}</span><span class="t">${this.escape(c.summary || (c.body || '').replace(/[#*_`>~]/g, '').slice(0, 80) || '(без текста)')}</span><span class="d">шаг ${d}</span></span>`; };
+    const node = (c, d, path) => {
+      const p2 = new Set(path).add(c.id);
+      return `<div class="ch-node">${chip(c, d)}${kids(c).length ? `<div class="ch-kids">${kids(c).map(o => {
+        const t = byId.get(o.nextContentId);
+        const sub = !t ? '<span class="ch-miss">объект удалён</span>' : p2.has(t.id) ? `<span class="ch-loop">↺ возврат к ${this.escape(t.trigger_code)}</span>` : node(t, d + 1, p2);
+        return `<div><div class="ch-edge">«${this.escape(o.label || 'вариант')}» →</div>${sub}</div>`;
+      }).join('')}</div>` : ''}</div>`;
+    };
+    const html = roots.map(r => { maxDepth = 0; const t = node(r, 1, new Set()); return `<div class="ch-root"><div class="ch-root-h">Цепочка от ${this.escape(r.trigger_code)} · шагов: ${maxDepth}</div>${t}</div>`; }).join('');
+    el.innerHTML = html ? `<div class="ch-tree">${html}</div>` : '<div class="empty-line">Ветвлений нет. Добавьте варианты выбора в окне объекта — «Ветвление».</div>';
   },
   async toggleContentViewed(id, value) {
     const c = this.contentItems.find(x => x.id === id); if (!c) return;
@@ -2336,8 +2531,11 @@ const Admin = {
     const mediaLabel = document.getElementById('eMediaLabel');
     const interruptField = document.getElementById('eInterruptField');
 
-    mediaField.style.display = (type === 'image' || type === 'audio' || type === 'video') ? 'flex' : 'none';
+    mediaField.style.display = 'none';   // медиа теперь — блоки страницы
     interruptField.style.display = (type === 'event') ? 'flex' : 'none';
+    document.getElementById('eBodyField').style.display = type === 'event' ? '' : 'none';
+    document.getElementById('eBlocksField').style.display = type === 'event' ? 'none' : '';
+    document.getElementById('eVariantsField').style.display = type === 'event' ? 'none' : document.getElementById('eVariantsField').style.display;
 
     const bodyLabels = { text: 'Текст', image: 'Подпись к изображению', audio: 'Подпись / описание', video: 'Подпись / описание', event: 'Текст события' };
     bodyLabel.textContent = bodyLabels[type] || 'Текст';
@@ -2398,16 +2596,17 @@ const Admin = {
           <label>Ведёт к объекту</label>
           <select class="input" data-action="updateChoiceNext" data-idx="${idx}">
             <option value="">— выберите —</option>
-            ${otherItems.map(c => `<option value="${c.id}" ${c.id === opt.nextContentId ? 'selected' : ''}>${this.escape(c.trigger_code)} (${this.escape(c.type)})</option>`).join('')}
+            ${otherItems.map(c => `<option value="${c.id}" ${c.id === opt.nextContentId ? 'selected' : ''}>${this.escape(c.trigger_code)} — ${this.escape((c.summary || (c.body || '').replace(/[#*_`>~]/g, '')).slice(0, 50) || c.type)}</option>`).join('')}
           </select>
         </div>
+        <button class="btn ghost ch-new" data-ce="newBranch" data-idx="${idx}" title="Создать новый объект и привязать к этому варианту">+ Новый объект</button>
         <button class="btn ghost" data-action="removeChoiceOption" data-idx="${idx}">✕</button>
       `;
       el.appendChild(row);
     });
   },
   addChoiceOption() {
-    if (this.choiceOptions.length >= 8) return;
+    if (this.choiceOptions.length >= 12) return;
     this.choiceOptions.push({
       id: (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('opt-' + Date.now() + Math.random().toString(36).slice(2)),
       label: '', nextContentId: ''
@@ -2565,7 +2764,8 @@ const Admin = {
   },
 
   /* ---------- Открытие / закрытие редактора ---------- */
-  openContentEditor(id) {
+  openContentEditor(id, nested) {
+    if (!nested) this.editorStack = [];
     this.editingContentId = id || null;
     this.uploadedMedia = null;
 
@@ -2582,7 +2782,10 @@ const Admin = {
     document.getElementById('deleteContentBtn').style.display = item ? 'inline-block' : 'none';
 
     document.getElementById('eTriggerCode').value = item ? item.trigger_code : this.generateTriggerCode();
-    document.getElementById('eType').value = item ? item.type : 'text';
+    document.getElementById('eType').value = item && item.type === 'event' ? 'event' : 'text';
+    this.blocks = item ? JSON.parse(JSON.stringify(contentToBlocks(item))) : [{ type: 'text', md: '', width: 'full' }];
+    if (!this.blocks.length) this.blocks.push({ type: 'text', md: '', width: 'full' });
+    this.renderBlocks();
     document.getElementById('eBody').value = item ? (item.body || '') : '';
     document.getElementById('eMediaUrl').value = item ? (item.media_url || '') : '';
 
@@ -2636,7 +2839,53 @@ const Admin = {
     this.renderQr();
   },
   closeContentEditor() {
+    if ((this.editorStack || []).length) { this.restoreEditor(this.editorStack.pop()); return; }   // закрыли вложенное окно — назад к родителю
     document.getElementById('contentEditorModal').classList.remove('open');
+  },
+  /* ---------- ветвление: новый объект во вложенном окне ---------- */
+  captureEditor() {
+    const v = id => document.getElementById(id).value, sel = id => [...document.querySelectorAll('#' + id + ' input:checked')].map(i => i.value);
+    return {
+      editingContentId: this.editingContentId, uploadedMedia: this.uploadedMedia,
+      choiceOptions: JSON.parse(JSON.stringify(this.choiceOptions || [])), variants: JSON.parse(JSON.stringify(this.variants || [])), blocks: JSON.parse(JSON.stringify(this.blocks || [])),
+      f: Object.fromEntries(['eTriggerCode', 'eType', 'eSummary', 'eBody', 'eMediaUrl', 'eUnlockType', 'eTimerMinutes', 'eEventId'].map(id => [id, v(id)])),
+      playback: (document.querySelector('input[name="ePlayback"]:checked') || {}).value, interrupt: (document.querySelector('input[name="eInterrupt"]:checked') || {}).value,
+      mods: sel('eModuleScope'), chars: sel('eCharScope'), prev: sel('eRequiresPrevious'), viewed: document.getElementById('eViewed').checked,
+      title: document.getElementById('editorTitle').textContent, delDisplay: document.getElementById('deleteContentBtn').style.display, viewDisplay: document.getElementById('eViewSection').style.display,
+      scroll: [...document.querySelectorAll('#contentEditorModal .ce-col')].map(c => c.scrollTop)
+    };
+  },
+  restoreEditor(st) {
+    this.editingContentId = st.editingContentId; this.uploadedMedia = st.uploadedMedia;
+    this.choiceOptions = st.choiceOptions; this.variants = st.variants; this.blocks = st.blocks;
+    Object.entries(st.f).forEach(([id, val]) => document.getElementById(id).value = val);
+    const radio = (name, val) => document.querySelectorAll(`input[name="${name}"]`).forEach(r => { r.checked = r.value === val; r.closest('.radio-chip').classList.toggle('checked', r.checked); });
+    if (st.playback) radio('ePlayback', st.playback); if (st.interrupt) radio('eInterrupt', st.interrupt);
+    this.renderModuleScopeCheckboxes(st.mods); this.renderCharScope(st.chars); this.renderRequiresPreviousCheckboxes(st.prev, st.editingContentId);
+    document.getElementById('eViewed').checked = st.viewed; document.getElementById('eViewed').closest('.checkbox-chip').classList.toggle('checked', st.viewed);
+    document.getElementById('editorTitle').textContent = st.title; document.getElementById('deleteContentBtn').style.display = st.delDisplay; document.getElementById('eViewSection').style.display = st.viewDisplay;
+    document.getElementById('editorError').textContent = ''; document.getElementById('editorOk').textContent = '';
+    this.onTypeChange(); this.onUnlockTypeChange(); this.renderChoiceList(); this.renderVariants(); this.renderBlocks(); this.renderQr(); this.renderCrumb();
+    setTimeout(() => document.querySelectorAll('#contentEditorModal .ce-col').forEach((c, i) => c.scrollTop = (st.scroll || [])[i] || 0), 0);
+  },
+  renderCrumb() {
+    const el = document.getElementById('ceCrumb'); if (!el) return;
+    const st = this.editorStack || [];
+    el.innerHTML = st.length ? '↳ ' + st.map(x => this.escape(x.f.eTriggerCode)).join(' → ') + ' → новый объект · «Отмена» вернёт назад' : '';
+  },
+  newBranchObject(idx) {
+    const opt = this.choiceOptions[idx]; if (!opt) return;
+    const parent = this.captureEditor();
+    parent.branchIdx = idx;
+    (this.editorStack = this.editorStack || []).push(parent);
+    this.openContentEditor(null, true);
+    // наследуем доступ родителя; открывается только через выбор
+    this.renderModuleScopeCheckboxes(parent.mods); this.renderCharScope(parent.chars);
+    document.getElementById('eUnlockType').value = 'player_choice'; this.onUnlockTypeChange();
+    document.getElementById('editorTitle').textContent = `Новый объект для варианта «${opt.label || 'без названия'}»`;
+    document.getElementById('eSummary').value = opt.label ? 'Ветка: ' + opt.label : '';
+    this.renderCrumb();
+    document.querySelectorAll('#contentEditorModal .ce-col').forEach(c => c.scrollTop = 0);
   },
 
   /* ---------- Сохранение / удаление ---------- */
@@ -2650,9 +2899,16 @@ const Admin = {
     const dupe = this.contentItems.find(c => c.trigger_code === triggerCode && c.id !== this.editingContentId);
     if (dupe) { errEl.textContent = 'Такой код уже используется другим объектом.'; return; }
 
-    const type = document.getElementById('eType').value;
-    const body = document.getElementById('eBody').value;
-    const mediaUrl = document.getElementById('eMediaUrl').value.trim() || null;
+    const isEvent = document.getElementById('eType').value === 'event';
+    const blocks = (this.blocks || []).filter(b => b.type === 'divider' || (b.type === 'text' ? (b.md || '').trim() : b.type === 'gallery' ? (b.urls || []).length : b.url));
+    const texts = blocks.filter(b => b.type === 'text').map(b => b.md.trim());
+    const medias = blocks.filter(b => ['image', 'video', 'audio'].includes(b.type));
+    // тип и «главное» медиа — для совместимости со старыми страницами и печатью
+    const type = isEvent ? 'event' : (!texts.length && blocks.length === 1 && medias.length === 1 ? medias[0].type : (medias[0] && blocks[0] === medias[0] ? medias[0].type : 'text'));
+    const body = isEvent ? document.getElementById('eBody').value : texts.join('\n\n');
+    const mediaUrl = isEvent ? null : ((medias[0] || {}).url || (blocks.find(b => b.type === 'gallery') || { urls: [] }).urls[0] || null);
+    const hasBlocksCol = !this.contentItems.length || 'blocks' in this.contentItems[0];
+    if (!isEvent && !hasBlocksCol && (blocks.length > 2 || blocks.some(b => b.type === 'gallery'))) { errEl.textContent = 'Чтобы сохранять сборные страницы, выполните sql/content_v3.sql в Supabase.'; return; }
     const playback = document.querySelector('input[name="ePlayback"]:checked').value;
     const interrupt = type === 'event' ? document.querySelector('input[name="eInterrupt"]:checked').value : null;
 
@@ -2688,6 +2944,7 @@ const Admin = {
       interrupt_behavior: interrupt,
       updated_at: new Date().toISOString()
     };
+    if (hasBlocksCol) row.blocks = isEvent ? [] : blocks;
     if (!this.contentItems.length || 'summary' in this.contentItems[0]) {
       const cs = Array.from(document.querySelectorAll('#eCharScope input:checked')).map(i => i.value);
       row.summary = document.getElementById('eSummary').value.trim() || null;
@@ -2701,12 +2958,20 @@ const Admin = {
     if (this.editingContentId) {
       ({ error } = await sb.from('content_items').update(row).eq('id', this.editingContentId));
     } else {
-      ({ error } = await sb.from('content_items').insert(row));
+      let ins; ({ data: ins, error } = await sb.from('content_items').insert(row).select('id'));
+      this.lastSavedId = ins && ins[0] && ins[0].id;
     }
     if (error) { errEl.textContent = 'Ошибка сохранения: ' + error.message; return; }
 
     document.getElementById('editorOk').textContent = 'Сохранено.';
     await this.loadContentItems();
+    if ((this.editorStack || []).length) {   // сохранили объект ветки — возвращаемся в родителя и привязываем
+      const parent = this.editorStack.pop(), newId = this.editingContentId || this.lastSavedId;
+      if (newId && parent.choiceOptions[parent.branchIdx]) parent.choiceOptions[parent.branchIdx].nextContentId = newId;
+      this.restoreEditor(parent);
+      document.getElementById('editorOk').textContent = `Объект ${row.trigger_code} создан и привязан к варианту. Сохраните этот объект.`;
+      return;
+    }
     setTimeout(() => this.closeContentEditor(), 500);
   },
 
@@ -2748,36 +3013,63 @@ const Admin = {
     }).join(', ');
   },
 
-  renderCharacterList() {
-    const searchEl = document.getElementById('characterSearch');
-    const search = searchEl ? searchEl.value.trim().toLowerCase() : '';
-    const el = document.getElementById('characterTable');
-    let list = this.characters;
-    if (search) {
-      list = list.filter(c =>
-        (c.name || '').toLowerCase().includes(search) ||
-        (c.qr_code || '').toLowerCase().includes(search)
-      );
-    }
-    if (!list.length) {
-      el.innerHTML = '<div class="empty-line">Персонажей не найдено.</div>';
-      return;
-    }
-    el.innerHTML = list.map(c => `
-      <div class="content-row char-row">
-        ${this.faceHtml(c, 'char-thumb')}
-        <span class="code">${this.escape(c.qr_code || '—')}</span>
-        <span class="pill ${c.active === false ? 'off' : ''}">${c.active === false ? 'НЕАКТИВЕН' : 'АКТИВЕН'}</span>
-        <div class="info">
-          <span class="preview">${this.escape(c.name || '(без имени)')}</span>
-          <span class="meta">${c.badge_id ? 'БЕЙДЖ: ' + this.escape(c.badge_id) + ' · ' : ''}МОДУЛИ: ${this.escape(this.moduleNamesFor(c.module_access))}${c.is_hacker ? ' · <span style="color:#C4B5FD">🕶 ХАКЕР</span>' : c.can_create_channels ? ' · <span style="color:var(--cyan)">⌁ СОЗДАЁТ КАНАЛЫ</span>' : ''}</span>
-        </div>
-        <div class="actions">
-          ${c.badge_url ? `<button class="btn ghost" data-cat="badge" data-id="${c.id}" title="Открыть картинку бейджа">🪪 Бейдж</button>` : ''}
-          <button class="btn ghost" data-action="openCharacterEditor" data-id="${c.id}">Изменить</button>
-        </div>
-      </div>`).join('');
+  /* ---------- сборная страница: блоки ---------- */
+  renderBlocks() {
+    const el = document.getElementById('eBlocks'); if (!el) return;
+    const L = { text: '¶ Текст', image: '🖼 Картинка', gallery: '▦ Несколько картинок', video: '▶ Видео', audio: '♪ Аудио', divider: '— Линия' };
+    const n = this.blocks.length;
+    el.innerHTML = this.blocks.map((b, i) => {
+      const head = `<div class="bl-head"><b>${i + 1}. ${L[b.type] || b.type}</b>
+        ${b.type === 'text' ? `<select data-bl="style" data-i="${i}" title="Оформление"><option value="plain" ${b.style !== 'note' && b.style !== 'alert' ? 'selected' : ''}>обычный</option><option value="note" ${b.style === 'note' ? 'selected' : ''}>выделенный</option><option value="alert" ${b.style === 'alert' ? 'selected' : ''}>тревожный</option></select>` : ''}
+        ${b.type !== 'divider' ? `<select data-bl="width" data-i="${i}" title="Ширина"><option value="full" ${b.width !== 'half' ? 'selected' : ''}>во всю ширину</option><option value="half" ${b.width === 'half' ? 'selected' : ''}>половина</option></select>` : ''}
+        <button type="button" data-bl="up" data-i="${i}" ${i ? '' : 'disabled'} title="Выше">↑</button><button type="button" data-bl="down" data-i="${i}" ${i < n - 1 ? '' : 'disabled'} title="Ниже">↓</button><button type="button" data-bl="del" data-i="${i}" title="Удалить блок">✕</button></div>`;
+      let body = '';
+      if (b.type === 'text') body = `<textarea class="input" data-f="md" placeholder="Текст (Markdown)">${this.escape(b.md || '')}</textarea>`;
+      if (['image', 'video', 'audio'].includes(b.type)) body = `<div class="bl-row"><input class="input" data-f="url" value="${this.escape(b.url || '')}" placeholder="Ссылка на файл или загрузите"><button type="button" class="btn ghost" data-bl="upload" data-i="${i}">⇪ Загрузить</button></div>
+        ${b.url && b.type === 'image' ? `<img class="bl-prev" src="${this.escape(b.url)}" alt="">` : ''}<input class="input" data-f="caption" value="${this.escape(b.caption || '')}" placeholder="Подпись (необязательно)">`;
+      if (b.type === 'gallery') body = `<div class="bl-thumbs">${(b.urls || []).map((u, k) => `<span><img src="${this.escape(u)}" alt=""><button type="button" data-bl="ungal" data-i="${i}" data-k="${k}" title="Убрать">✕</button></span>`).join('')}</div>
+        <div class="bl-row"><button type="button" class="btn ghost" data-bl="upload" data-i="${i}">⇪ Добавить картинки</button><span class="meta">можно выбрать несколько файлов</span></div>
+        <input class="input" data-f="caption" value="${this.escape(b.caption || '')}" placeholder="Подпись (необязательно)">`;
+      return `<div class="bl-item t-${b.type}" data-bi="${i}">${head}${body}<span class="bl-st" id="blSt${i}"></span></div>`;
+    }).join('') || '<div class="empty-line">Добавьте блоки ниже.</div>';
+    this.renderPagePreview(true);
   },
+  renderPagePreview(onlyIfOpen) {
+    const p = document.getElementById('eBodyPreview'); if (!p) return;
+    if (onlyIfOpen && p.style.display === 'none') return;
+    p.innerHTML = contentBlocksHtml(this.blocks || [], mdToHtml) || '<span class="meta">Пусто</span>';
+  },
+  blockAction(a, i, el) {
+    const B = this.blocks;
+    if (a === 'add') { const t = el.dataset.t; B.push(t === 'gallery' ? { type: t, urls: [], width: 'full' } : t === 'divider' ? { type: t } : t === 'text' ? { type: t, md: '', width: 'full', style: 'plain' } : { type: t, url: '', width: 'full' }); this.renderBlocks(); return; }
+    if (a === 'del') { if (B.length > 1 || confirm('Удалить последний блок?')) B.splice(i, 1); }
+    if (a === 'up' && i > 0) [B[i - 1], B[i]] = [B[i], B[i - 1]];
+    if (a === 'down' && i < B.length - 1) [B[i + 1], B[i]] = [B[i], B[i + 1]];
+    if (a === 'ungal') B[i].urls.splice(+el.dataset.k, 1);
+    if (a === 'upload') {
+      const f = document.getElementById('blFile'); this.blUploadIdx = i;
+      f.multiple = B[i].type === 'gallery';
+      f.accept = B[i].type === 'video' ? 'video/*' : B[i].type === 'audio' ? 'audio/*' : 'image/*';
+      f.value = ''; f.click(); return;
+    }
+    this.renderBlocks();
+  },
+  async uploadBlockFiles(files) {
+    const i = this.blUploadIdx, b = this.blocks[i]; if (!b || !files.length) return;
+    const st = document.getElementById('blSt' + i);
+    const code = (document.getElementById('eTriggerCode').value.trim() || 'tmp').toUpperCase();
+    for (const [k, file] of [...files].entries()) {
+      if (st) st.textContent = `Загрузка ${k + 1} из ${files.length}…`;
+      const ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const path = `${b.type === 'gallery' ? 'image' : b.type}/${code}-${Date.now()}-${k}.${ext}`;
+      const { error } = await sb.storage.from(MEDIA_BUCKET).upload(path, file, { upsert: true, contentType: file.type || undefined });
+      if (error) { if (st) st.textContent = 'Ошибка загрузки: ' + error.message; return; }
+      const url = sb.storage.from(MEDIA_BUCKET).getPublicUrl(path).data.publicUrl;
+      if (b.type === 'gallery') (b.urls = b.urls || []).push(url); else b.url = url;
+    }
+    this.renderBlocks();
+  },
+
   /* ---------- контент: варианты по персонажам, предпросмотр, PDF всех QR ---------- */
   renderVariants() {
     const el = document.getElementById('eVariants'); if (!el) return;
@@ -2831,6 +3123,148 @@ const Admin = {
     } catch (e) { tuiShowErrorToast('PDF не создан: ' + (e.message || e)); }
     btn.textContent = old; btn.disabled = false;
   },
+  modIcon(m) {
+    const t = ((m && m.name) || '') + ' ' + ((m && m.access_code) || '');
+    if (/пирвел|pirvel/i.test(t)) return '<svg viewBox="0 0 30 34" fill="#1A0E05"><path d="M15 0c3 0 5 1.5 6 3.5-3 1-5 .5-6-3.5z"/><circle cx="7" cy="10" r="4"/><circle cx="15" cy="10" r="4"/><circle cx="23" cy="10" r="4"/><circle cx="11" cy="17" r="4"/><circle cx="19" cy="17" r="4"/><circle cx="15" cy="24" r="4"/><circle cx="15" cy="31" r="2.5"/></svg>';
+    if (/парад|paradi/i.test(t)) return '<svg viewBox="0 0 32 32" fill="none" stroke="#0B1F33" stroke-width="2.6" stroke-linecap="round"><path d="M16 12c-1 5-1 9 0 14M16 12c-3-4-7-5-11-3M16 12c3-4 7-5 11-3M16 12c-4 0-7 2-9 6M16 12c4 0 7 2 9 6M16 12c0-3 1-5 3-7M6 28h20"/></svg>';
+    if (/фридом|freedom/i.test(t)) return '<svg viewBox="0 0 30 30" fill="#1A0204"><path d="M15 3 27 27h-6l-6-12-6 12H3z"/></svg>';
+    if (/искуп|redemp/i.test(t)) return '<svg viewBox="0 0 30 30" fill="none" stroke="#1A1400" stroke-width="2.8"><rect x="3" y="4" width="24" height="22"/><path d="M9 4v22M15 4v22M21 4v22"/></svg>';
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="#041018" stroke-width="2"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20c1.4-4 4.2-6 7.5-6s6.1 2 7.5 6"/></svg>';
+  },
+  charHome(c) { return c.home_module_id || ((c.module_access || []).length === 1 ? c.module_access[0] : null); },
+  renderCharacterList() {
+    const searchEl = document.getElementById('characterSearch');
+    const search = searchEl ? searchEl.value.trim().toLowerCase() : '';
+    const el = document.getElementById('characterTable');
+    let list = (this.characters || []).slice().sort((a, b) => (a.catalog_order ?? 999) - (b.catalog_order ?? 999) || (a.name || '').localeCompare(b.name || '', 'ru'));
+    if (search) list = list.filter(c => (c.name || '').toLowerCase().includes(search) || (c.qr_code || '').toLowerCase().includes(search) || (c.badge_id || '').toLowerCase().includes(search));
+    const mods = this.modules.filter(m => !m.is_master_terminal).sort((a, b) => (a.catalog_order ?? 99) - (b.catalog_order ?? 99) || (a.name || '').localeCompare(b.name || '', 'ru'));
+    const groups = mods.map(m => ({ m, items: list.filter(c => this.charHome(c) === m.id) }));
+    const rest = list.filter(c => !mods.some(m => m.id === this.charHome(c)));
+    if (rest.length) groups.push({ m: { id: '', name: 'Без модуля' }, items: rest });
+    const open = this.openCharId;
+    el.className = 'cp-grid';
+    el.innerHTML = groups.filter(g => g.items.length || !search).map(g => {
+      const hasOpen = g.items.some(c => c.id === open);
+      return `<section class="cp-mod ${hasOpen ? 'wide' : ''}" style="--mc:${this.modColor(g.m)}">
+        <div class="cp-mod-h"><span class="cp-ico">${this.modIcon(g.m)}</span><b>${this.escape(g.m.name || g.m.access_code)}</b><span>${g.items.length} чел.</span></div>
+        <div class="cp-cards">${g.items.map(c => `
+          <div class="cp-card ${c.id === open ? 'sel' : ''} ${c.active === false ? 'off' : ''}" data-cp="toggle" data-id="${c.id}">
+            ${this.faceHtml(c, '')}
+            <div style="min-width:0"><div class="nm">${this.escape(c.name || '(без имени)')}</div>
+              <div class="sub">${this.escape(c.qr_code || '—')}${c.badge_id ? ' · ' + this.escape(c.badge_id) : ''}</div>
+              <div class="fl">${c.is_hacker ? '<span style="color:#C4B5FD">🕶 хакер</span> ' : c.can_create_channels ? '<span style="color:var(--cyan)">⌁ каналы</span> ' : ''}${c.active === false ? '<span style="color:var(--red)">неактивен</span>' : ''}</div></div>
+          </div>`).join('') || '<div class="empty-line">Нет персонажей.</div>'}</div>
+        ${hasOpen ? this.charDetailHtml(list.find(c => c.id === open), g.m) : ''}
+      </section>`;
+    }).join('') || '<div class="empty-line">Персонажей не найдено.</div>';
+    if (hasOpenAny(groups, open)) this.renderCharActivity();
+    function hasOpenAny(gs, id) { return gs.some(g => g.items.some(c => c.id === id)); }
+  },
+  charDetailHtml(c, m) {
+    const ph = this.mediaUrl(c.photo_url), badge = this.mediaUrl(c.badge_url);
+    const kv = (k, v) => v ? `<span>${k}</span><b>${v}</b>` : '';
+    const st = this.charAct || {};
+    const cnt = k => st.id === c.id && st[k] ? ` (${st[k].length})` : '';
+    return `<div class="cp-detail">
+      <div>
+        <div class="cp-photo">${ph ? `<img src="${this.escape(ph)}" alt="">` : `<div class="none">${this.escape((c.name || '?').trim().split(/\s+/).pop()[0] || '?')}</div>`}</div>
+        ${badge ? `<img class="cp-badge" src="${this.escape(badge)}" alt="Бейдж" data-cat="badge" data-id="${c.id}" title="Открыть бейдж">` : ''}
+        <div class="cp-btns">
+          <button class="btn" data-action="openCharacterEditor" data-id="${c.id}">✎ Изменить</button>
+          ${badge ? `<button class="btn ghost" data-cat="badge" data-id="${c.id}">🪪 Показать бейдж</button><a class="btn ghost" href="${this.escape(badge)}" download="badge-${this.escape((c.qr_code || c.name || '').replace(/\s+/g, '_'))}.jpg">⤓ Скачать бейдж</a>` : '<span class="meta">Бейджа нет</span>'}
+          <button class="btn ghost" data-cp="toggle" data-id="${c.id}">▴ Свернуть</button>
+        </div>
+      </div>
+      <div class="cp-info">
+        <h3>${this.escape(c.name || '')}</h3>
+        ${c.tagline ? `<div style="color:var(--mc)">${this.escape(c.tagline)}</div>` : ''}
+        <div class="cp-kv">
+          ${kv('Код входа', `<span style="font-family:var(--font-mono);color:var(--cyan);font-size:12px;letter-spacing:1px">${this.escape(c.qr_code || '—')}</span>`)}
+          ${kv('Номер', this.escape(c.badge_id || ''))}
+          ${kv('Модуль', this.escape(m.name || '—'))}
+          ${kv('Доступ', this.escape(this.moduleNamesFor(c.module_access)))}
+          ${kv('Статус', c.active === false ? '<span style="color:var(--red)">неактивен — вход заблокирован</span>' : 'активен')}
+          ${kv('Пароль', c.password ? 'есть' : '')}
+          ${kv('Таймеры', [c.session_timeout_minutes ? 'сессия ' + c.session_timeout_minutes + ' мин' : '', c.inactivity_timeout_minutes ? 'бездействие ' + c.inactivity_timeout_minutes + ' мин' : ''].filter(Boolean).join(' · '))}
+          ${kv('Способности', [c.can_create_channels ? '⌁ создаёт каналы' : '', c.is_hacker ? '🕶 хакер' : ''].filter(Boolean).join(' · '))}
+          ${kv('В каталоге', c.catalog_visible === false ? 'скрыт' : '')}
+        </div>
+        ${c.legend ? `<div class="cp-legend">${this.escape(c.legend)}</div>` : ''}
+      </div>
+      <div class="cp-act">
+        <div class="cp-tabs">
+          <button class="${(this.charTab || 'msg') === 'msg' ? 'on' : ''}" data-cp="tab" data-t="msg">✉ Сообщения${cnt('msg')}</button>
+          <button class="${this.charTab === 'jr' ? 'on' : ''}" data-cp="tab" data-t="jr">▤ Журнал${cnt('jr')}</button>
+          <button class="${this.charTab === 'ct' ? 'on' : ''}" data-cp="tab" data-t="ct">◈ Контент${cnt('ct')}</button>
+        </div>
+        <div class="cp-list" id="cpList"><div class="empty-line">Загрузка…</div></div>
+      </div>
+    </div>`;
+  },
+  async toggleChar(id) {
+    this.openCharId = this.openCharId === id ? null : id;
+    this.charTab = this.charTab || 'msg';
+    this.renderCharacterList();
+    if (this.openCharId) {
+      await this.loadCharActivity(id);
+      if (this.openCharId === id) { this.renderCharacterList(); setTimeout(() => { const d = document.querySelector('.cp-detail'); if (d) d.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 30); }
+    }
+  },
+  async loadCharActivity(id) {
+    const sel = 'id,channel_id,from_master,from_label,anon,from_module_id,from_character_id,to_master,to_module_id,to_character_id,kind,text,media_path,created_at';
+    const [d, mem, jr, pr] = await Promise.all([
+      sb.from('comm_messages').select(sel).or(`from_character_id.eq.${id},to_character_id.eq.${id}`).order('created_at', { ascending: false }).limit(200),
+      sb.from('comm_members').select('channel_id,hidden').eq('character_id', id),
+      sb.from('journal_entries').select('*').eq('character_id', id).order('created_at', { ascending: false }).limit(200),
+      sb.from('character_progress').select('*').eq('character_id', id)
+    ]);
+    let msgs = d.data || [];
+    const chIds = (mem.data || []).map(x => x.channel_id);
+    if (chIds.length) {
+      const r = await sb.from('comm_messages').select(sel).in('channel_id', chIds).order('created_at', { ascending: false }).limit(200);
+      const have = new Set(msgs.map(m => m.id)); (r.data || []).forEach(m => { if (!have.has(m.id)) msgs.push(m); });
+    }
+    msgs.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+    if (this.openCharId !== id) return;
+    this.charAct = { id, msg: msgs, jr: jr.data || [], ct: (pr.data || []).sort((a, b) => String(b.last_opened_at).localeCompare(String(a.last_opened_at))), err: [d.error, jr.error].filter(Boolean).map(e => e.message) };
+  },
+  renderCharActivity() {
+    const el = document.getElementById('cpList'), st = this.charAct; if (!el) return;
+    if (!st || st.id !== this.openCharId) { el.innerHTML = '<div class="empty-line">Загрузка…</div>'; return; }
+    const t = this.charTab || 'msg', id = st.id, me = (this.characters || []).find(c => c.id === id) || {};
+    const url = p => /^https?:/.test(p) ? p : sb.storage.from(MEDIA_BUCKET).getPublicUrl(p).data.publicUrl;
+    const cname = x => ((this.characters || []).find(c => c.id === x) || {}).name || 'персонаж';
+    const mname = x => (this.modules.find(m => m.id === x) || {}).name || 'модуль';
+    const time = x => new Date(x).toLocaleString().slice(0, 17);
+    const media = m => (m.kind === 'audio' && m.media_path ? `<audio controls preload="none" src="${this.escape(url(m.media_path))}"></audio>` : '') + (m.kind === 'photo' && m.media_path ? `<img src="${this.escape(url(m.media_path))}" data-cam="view" data-url="${this.escape(url(m.media_path))}" alt="">` : '');
+    if (t === 'msg') {
+      el.innerHTML = st.msg.length ? st.msg.map(m => {
+        const out = m.from_character_id === id;
+        const from = m.from_master ? (m.from_label || 'Центр управления') : m.anon && !out ? 'Аноним 🕶 — ' + cname(m.from_character_id) : out ? 'он(а)' + (m.anon ? ' анонимно' : '') : mname(m.from_module_id) + (m.from_character_id ? ' · ' + cname(m.from_character_id) : '');
+        const to = m.channel_id ? '#' + ((Co.channels.find(c => c.id === m.channel_id) || {}).name || 'канал') : m.to_master ? 'Центр управления' : m.to_character_id === id ? 'ему/ей лично' : mname(m.to_module_id) + (m.to_character_id ? ' · ' + cname(m.to_character_id) : '');
+        return `<div class="cp-it ${out ? 'out' : ''}"><div class="m"><b>${out ? '→' : '←'} ${this.escape(from)}</b> → ${this.escape(to)}<i>${time(m.created_at)}</i></div>${m.text ? `<div class="x">${this.escape(m.text)}</div>` : ''}${media(m)}</div>`;
+      }).join('') : '<div class="empty-line">Сообщений нет.</div>';
+    } else if (t === 'jr') {
+      el.innerHTML = st.jr.length ? st.jr.map(e => `<div class="cp-it jr"><div class="m"><b>▣ ${this.escape(mname(e.module_id))}</b>${e.type === 'audio' ? ' · 🎙 голос' : ''}<i>${time(e.created_at)}</i></div>${e.text_content ? `<div class="x">${this.escape(e.text_content)}</div>` : ''}${e.media_path ? `<audio controls preload="none" src="${this.escape(this.journalMediaUrl(e.media_path))}"></audio>` : ''}</div>`).join('') : '<div class="empty-line">Записей в бортовом журнале нет.</div>';
+    } else {
+      el.innerHTML = st.ct.length ? st.ct.map(p => {
+        const c = this.contentItems.find(x => x.id === p.content_id);
+        return `<div class="cp-it ct" data-cp="view" data-id="${p.content_id}"><div class="m"><b>${this.escape(c ? c.trigger_code : 'удалён')}</b>${p.play_count > 1 ? ` · ${p.play_count} раз` : ''}<i>${p.last_opened_at ? time(p.last_opened_at) : ''}</i></div><div class="x">${this.escape(c ? (c.summary || (c.body || '').replace(/[#*_`>~]/g, '').slice(0, 120) || '(без текста)') : '')}</div></div>`;
+      }).join('') : '<div class="empty-line">Открытого контента нет.</div>';
+    }
+    if (st.err && st.err.length) el.insertAdjacentHTML('afterbegin', `<div class="empty-line" style="color:var(--red)">${this.escape(st.err.join('; '))}</div>`);
+  },
+  viewContent(id) {
+    const c = this.contentItems.find(x => x.id === id); if (!c) return;
+    document.getElementById('cpViewTitle').textContent = 'Контент ' + c.trigger_code + (c.summary ? ' — ' + c.summary : '');
+    const blocks = contentToBlocks(c);
+    document.getElementById('cpViewBody').innerHTML = (blocks.length ? contentBlocksHtml(blocks, mdToHtml) : '<span class="meta">Пусто</span>') +
+      ((c.variants || []).length ? `<div class="meta" style="margin-top:10px">Есть варианты текста для: ${this.escape(c.variants.map(v => (v.character_ids || []).map(x => ((this.characters || []).find(ch => ch.id === x) || {}).name).filter(Boolean).join(', ')).join('; '))}</div>` : '');
+    document.getElementById('cpViewEdit').dataset.id = id;
+    document.getElementById('cpViewModal').classList.add('open');
+  },
+
   /* ---------- фото / бейджи персонажей ---------- */
   mediaUrl(p) { return !p ? '' : /^(https?:|data:)/.test(p) || /^(catalog|badges)\//.test(p) ? p : sb.storage.from(MEDIA_BUCKET).getPublicUrl(p).data.publicUrl; },
   faceHtml(c, cls) {
@@ -3647,17 +4081,46 @@ document.addEventListener('click', (e) => {
 });
 
 document.addEventListener('click', (e) => {
+  const z = e.target.closest('.cb [data-zoom], .md-preview [data-zoom]');
+  if (z) { const d = document.createElement('div'); d.className = 'cb-zoom'; d.innerHTML = `<img src="${z.dataset.zoom}" alt="">`; d.onclick = () => d.remove(); document.body.appendChild(d); return; }
+  const c = e.target.closest('[data-cp]'); if (!c) return;
+  if (e.target.closest('a, [data-action], [data-cat]') && c.dataset.cp === 'toggle' && !e.target.closest('button[data-cp]')) return;
+  const a = c.dataset.cp;
+  if (a === 'toggle') Admin.toggleChar(c.dataset.id);
+  if (a === 'tab') { Admin.charTab = c.dataset.t; document.querySelectorAll('.cp-tabs button').forEach(b => b.classList.toggle('on', b === c)); Admin.renderCharActivity(); }
+  if (a === 'view') Admin.viewContent(c.dataset.id);
+  if (a === 'closeView') document.getElementById('cpViewModal').classList.remove('open');
+  if (a === 'editContent') { document.getElementById('cpViewModal').classList.remove('open'); Admin.openContentEditor(c.dataset.id); }
+});
+document.addEventListener('click', (e) => {
+  const cv = e.target.closest('[data-cv]');
+  if (cv) { Admin.contentView = cv.dataset.cv; document.querySelectorAll('[data-cv]').forEach(x => x.classList.toggle('on', x === cv)); Admin.renderContentList(); return; }
+  const ce = e.target.closest('[data-ce]');
+  if (ce && ce.dataset.ce === 'newBranch') { Admin.newBranchObject(parseInt(ce.dataset.idx, 10)); return; }
+});
+document.addEventListener('change', (e) => { if (e.target.id === 'cfModule' || e.target.id === 'cfChar') Admin.renderContentList(); });
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-bl]'); if (!b || b.tagName === 'SELECT') return;
+  Admin.blockAction(b.dataset.bl, parseInt(b.dataset.i, 10), b);
+});
+document.addEventListener('change', (e) => {
+  if (e.target.id === 'blFile' && e.target.files.length) Admin.uploadBlockFiles(e.target.files);
+  const s = e.target.closest && e.target.closest('select[data-bl]');
+  if (s) { Admin.blocks[+s.dataset.i][s.dataset.bl] = s.value; Admin.renderPagePreview(true); }
+});
+document.addEventListener('click', (e) => {
   const v = e.target.closest('[data-vr]'); if (!v) return;
   const a = v.dataset.vr, i = parseInt(v.dataset.i, 10);
-  if (a === 'add') { Admin.variants = Admin.variants || []; Admin.variants.push({ character_ids: [], body: document.getElementById('eBody').value }); Admin.renderVariants(); }
+  if (a === 'add') { Admin.variants = Admin.variants || []; Admin.variants.push({ character_ids: [], body: ((Admin.blocks || []).find(b => b.type === 'text') || {}).md || '' }); Admin.renderVariants(); }
   if (a === 'del') { Admin.variants.splice(i, 1); Admin.renderVariants(); }
   if (a === 'toggle') { const ids = Admin.variants[i].character_ids = Admin.variants[i].character_ids || []; const k = ids.indexOf(v.dataset.id); k < 0 ? ids.push(v.dataset.id) : ids.splice(k, 1); Admin.renderVariants(); }
-  if (a === 'preview') { const p = document.getElementById('eBodyPreview'); const on = p.style.display === 'none'; p.style.display = on ? '' : 'none'; if (on) p.innerHTML = mdToHtml(document.getElementById('eBody').value) || '<span class="meta">Пусто</span>'; }
+  if (a === 'preview') { const p = document.getElementById('eBodyPreview'); const on = p.style.display === 'none'; p.style.display = on ? '' : 'none'; if (on) Admin.renderPagePreview(); }
   if (a === 'qrPdf') Admin.exportContentQrPdf();
 });
 document.addEventListener('input', (e) => {
   if (e.target.dataset && e.target.dataset.vrBody !== undefined) Admin.variants[parseInt(e.target.dataset.vrBody, 10)].body = e.target.value;
-  if (e.target.id === 'eBody') { const p = document.getElementById('eBodyPreview'); if (p && p.style.display !== 'none') p.innerHTML = mdToHtml(e.target.value); }
+  const bl = e.target.closest && e.target.closest('[data-bi]');
+  if (bl && e.target.dataset.f) { const b = Admin.blocks[+bl.dataset.bi]; b[e.target.dataset.f] = e.target.value; Admin.renderPagePreview(true); }
 });
 
 document.addEventListener('click', (e) => {
