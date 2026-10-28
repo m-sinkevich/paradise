@@ -358,7 +358,33 @@ footer.admin-footer a{ color:var(--sky); text-decoration:none; }
 .content-row .actions{ display:flex; gap:6px; }
 
 /* ---------- Модалка редактора контента (шире стандартной) ---------- */
-#contentEditorModal .modal-box{ max-width: 720px; }
+#contentEditorModal .modal-box{ max-width: min(1240px, 96vw); }
+/* окно контента: шапка и кнопки на месте, внутри — две колонки со своей прокруткой */
+#contentEditorModal{ padding:12px; }
+.ce-box{ max-height: calc(100vh - 24px) !important; overflow: hidden !important; padding: 14px 18px !important; gap: 10px !important; }
+.ce-body{ display:grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 18px; min-height:0; flex:1; overflow:hidden; }
+.ce-col{ overflow-y:auto; min-height:0; padding-right:6px; display:flex; flex-direction:column; gap:12px; }
+.ce-col > .editor-section{ border-top: 1px dashed rgba(56,189,248,0.22); padding-top:12px; margin-top:0; }
+.ce-col > .editor-section:first-child{ border-top:none; padding-top:0; }
+.ce-foot{ border-top:1px solid var(--edge); padding-top:10px; display:flex; flex-direction:column; gap:6px; }
+.ce-foot .btn-row{ margin:0; }
+.ce-box .qr-box{ gap:12px; }
+.ce-box .qr-box #qrCanvas{ width:124px; height:124px; padding:10px; }
+.ce-box #qrCanvas canvas, .ce-box #qrCanvas img{ width:104px !important; height:104px !important; }
+.ce-foot .error-line:empty, .ce-foot .ok-line:empty{ display:none; }
+.ce-box #eBody{ min-height: 140px; }
+.ce-chars{ max-height: 150px; overflow-y:auto; }
+@media (max-width: 980px){ .ce-body{ grid-template-columns: 1fr; overflow-y:auto; } .ce-col{ overflow:visible; } }
+/* таблица контента */
+.content-row.clickable{ cursor:pointer; } .content-row.clickable:hover{ border-color: var(--cyan); background: rgba(94,234,212,.04); }
+.content-row .info .sum{ color:var(--ink-100); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.content-row .info .preview.dim{ color:var(--ink-400); font-size:10.5px; }
+.content-row .scope{ display:flex; flex-wrap:wrap; gap:4px; margin-top:2px; }
+.content-row .scope span{ font-size:9.5px; padding:1px 6px; border:1px solid rgba(56,189,248,.25); color:var(--ink-400); }
+.content-row .scope span.mod{ color:var(--sky); } .content-row .scope span.chr{ color:#C4B5FD; border-color:rgba(196,181,253,.4); }
+.content-row .scope span.all{ color:var(--ink-600); border-style:dashed; }
+.view-btn{ font-size:10px; padding:5px 9px; border:1px solid var(--edge); background:transparent; color:var(--ink-400); cursor:pointer; white-space:nowrap; font-family:var(--font-mono); }
+.view-btn.on{ border-color:var(--cyan); color:var(--cyan); background:rgba(94,234,212,.08); }
 #moduleEditorModal .modal-box{ max-width: 640px; }
 .editor-section{ border-top: 1px dashed rgba(56,189,248,0.22); padding-top:14px; margin-top:4px; }
 .editor-section:first-of-type{ border-top:none; padding-top:0; margin-top:0; }
@@ -1082,36 +1108,20 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
 
 <!-- ======= МОДАЛКА РЕДАКТОРА КОНТЕНТА ======= -->
 <div class="modal-veil" id="contentEditorModal">
-  <div class="modal-box">
+  <div class="modal-box ce-box">
     <div class="modal-head">
       <span class="modal-title" id="editorTitle">Новый объект контента</span>
       <button class="modal-close" data-action="closeContentEditor">✕</button>
     </div>
 
-    <!-- ---- Код объекта + QR ---- -->
-    <div class="editor-section">
-      <div class="sec-title">Код и QR</div>
-      <div class="trigger-row">
-        <div class="field">
-          <label>Код объекта (trigger_code)</label>
-          <input type="text" class="input" id="eTriggerCode" placeholder="ABC123" maxlength="6" style="text-transform:uppercase; letter-spacing:2px;">
-        </div>
-        <button class="btn ghost" data-action="regenerateTriggerCode">⟳ Сгенерировать</button>
-      </div>
-      <div class="qr-box">
-        <div id="qrCanvas"></div>
-        <div class="qr-box-meta">
-          <div class="status-line">QR обновляется автоматически по коду.</div>
-          <button class="btn ghost" data-action="downloadQr">Скачать QR (PNG)</button>
-          <button class="btn ghost" data-action="showQrFullscreen">Показать крупно для сканирования</button>
-        </div>
-      </div>
-      <div class="error-line" id="triggerCodeError"></div>
-    </div>
-
-    <!-- ---- Тип и содержимое ---- -->
+    <div class="ce-body"><div class="ce-col ce-main">
+<!-- ---- Тип и содержимое ---- -->
     <div class="editor-section">
       <div class="sec-title">Тип и содержимое</div>
+      <div class="field">
+        <label>Краткое описание — видят только мастера (таблица контента, печать QR)</label>
+        <input type="text" class="input" id="eSummary" maxlength="140" placeholder="Например: записка в ящике у реактора, подсказка к шифру">
+      </div>
       <div class="field">
         <label>Тип контента</label>
         <select class="input" id="eType">
@@ -1155,7 +1165,42 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
       </div>
     </div>
 
-    <!-- ---- Доступ ---- -->
+    <!-- ---- Ветвление ---- -->
+    <div class="editor-section">
+      <div class="sec-title">Ветвление (выбор после этого объекта)</div>
+      <div class="choice-list" id="choiceList"></div>
+      <button class="btn ghost" style="margin-top:10px;" data-action="addChoiceOption">+ Добавить вариант выбора</button>
+    </div>
+
+</div><div class="ce-col ce-side">
+<!-- ---- Код объекта + QR ---- -->
+    <div class="editor-section">
+      <div class="sec-title">Код и QR</div>
+      <div class="trigger-row">
+        <div class="field">
+          <label>Код объекта (trigger_code)</label>
+          <input type="text" class="input" id="eTriggerCode" placeholder="ABC123" maxlength="6" style="text-transform:uppercase; letter-spacing:2px;">
+        </div>
+        <button class="btn ghost" data-action="regenerateTriggerCode">⟳ Сгенерировать</button>
+      </div>
+      <div class="qr-box">
+        <div id="qrCanvas"></div>
+        <div class="qr-box-meta">
+          <div class="status-line">QR обновляется автоматически по коду.</div>
+          <button class="btn ghost" data-action="downloadQr">Скачать QR (PNG)</button>
+          <button class="btn ghost" data-action="showQrFullscreen">Показать крупно для сканирования</button>
+        </div>
+      </div>
+      <div class="error-line" id="triggerCodeError"></div>
+    </div>
+
+        <!-- ---- Статус просмотра ---- -->
+    <div class="editor-section" id="eViewSection">
+      <div class="sec-title">Статус</div>
+      <label class="checkbox-chip" style="align-self:flex-start"><input type="checkbox" id="eViewed"> 👁 Просмотрено</label>
+      <div class="status-line" id="eViewInfo"></div>
+    </div>
+<!-- ---- Доступ ---- -->
     <div class="editor-section">
       <div class="sec-title">Доступ</div>
       <div class="field">
@@ -1168,6 +1213,10 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
       <div class="field">
         <label>Доступно в модулях (ничего не выбрано = во всех)</label>
         <div class="checkbox-grid" id="eModuleScope"></div>
+      </div>
+      <div class="field" id="eCharScopeField">
+        <label>Доступно персонажам (никто не выбран = всем вошедшим)</label>
+        <div class="checkbox-grid ce-chars" id="eCharScope"></div>
       </div>
     </div>
 
@@ -1210,13 +1259,8 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
       </div>
     </div>
 
-    <!-- ---- Ветвление ---- -->
-    <div class="editor-section">
-      <div class="sec-title">Ветвление (выбор после этого объекта)</div>
-      <div class="choice-list" id="choiceList"></div>
-      <button class="btn ghost" style="margin-top:10px;" data-action="addChoiceOption">+ Добавить вариант выбора</button>
-    </div>
-
+        </div></div>
+    <div class="ce-foot">
     <div class="error-line" id="editorError"></div>
     <div class="ok-line" id="editorOk"></div>
 
@@ -1224,6 +1268,7 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
       <button class="btn amber" data-action="saveContent">▸ Сохранить</button>
       <button class="btn danger" id="deleteContentBtn" style="display:none;" data-action="confirmDeleteContent">Удалить объект</button>
       <button class="btn ghost" data-action="closeContentEditor">Отмена</button>
+    </div>
     </div>
   </div>
 </div>
@@ -2182,6 +2227,8 @@ const Admin = {
     const { data, error } = await sb.from('content_items').select('*').order('created_at', { ascending: false });
     if (error) { console.error(error); return; }
     this.contentItems = data || [];
+    const pr = await sb.from('character_progress').select('content_id,character_id,play_count,last_opened_at');
+    this.contentProgress = pr.error ? [] : (pr.data || []);
     const meta = document.getElementById('metaContentCount');
     if (meta) meta.textContent = `CONTENT_ITEMS: ${this.contentItems.length}`;
     this.renderContentList();
@@ -2196,6 +2243,7 @@ const Admin = {
     if (search) {
       list = list.filter(c =>
         (c.trigger_code || '').toLowerCase().includes(search) ||
+        (c.summary || '').toLowerCase().includes(search) ||
         (c.body || '').toLowerCase().includes(search)
       );
     }
@@ -2203,24 +2251,53 @@ const Admin = {
       el.innerHTML = '<div class="empty-line">Объектов контента не найдено.</div>';
       return;
     }
+    const TYPES = { text: 'текст', image: 'картинка', audio: 'аудио', video: 'видео', event: 'событие' };
+    const COND = { always: '', after_timer: 'по таймеру', master_event: 'по событию', silence_timeout: 'при тишине журнала', player_choice: 'через выбор' };
     el.innerHTML = list.map(c => {
-      const preview = (c.body || '').slice(0, 70).replace(/\n/g, ' ') || '(без текста)';
-      const scopeLabel = (c.module_scope && c.module_scope.length) ? `${c.module_scope.length} модул(ей)` : 'все модули';
+      const preview = (c.body || '').replace(/[#*_`>~]/g, '').replace(/\s+/g, ' ').trim().slice(0, 110) || '(без текста)';
+      const mods = (c.module_scope || []).map(id => (this.modules.find(m => m.id === id) || {}).name).filter(Boolean);
+      const chars = (c.character_scope || []).map(id => ((this.characters || []).find(x => x.id === id) || {}).name).filter(Boolean);
+      const vars = (c.variants || []).length;
       const condType = c.unlock_condition && c.unlock_condition.type ? c.unlock_condition.type : 'always';
-      const choicesLabel = (c.choice_options && c.choice_options.length) ? ` · ${c.choice_options.length} веток` : '';
+      const opened = (this.contentProgress || []).filter(x => x.content_id === c.id);
+      const viewed = !!c.viewed || (c.viewed == null && opened.length > 0);
+      const extra = [c.playback === 'once' ? 'один раз' : '', COND[condType] || '', (c.choice_options || []).length ? `${c.choice_options.length} веток` : '', vars ? `свой текст для ${vars} вар.` : '',
+        opened.length ? `открыли: ${opened.map(x => ((this.characters || []).find(ch => ch.id === x.character_id) || {}).name || '?').join(', ')}` : ''].filter(Boolean).join(' · ');
       return `
-        <div class="content-row">
+        <div class="content-row clickable" data-action="openContentEditor" data-id="${c.id}" title="Открыть">
           <span class="code">${this.escape(c.trigger_code)}</span>
-          <span class="type-pill ${this.escape(c.type)}">${this.escape(c.type)}</span>
+          <span class="type-pill ${this.escape(c.type)}">${this.escape(TYPES[c.type] || c.type)}</span>
           <div class="info">
-            <span class="preview">${this.escape(preview)}</span>
-            <span class="meta">${scopeLabel} · ${c.playback === 'once' ? 'один раз' : 'многократно'} · ${this.escape(condType)}${choicesLabel}</span>
+            ${c.summary ? `<span class="sum">${this.escape(c.summary)}</span><span class="preview dim">${this.escape(preview)}</span>` : `<span class="preview">${this.escape(preview)}</span>`}
+            <div class="scope">${mods.length ? mods.map(n => `<span class="mod">▣ ${this.escape(n)}</span>`).join('') : '<span class="all">все модули</span>'}${chars.length ? chars.map(n => `<span class="chr">◉ ${this.escape(n)}</span>`).join('') : '<span class="all">все игроки</span>'}</div>
+            ${extra ? `<span class="meta">${this.escape(extra)}</span>` : ''}
           </div>
           <div class="actions">
-            <button class="btn ghost" data-action="openContentEditor" data-id="${c.id}">Изменить</button>
+            <button class="view-btn ${viewed ? 'on' : ''}" data-action="toggleContentViewed" data-id="${c.id}" title="Отметить просмотренным / не просмотренным">${viewed ? '👁 просмотрено' : '○ не просмотрено'}</button>
           </div>
         </div>`;
     }).join('');
+  },
+  async toggleContentViewed(id, value) {
+    const c = this.contentItems.find(x => x.id === id); if (!c) return;
+    if (!('viewed' in c)) { tuiShowErrorToast('Выполните sql/content_v2.sql в Supabase — тогда статус можно будет менять.'); return; }
+    const opened = (this.contentProgress || []).some(x => x.content_id === id);
+    const cur = !!c.viewed || (c.viewed == null && opened);
+    const v = value === undefined ? !cur : value;
+    const { error } = await sb.from('content_items').update({ viewed: v, viewed_at: v ? new Date().toISOString() : null }).eq('id', id);
+    if (error) { tuiShowErrorToast('Не удалось: ' + error.message); return; }
+    c.viewed = v; c.viewed_at = v ? new Date().toISOString() : null;
+    this.renderContentList();
+  },
+  renderCharScope(selected) {
+    selected = selected || [];
+    const el = document.getElementById('eCharScope');
+    const list = (this.characters || []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ru'));
+    el.innerHTML = list.length ? list.map(c => `
+      <label class="checkbox-chip ${selected.includes(c.id) ? 'checked' : ''}">
+        <input type="checkbox" value="${c.id}" ${selected.includes(c.id) ? 'checked' : ''} data-action="onScopeCheckboxChange">
+        ${this.escape(c.name || c.qr_code)}
+      </label>`).join('') : '<div class="empty-line">Нет персонажей.</div>';
   },
 
   wireContentEditor() {
@@ -2533,6 +2610,22 @@ const Admin = {
 
     this.choiceOptions = (item && item.choice_options) ? JSON.parse(JSON.stringify(item.choice_options)) : [];
     this.variants = (item && Array.isArray(item.variants)) ? JSON.parse(JSON.stringify(item.variants)) : [];
+    const hasV2 = !this.contentItems.length || 'summary' in this.contentItems[0];
+    document.getElementById('eSummary').value = (item && item.summary) || '';
+    document.getElementById('eSummary').disabled = !hasV2;
+    document.getElementById('eSummary').placeholder = hasV2 ? 'Например: записка в ящике у реактора, подсказка к шифру' : 'Выполните sql/content_v2.sql, чтобы появилось это поле';
+    document.getElementById('eCharScopeField').style.display = hasV2 ? '' : 'none';
+    document.getElementById('eViewSection').style.display = item && hasV2 ? '' : 'none';
+    this.renderCharScope(item ? item.character_scope : []);
+    if (item) {
+      const opened = (this.contentProgress || []).filter(x => x.content_id === item.id);
+      const viewed = !!item.viewed || (item.viewed == null && opened.length > 0);
+      document.getElementById('eViewed').checked = viewed;
+      document.getElementById('eViewed').closest('.checkbox-chip').classList.toggle('checked', viewed);
+      document.getElementById('eViewInfo').textContent = opened.length
+        ? 'Открывали: ' + opened.map(x => `${((this.characters || []).find(ch => ch.id === x.character_id) || {}).name || '?'} (${x.play_count || 1}×, ${x.last_opened_at ? new Date(x.last_opened_at).toLocaleString().slice(0, 17) : ''})`).join('; ')
+        : 'Никто из персонажей ещё не открывал.';
+    }
     document.getElementById('eBodyPreview').style.display = 'none';
     document.getElementById('eVariantsField').style.display = (!this.contentItems.length || 'variants' in this.contentItems[0]) ? '' : 'none';
     this.renderVariants();
@@ -2595,6 +2688,12 @@ const Admin = {
       interrupt_behavior: interrupt,
       updated_at: new Date().toISOString()
     };
+    if (!this.contentItems.length || 'summary' in this.contentItems[0]) {
+      const cs = Array.from(document.querySelectorAll('#eCharScope input:checked')).map(i => i.value);
+      row.summary = document.getElementById('eSummary').value.trim() || null;
+      row.character_scope = cs.length ? cs : null;
+      if (this.editingContentId) { const v = document.getElementById('eViewed').checked; row.viewed = v; const ex = this.contentItems.find(c => c.id === this.editingContentId); row.viewed_at = v ? ((ex && ex.viewed_at) || new Date().toISOString()) : null; }
+    }
     if (!this.contentItems.length || 'variants' in this.contentItems[0])
       row.variants = (this.variants || []).filter(v => (v.character_ids || []).length && (v.body || '').trim()).map(v => ({ character_ids: v.character_ids, body: v.body }));
 
@@ -2638,6 +2737,7 @@ const Admin = {
     if (tech) tech.textContent = `CHARACTERS: ${this.characters.length}`;
     this.renderCharacterList();
     this.renderModuleTable();
+    if (this.contentItems) this.renderContentList();
   },
 
   moduleNamesFor(ids) {
@@ -2721,7 +2821,7 @@ const Admin = {
           const mods = (it.module_scope || []).map(id => (this.modules.find(m => m.id === id) || {}).name).filter(Boolean).join(', ');
           ctx.fillText((TYPES[it.type] || it.type || '').toUpperCase() + (mods ? ' · ' + mods : ''), x + cw / 2, y + 346);
           ctx.font = '17px sans-serif'; ctx.fillStyle = '#222';
-          wrap(ctx, plain(it.body) || '(без текста)', cw - 40, 2).forEach((ln, i) => ctx.fillText(ln, x + cw / 2, y + 370 + i * 21));
+          wrap(ctx, (it.summary || '').trim() || plain(it.body) || '(без текста)', cw - 40, 2).forEach((ln, i) => ctx.fillText(ln, x + cw / 2, y + 370 + i * 21));
           ctx.textAlign = 'left';
         });
         if (p) pdf.addPage();
@@ -3506,6 +3606,7 @@ document.addEventListener('click', (e) => {
     case 'resetForm': Admin.resetForm(); break;
     case 'launchTest': Admin.launchTest(); break;
     case 'openContentEditor': Admin.openContentEditor(id || null); break;
+    case 'toggleContentViewed': Admin.toggleContentViewed(id); break;
     case 'closeConfirm': Admin.closeConfirm(); break;
     case 'closeContentEditor': Admin.closeContentEditor(); break;
     case 'regenerateTriggerCode': Admin.regenerateTriggerCode(); break;
@@ -3590,7 +3691,7 @@ document.addEventListener('input', (e) => {
 
 document.addEventListener('change', (e) => {
   if (e.target.id === 'cPhotoFile' && e.target.files && e.target.files[0]) { Admin.uploadCharPhoto(e.target.files[0]); e.target.value = ''; }
-  if (['cCatalogVisible', 'cCanCreate', 'cHacker'].includes(e.target.id)) e.target.closest('.checkbox-chip').classList.toggle('checked', e.target.checked);
+  if (['cCatalogVisible', 'cCanCreate', 'cHacker', 'eViewed'].includes(e.target.id)) e.target.closest('.checkbox-chip').classList.toggle('checked', e.target.checked);
   if (e.target.id === 'alertSoundFile' && e.target.files && e.target.files[0]) Admin.uploadAlertSound(e.target.files[0]);
   if (e.target.id === 'eType') Admin.onTypeChange();
   if (e.target.id === 'eUnlockType') Admin.onUnlockTypeChange();

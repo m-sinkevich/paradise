@@ -3812,6 +3812,16 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       const item = await DB.findContentById(contentId);
       if (!item) return;
 
+      // кому доступно: модули (module_scope) и персонажи (character_scope); пусто — всем
+      const mods = item.module_scope || [], chars = item.character_scope || [];
+      if ((mods.length && DB.moduleRow && !mods.includes(DB.moduleRow.id)) || (chars.length && !chars.includes(this.currentCharacter.id))) {
+        await this.log('content_open', { contentId, type: item.type, result: 'scope_denied' });
+        this.renderGate("ДОСТУП ОГРАНИЧЕН", item.type, chars.length && !chars.includes(this.currentCharacter.id)
+          ? "Данные зашифрованы для другого получателя. Ваш допуск не подходит."
+          : "Эти данные недоступны с терминала этого модуля.");
+        return;
+      }
+
       const prog = await DB.getProgress(this.currentCharacter.id, contentId);
       if (item.playback === 'once' && prog && prog.play_count > 0) {
         this.renderGate("ДОСТУП ЗАКРЫТ", item.type,
@@ -3828,6 +3838,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 
       await DB.recordProgress(this.currentCharacter.id, contentId);
       await this.log('content_open', { contentId, type: item.type });
+      if ('viewed' in item && !item.viewed) sb.from('content_items').update({ viewed: true, viewed_at: new Date().toISOString() }).eq('id', item.id).then(() => {});
 
       this.contentHistory.push(contentId);
       this.renderContentInModal(item, { withProgress: true });
