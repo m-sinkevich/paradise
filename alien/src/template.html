@@ -29,21 +29,21 @@
   .tx { position: absolute; overflow: hidden; }
   .tx-in { position: absolute; left: 0; right: 0; top: 0; display: flex; flex-direction: column; gap: 1.1vh; transition: transform .8s ease; }
   .seg { position: relative; height: 3.3vh; }
-  .seg img { height: 100%; display: block; clip-path: inset(0 100% 0 0); filter: drop-shadow(0 0 .5vh rgba(94, 234, 212, .55)); }
-  .seg.on img { animation: write var(--d, 2s) linear forwards; }
-  .seg.done img { clip-path: none; opacity: .78; filter: drop-shadow(0 0 .3vh rgba(94, 234, 212, .35)); transition: opacity 1.2s; }
-  .seg.on::after { content: ''; position: absolute; top: -10%; bottom: -10%; width: .35vh; left: 0; background: #e6fffb;
-    box-shadow: 0 0 1.4vh 0.4vh var(--cy); animation: cursor var(--d, 2s) linear forwards; }
-  .seg.done::after { display: none; }
+  .seg img { height: 100%; display: block; }
+  .seg img.base { visibility: hidden; }
+  .seg img.sl { position: absolute; left: 0; top: 0; opacity: 0; clip-path: inset(100% var(--r) 0 var(--l)); transform: translateY(1.2vh); filter: drop-shadow(0 0 .4vh rgba(94, 234, 212, .6)); }
+  .seg.on img.sl { animation: rise var(--dd) cubic-bezier(.2, .7, .3, 1) var(--dl) forwards; }
+  .seg.done img.sl { opacity: .78; clip-path: inset(0 var(--r) 0 var(--l)); transform: none; filter: drop-shadow(0 0 .3vh rgba(94, 234, 212, .35)); transition: opacity 1.2s, filter 1.2s; animation: none; }
+  @keyframes rise { 0% { opacity: 0; clip-path: inset(100% var(--r) 0 var(--l)); transform: translateY(1.2vh); } 30% { opacity: 1; } 100% { opacity: 1; clip-path: inset(0 var(--r) 0 var(--l)); transform: none; } }
   @keyframes write { to { clip-path: inset(0 0 0 0); } }
   @keyframes cursor { to { left: var(--w, 100%); } }
   .cline { display: flex; flex-wrap: wrap; gap: .9vh 0; align-items: flex-end; }
-  .cg { width: calc(var(--gw, 1) * 2.1vh); height: 4.2vh; opacity: 0; transform: translateY(.6vh) scale(.6); transition: opacity .25s, transform .25s; }
+  .cg { width: calc(var(--gw, 1) * 2.1vh); height: 4.2vh; opacity: 0; transform: translateY(2.2vh) scale(.25, .1) rotate(var(--rr, 0deg)); transform-origin: 50% 100%; transition: opacity .35s, transform .55s cubic-bezier(.2, 1.4, .4, 1); }
   .cg.on { opacity: 1; transform: none; }
   .cg svg { width: 100%; height: 100%; overflow: visible; }
   .cg path { fill: rgba(94, 234, 212, .16); stroke: var(--ice); stroke-width: 2; stroke-linejoin: miter; filter: drop-shadow(0 0 3px rgba(94, 234, 212, .8)); }
   .cg.fresh path { stroke: #fff; fill: rgba(191, 248, 240, .5); }
-  .cg.sp { width: 2vh; }
+  .cg.sp { width: 2vh; opacity: 1; }
   .cw { display: inline-flex; align-items: flex-end; position: relative; padding-top: .45vh; }
   .cw::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(191, 248, 240, .75), transparent); opacity: 0; transition: opacity .6s; }
   .cw:has(.cg.on)::before { opacity: 1; }
@@ -236,7 +236,7 @@ const DATA = /*DATA*/null;
     holdAfterText: 8,     // с — пауза после текста
     memory: 12,           // с — воспоминание-голограмма
     qrHold: 18,           // с — QR при «резонансе» неподвижен и читается
-    qrBuild: 3, qrBreak: 2.5,
+    qrBuild: 3.5, qrBreak: 3.5,
     between: 3            // с — пауза между записями
   };
   const params0 = new URLSearchParams(location.search);
@@ -319,7 +319,7 @@ const DATA = /*DATA*/null;
   function txEls() { return $$('.stage .tx .tx-in'); }
   function clearText() { txEls().forEach(el => { el.innerHTML = ''; el.style.transform = ''; el.parentNode.classList.remove('fade'); }); }
   function fadeText(on) { $$('.stage .tx').forEach(t => t.classList.toggle('fade', on)); }
-  function activeTx() { return $(`body[data-view="${cfg.view}"] .stage .tx .tx-in`) || txEls()[0]; }
+  function activeTx() { return $({ archive: '#vArchive', cradle: '#vCradle', beacon: '#vBeacon' }[cfg.view] + ' .tx .tx-in') || txEls()[0]; }
   // строки пишутся сверху; когда панель заполнена — текст плавно уезжает вверх
   function scrollFix() { txEls().forEach(inner => { const over = inner.scrollHeight - inner.parentNode.clientHeight; inner.style.transform = over > 0 ? `translateY(${-over}px)` : ''; }); }
   async function writePiqad(rec, epoch) {
@@ -330,7 +330,14 @@ const DATA = /*DATA*/null;
       txEls().forEach(inner => {
         const d = document.createElement('div'); d.className = 'seg';
         const hpx = inner.parentNode.clientHeight ? null : null;
-        d.innerHTML = `<img src="img/r${rec}_${k}.png" alt="">`;
+        // строка проявляется вертикальными полосами снизу вверх, в случайном порядке
+        const src = `img/r${rec}_${k}.png`, NS = 14;
+        let sl = `<img class="base" src="${src}" alt="">`;
+        for (let j = 0; j < NS; j++) {
+          const l = j / NS * 100, r = 100 - (j + 1) / NS * 100 - .3, dl = Math.random() * dur * .7, dd = dur * (.25 + Math.random() * .2);
+          sl += `<img class="sl" src="${src}" alt="" style="--l:${l.toFixed(2)}%;--r:${Math.max(0, r).toFixed(2)}%;--dl:${dl.toFixed(2)}s;--dd:${dd.toFixed(2)}s">`;
+        }
+        d.innerHTML = sl;
         d.style.setProperty('--d', dur + 's');
         inner.appendChild(d);
         const img = d.firstChild;
@@ -354,16 +361,23 @@ const DATA = /*DATA*/null;
       toks.forEach(t => lines.forEach((l, i) => {
         const g = document.createElement('span');
         if (t === ' ') { g.className = 'cg sp'; l.appendChild(g); words[i] = document.createElement('span'); words[i].className = 'cw'; l.appendChild(words[i]); }
-        else { g.className = 'cg'; g.innerHTML = glyph(/^[0-9]$/.test(t) ? 'digit' + t : t); if (t.length > 1) g.style.setProperty('--gw', 1.25); if ("'.,:;«»—!?-[]()".includes(t)) g.style.setProperty('--gw', .55); words[i].appendChild(g); }
+        else { g.className = 'cg'; g.dataset.k = /^[0-9]$/.test(t) ? 'digit' + t : t; g.innerHTML = glyph(g.dataset.k); g.style.setProperty('--rr', ((Math.random() - .5) * 50).toFixed(0) + 'deg'); if (t.length > 1) g.style.setProperty('--gw', 1.25); if ("'.,:;«»—!?-[]()".includes(t)) g.style.setProperty('--gw', .55); words[i].appendChild(g); }
         groups[i].push(g);
       }));
-      for (let k = 0; k < toks.length; k++) {
+      // абзац сначала занимает место (знаки невидимы), затем знаки прорастают снизу вверх, с разбросом
+      scrollFix(); await sleep(.85);
+      const act = Math.max(0, lines.findIndex(l => l.parentNode === activeTx())), ag = groups[act];
+      const lh = (ag.find(g => !g.classList.contains('sp')) || { offsetHeight: 30 }).offsetHeight || 30;
+      const order = toks.map((tk, k) => k).filter(k => toks[k] !== ' ')
+        .map(k => ({ k, key: -ag[k].offsetTop + (Math.random() - .3) * lh * 2.2 + Math.random() * 6 }))
+        .sort((a, b) => a.key - b.key).map(o => o.k);
+      for (let i = 0; i < order.length; i++) {
         if (epoch !== run.epoch) return;
-        groups.forEach(gs => { const g = gs[k]; g.classList.add('on', 'fresh'); setTimeout(() => g.classList.remove('fresh'), 500); });
-        if (k % 2) await sleep(2 / T.crystalCps);
-        if (k % 24 === 0) scrollFix();
+        const k = order[i];
+        groups.forEach(gs => { const g = gs[k]; g.classList.add('on', 'fresh'); setTimeout(() => g.classList.remove('fresh'), 700); });
+        if (i % 2) await sleep(2 / T.crystalCps);
       }
-      scrollFix(); await sleep(.6);
+      await sleep(.6);
     }
   }
 
@@ -381,14 +395,15 @@ const DATA = /*DATA*/null;
     const q = DATA.qrs[rec - 1], n = q.m.length, Q = 4, N = n + Q * 2, tg = qrTarget(), s = tg.size / N;
     const cells = [];
     for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (q.m[y][x] === '1') cells.push({ x: tg.x + (x + Q) * s, y: tg.y + (y + Q) * s });
-    const src = (document.querySelector(`body[data-view="${cfg.view}"] .stage .tx`) || document.body).getBoundingClientRect();
-    parts = cells.map(c => ({ tx: c.x, ty: c.y, x: src.left + Math.random() * src.width, y: src.top + Math.random() * src.height, r: (Math.random() - .5) * 4 * Math.PI, d: .45 + Math.random() * .5 }));
+    parts = glyphSources(rec, cells.length).map((g, i) => {
+      const c = cells[i], tx = c.x + s / 2, ty = c.y + s / 2, mx = (g.x + tx) / 2, my = (g.y + ty) / 2, dl = Math.hypot(tx - g.x, ty - g.y);
+      return { tx, ty, x: g.x, y: g.y, gs: g.h, path: g.path, cx: mx + (Math.random() - .5) * dl * .6, cy: my - dl * (.1 + Math.random() * .35), r: (Math.random() - .5) * 3 * Math.PI, d: .45 + Math.random() * .5, del: Math.random() * .4 };
+    });
     pState = { tg, s, t0: performance.now(), phase: 'build', frame: crystalFrame(rec, tg, s) };
     fadeText(true);
     await sleep(T.qrBuild); if (epoch !== run.epoch) return endPulse();
     pState.phase = 'hold'; await sleep(T.qrHold); if (epoch !== run.epoch) return endPulse();
-    pState.phase = 'break'; pState.t1 = performance.now();
-    parts.forEach(p => { p.bx = p.tx; p.by = p.ty; p.ex = p.tx + (Math.random() - .5) * innerWidth * .8; p.ey = p.ty + (Math.random() - .5) * innerHeight * .8; });
+    pState.phase = 'break'; pState.t1 = performance.now(); fadeText(false);
     await sleep(T.qrBreak); endPulse(); fadeText(false);
   }
   function endPulse() { pState = null; parts = []; px2.clearRect(0, 0, pc.width, pc.height); fadeText(false); }
@@ -432,26 +447,46 @@ const DATA = /*DATA*/null;
     c.fillStyle = '#bff8f0'; c.fillRect(-h - .4, -h - .4, sz + .8, sz + .8);
     c.restore();
   }
+  // откуда летят знаки: видимые знаки текущей записи; для письма pIqaD — знаки из её текста в области текста
+  const PATHS = {};
+  const glyphPath = k => PATHS[k] || (PATHS[k] = new Path2D(gD(k)));
+  function glyphSources(rec, n) {
+    const box = (activeTx() || document.body).parentNode.getBoundingClientRect(), out = [];
+    activeTx().querySelectorAll('.cg.on:not(.sp)').forEach(g => {
+      const r = g.getBoundingClientRect();
+      if (r.width && r.top >= box.top - 4 && r.bottom <= box.bottom + 4) out.push({ x: r.left + r.width / 2, y: r.top + r.height / 2, h: r.height, path: glyphPath(g.dataset.k) });
+    });
+    if (!out.length) {
+      const keys = tokens(DATA.texts[rec].join(' ')).filter(k => k !== ' ' && !/^[0-9]$/.test(k)), h = innerHeight * .042;
+      for (let i = 0; i < 160; i++) out.push({ x: box.left + Math.random() * box.width, y: box.top + Math.random() * box.height * .8, h, path: glyphPath(keys[i % keys.length]) });
+    }
+    for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [out[i], out[j]] = [out[j], out[i]]; }
+    return Array.from({ length: n }, (_, i) => out[i % out.length]);
+  }
+  // u: 0 — знак на своём месте в тексте, 1 — модуль QR на месте
+  function drawPart(p, u, s) {
+    const e = u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2, q = 1 - e;
+    const x = q * q * p.x + 2 * q * e * p.cx + e * e * p.tx, y = q * q * p.y + 2 * q * e * p.cy + e * e * p.ty;
+    const m = Math.min(1, Math.max(0, (u - .45) / .45));   // превращение знака в кубик
+    if (m < 1) {
+      const sc = p.gs * (1 - m * .6) / 30;
+      px2.save(); px2.globalAlpha = 1 - m; px2.translate(x, y); px2.rotate(p.r * u * (1 - u) * 2); px2.scale(sc, sc); px2.translate(-10, -15);
+      px2.fillStyle = 'rgba(191,248,240,.35)'; px2.fill(p.path); px2.strokeStyle = '#e6fffb'; px2.lineWidth = 2; px2.shadowColor = '#5eead4'; px2.shadowBlur = 8; px2.stroke(p.path);
+      px2.restore();
+    }
+    if (m > 0) {
+      const sz = s * (.4 + .6 * m);
+      px2.globalAlpha = m; cube(x - sz / 2, y - sz / 2, sz, u >= 1 ? 0 : sz * p.d * (1 - m), p.r * (1 - m) * .5); px2.globalAlpha = 1;
+    }
+  }
   function drawPulse(now) {
     px2.clearRect(0, 0, pc.width, pc.height);
     if (!pState) return;
-    const { s } = pState;
-    if (pState.phase !== 'break') {
-      const k = Math.min(1, (now - pState.t0) / (T.qrBuild * 1000)), e = 1 - Math.pow(1 - k, 3);
-      drawFrame(pState.frame, Math.min(1, k * 1.4));
-      for (const p of parts) {
-        const x = p.x + (p.tx - p.x) * e, y = p.y + (p.ty - p.y) * e, sz = s * (.4 + .6 * e);
-        cube(x, y, sz, sz * p.d * (1 - e), p.r * (1 - e));
-      }
-    } else {
-      const k = Math.min(1, (now - pState.t1) / (T.qrBreak * 1000)), e = k * k;
-      drawFrame(pState.frame, 1 - k);
-      px2.globalAlpha = 1 - k;
-      for (const p of parts) { const x = p.bx + (p.ex - p.bx) * e, y = p.by + (p.ey - p.by) * e, sz = s * (1 - e * .5); cube(x, y, sz, sz * p.d * Math.min(1, e * 3), p.r * e); }
-      px2.globalAlpha = 1;
-    }
+    const { s } = pState, span = .6;
+    const k = pState.phase === 'build' ? Math.min(1, (now - pState.t0) / (T.qrBuild * 1000)) : pState.phase === 'hold' ? 1 : 1 - Math.min(1, (now - pState.t1) / (T.qrBreak * 1000));
+    drawFrame(pState.frame, Math.min(1, Math.max(0, (k - .25) * 1.6)));
+    for (const p of parts) drawPart(p, pState.phase === 'hold' ? 1 : Math.min(1, Math.max(0, (k - p.del) / span)), s);
   }
-
   /* ---------------- пыль / частицы ---------------- */
   const dust = $('#dust'), dx = dust.getContext('2d');
   const motes = Array.from({ length: 90 }, () => ({ x: Math.random(), y: Math.random(), v: .00004 + Math.random() * .00012, s: .5 + Math.random() * 1.8, p: Math.random() * 6.28 }));
