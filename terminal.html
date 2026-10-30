@@ -66,6 +66,9 @@
 ::-webkit-scrollbar-corner { background: transparent; }
 input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+  /* режим наблюдения мастера (terminal.html?watch=1) — колонисты эту плашку не видят */
+  html.tui-watch body::after { content: '◉ НАБЛЮДЕНИЕ МАСТЕРА · ТОЛЬКО ПРОСМОТР'; position: fixed; right: 10px; bottom: 10px; z-index: 99999; pointer-events: none;
+    font: 600 11px/1 monospace; letter-spacing: 1.5px; color: #FFB84D; background: rgba(0,0,0,.75); border: 1px solid #FFB84D; padding: 6px 9px; }
 </style>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, monospace; }
@@ -2365,6 +2368,24 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   const SUPABASE_URL = "https://yfogwbxxomuzbezgpqjm.supabase.co";
   const SUPABASE_KEY = "sb_publishable_TflOx6ZH1UM3wQPg_rEe4A_b6oxzSmd";
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  /* ---------- Режим наблюдения мастера: terminal.html?module=КОД&watch=1 ----------
+     Мастер видит, как выглядит терминал у колонистов, но этот экземпляр ничего не
+     пишет в базу (нет «пульса» онлайн, журнала действий, снимков камеры, авто-угроз),
+     без звука и камеры. Вход колониста повторяется по журналу входов модуля. */
+  const WATCH = new URLSearchParams(location.search).get('watch') === '1';
+  if (WATCH) {
+    const done = { data: null, error: null, count: 0 };
+    const noop = () => { const p = new Proxy(function () {}, { get: (o, k) => k === 'then' ? (res, rej) => Promise.resolve(done).then(res, rej) : () => p, apply: () => p }); return p; };
+    const from0 = sb.from.bind(sb);
+    sb.from = tbl => { const q = from0(tbl); ['insert', 'update', 'upsert', 'delete'].forEach(m => { q[m] = () => noop(); }); return q; };
+    const st0 = sb.storage.from.bind(sb.storage);
+    sb.storage.from = b => { const s = st0(b); s.upload = async () => ({ data: { path: '' }, error: null }); s.remove = async () => ({ data: [], error: null }); return s; };
+    HTMLMediaElement.prototype.play = function () { this.muted = true; return Promise.resolve(); };
+    window.AudioContext = undefined; window.webkitAudioContext = undefined;
+    if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = () => Promise.reject(new Error('режим наблюдения'));
+    document.documentElement.classList.add('tui-watch');
+  }
   const MEDIA_BUCKET = 'content-media'; // Storage: медиа контента и голосовые записи журнала (папка journal/)
 
   // Код модуля берётся из адреса: terminal.html?module=КОД
@@ -2373,7 +2394,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   const MODULE_ACCESS_CODE = (function () {
     const fromUrl = (new URLSearchParams(location.search).get('module') || '').trim().toUpperCase();
     try {
-      if (fromUrl) { localStorage.setItem('colonist_module_code', fromUrl); return fromUrl; }
+      if (fromUrl) { if (!WATCH) localStorage.setItem('colonist_module_code', fromUrl); return fromUrl; }
       const saved = localStorage.getItem('colonist_module_code');
       if (saved) return saved;
     } catch (e) { /* localStorage недоступен */ }
@@ -3454,7 +3475,12 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       }
       this.currentCharacter = character;
       await this.log('auth', { code, result: 'ok' });
+      await this.applyLogin(character);
+    },
 
+    // интерфейс вошедшего оператора (общий для входа по пропуску и режима наблюдения)
+    async applyLogin(character, watch) {
+      this.currentCharacter = character;
       document.getElementById('tui-char-name').textContent = character.name.toUpperCase();
       // вместо кода входа (его можно подсмотреть и войти чужим персонажем) — только номер бейджа, если он есть
       document.getElementById('tui-char-id-badge').textContent = character.badge_id || '';
@@ -3463,8 +3489,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       Comms.loadChannels(); Comms.renderIndicator();
       document.getElementById('tui-dock').classList.add('visible');
 
-      this.startSessionTimers(character);
-      this.closeScannerModal(true);
+      if (!watch) { this.startSessionTimers(character); this.closeScannerModal(true); }
       await this.refreshJournalWidget();
     },
 
@@ -3913,6 +3938,10 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     /* ---------- Общий рендер тела модалки: текст/аудио/видео/картинка
        + ветвление выбором (до 8 уровней, см. contentHistory) ---------- */
     renderContentInModal(item, opts) {
+      // отдельная страница для вошедшего персонажа (вариант со своими блоками) заменяет основную целиком
+      const vp = this.variantFor(item);
+      if (vp && Array.isArray(vp.blocks) && vp.blocks.length && item.type !== 'event')
+        item = Object.assign({}, item, { blocks: vp.blocks, body: vp.body || '', variants: [], type: 'text', media_url: null });
       document.getElementById('contentTitle').textContent = "ДАННЫЕ ОБЪЕКТА";
       document.getElementById('contentTypeTag').textContent = item.type.toUpperCase();
 
@@ -4014,10 +4043,13 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     },
 
     // вариант текста для вошедшего персонажа (content_items.variants), иначе основной текст
-    variantBody(item) {
+    variantFor(item) {
       const ch = this.currentCharacter;
-      const v = ch && Array.isArray(item.variants) ? item.variants.find(x => x && (x.character_ids || []).includes(ch.id) && (x.body || '').trim()) : null;
-      return v ? v.body : (item.body || '');
+      return ch && Array.isArray(item.variants) ? item.variants.find(x => x && (x.character_ids || []).includes(ch.id) && ((x.body || '').trim() || (x.blocks || []).length)) || null : null;
+    },
+    variantBody(item) {
+      const v = this.variantFor(item);
+      return v && (v.body || '').trim() ? v.body : (item.body || '');
     },
     // «печатная машинка» поверх отформатированного HTML: текст появляется по символу, разметка сохраняется
     typeHtml(el, html) {
@@ -4679,9 +4711,9 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     App.refreshJournalWidget();
     setInterval(() => App.refreshJournalWidget(), 60000);
     AlertManager.start();
-    SilenceWatcher.start();
-    CameraWatcher.start();
+    if (!WATCH) { SilenceWatcher.start(); CameraWatcher.start(); }
     Comms.start();
+    if (WATCH && DB.moduleRow) { WatchMirror.check(); setInterval(() => WatchMirror.check(), 8000); }
 
     // «Онлайн-таймер обратного отсчёта» — тишина в эфире тикает в реальном
     // времени между фактическими обновлениями refreshJournalWidget (раз в 60с),
@@ -4717,6 +4749,26 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       });
     }
   });
+
+  // режим наблюдения: повторяем вход/выход колониста по журналу входов модуля
+  const WatchMirror = {
+    cur: undefined,
+    async check() {
+      const { data } = await sb.from('logs').select('character_id, action_type, details, timestamp').eq('module_id', DB.moduleRow.id)
+        .in('action_type', ['auth', 'session_end']).order('timestamp', { ascending: false }).limit(30);
+      let charId = null;
+      for (const r of data || []) {
+        if (r.action_type === 'session_end') break;
+        if ((r.details || {}).result === 'ok') { charId = r.character_id; break; }
+      }
+      if (charId === this.cur) return;
+      this.cur = charId;
+      if (charId) {
+        const { data: ch } = await sb.from('characters').select('*').eq('id', charId).maybeSingle();
+        if (ch && this.cur === charId) App.applyLogin(ch, true);
+      } else if (App.currentCharacter) App.endSession('watch');
+    }
+  };
 
   window.App = App;
   window.Comms = Comms;

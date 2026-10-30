@@ -731,6 +731,27 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
 .mt-faces{ display:flex; gap:6px; margin-top:12px; flex-wrap:wrap; }
 .mt-faces img, .mt-faces .none{ width:34px; height:42px; object-fit:cover; object-position:50% 25%; border:1px solid color-mix(in srgb, var(--mc) 50%, transparent); background:#0B1626; }
 .mt-faces .none{ display:grid; place-items:center; font-size:12px; color:var(--ink-400); }
+.mt-now{ margin-top:10px; display:flex; flex-direction:column; gap:4px; font-size:11.5px; }
+.mt-line{ display:flex; align-items:baseline; gap:8px; min-width:0; }
+.mt-line > span{ flex:0 0 108px; font-size:9px; letter-spacing:1.2px; color:var(--ink-400); text-transform:uppercase; }
+.mt-line > b{ font-weight:600; color:var(--ink-100); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+.mt-line > i{ font-style:normal; color:var(--ink-400); font-size:10.5px; white-space:nowrap; }
+.mt-line .thr{ color:var(--red); } .mt-line .on{ color:var(--cyan); }
+.mt-watch{ margin-top:8px; align-self:flex-start; padding:5px 10px; font-size:10.5px; }
+.watch-veil{ position:fixed; inset:0; z-index:650; background:rgba(2,6,14,.94); display:none; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:16px; }
+.watch-veil.open{ display:flex; }
+.watch-head{ width:min(1280px,96vw); display:flex; align-items:center; gap:12px; color:var(--ink-100); font-size:12px; letter-spacing:1.5px; text-transform:uppercase; }
+.watch-head b{ color:var(--cyan); } .watch-head .sp{ flex:1; } .watch-head small{ color:var(--ink-400); letter-spacing:.5px; text-transform:none; }
+.watch-frame{ width:min(1280px,96vw); aspect-ratio:16/9; max-height:82vh; border:1px solid var(--cyan); box-shadow:0 0 30px rgba(94,234,212,.2); background:#000; overflow:hidden; position:relative; }
+.watch-frame iframe{ position:absolute; left:0; top:0; width:1600px; height:900px; border:0; transform-origin:0 0; }
+.photo-grid .ph-del{ position:absolute; top:4px; right:4px; z-index:2; background:rgba(2,6,14,.85); border:1px solid var(--red); color:var(--red); font-size:11px; line-height:1; padding:4px 6px; cursor:pointer; opacity:.75; }
+.photo-grid .ph-del:hover{ opacity:1; background:rgba(255,107,107,.2); }
+.vr-tabs{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+.vr-tab{ background:transparent; border:1px solid var(--edge); color:var(--ink-100); font-family:var(--font-mono); font-size:10.5px; letter-spacing:.5px; padding:6px 10px; cursor:pointer; max-width:320px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.vr-tab.on{ border-color:var(--cyan); background:rgba(94,234,212,.12); color:#fff; }
+.vr-tab.v{ border-left:3px solid #A78BFA; } .vr-tab.v.on{ border-color:#A78BFA; background:rgba(167,139,250,.18); }
+.vr-tab.add{ border-style:dashed; color:#C4B5FD; }
+#eBlocksField.vr-editing #eBlocks{ border-left:3px solid #A78BFA; padding-left:8px; }
 .mt-more{ display:none; margin-top:14px; border-top:1px dashed rgba(56,189,248,0.2); padding-top:12px; cursor:auto; }
 .mod-tile.open .mt-more{ display:block; }
 .mod-tile.open .mt-faces{ display:none; }
@@ -1251,6 +1272,10 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
       </div>
       <div class="field" id="eBlocksField">
         <label>Страница — блоки сверху вниз. «Половина» — два блока подряд встают в ряд</label>
+        <div id="eVariantsField">
+          <div class="vr-tabs" id="eVarTabs"></div>
+          <div id="eVariants"></div>
+        </div>
         <div id="eBlocks" class="bl-list"></div>
         <div class="bl-add">
           <span>Добавить:</span>
@@ -1265,11 +1290,6 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
           <button type="button" class="btn ghost" data-vr="preview">👁 Как увидит игрок</button></div>
         <div class="md-preview" id="eBodyPreview" style="display:none"></div>
         <input type="file" id="blFile" style="display:none">
-      </div>
-      <div class="field" id="eVariantsField">
-        <label>Варианты текста для конкретных персонажей — если на терминале вошёл один из выбранных, он видит свой вариант вместо основного</label>
-        <div id="eVariants"></div>
-        <button type="button" class="btn ghost" data-vr="add" style="align-self:flex-start;margin-top:6px">+ Вариант для персонажей</button>
       </div>
       <div class="field" id="eMediaField" style="display:none;">
         <label id="eMediaLabel">Медиафайл</label>
@@ -1663,6 +1683,7 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
       <div class="sec-title">Камера терминала</div>
       <div class="btn-row" style="align-items:center; margin-bottom:10px;">
         <button class="btn amber" data-cam="snapEditor">📷 Сделать снимок</button>
+        <button class="btn ghost" data-cam="delAll" title="Удалить все снимки этого модуля">🗑 Удалить все</button>
         <span class="status-line" id="moduleCamStatus"></span>
       </div>
       <div class="photo-grid" id="modulePhotoGrid"><div class="empty-line">Загрузка...</div></div>
@@ -1714,7 +1735,8 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
   </div>
 </div>
 
-<div class="cam-viewer" id="camViewer"><div class="cv-wait" id="cvWait"></div><img id="cvImg" alt="" style="display:none"><div class="cv-cap" id="cvCap"></div><div class="btn-row"><a class="btn ghost" id="cvDl" target="_blank" rel="noopener" style="display:none">⤓ Открыть оригинал</a><button class="btn" data-cam="closeViewer">Закрыть</button></div></div>
+<div class="watch-veil" id="watchVeil"><div class="watch-head">👁 Экран колонистов · <b id="watchName"></b><small>только просмотр: терминал не отмечается онлайн, ничего не записывает в базу</small><span class="sp"></span><button class="btn" data-mwc="1">Закрыть</button></div><div class="watch-frame" id="watchFrame"></div></div>
+<div class="cam-viewer" id="camViewer"><div class="cv-wait" id="cvWait"></div><img id="cvImg" alt="" style="display:none"><div class="cv-cap" id="cvCap"></div><div class="btn-row"><a class="btn ghost" id="cvDl" target="_blank" rel="noopener" style="display:none">⤓ Открыть оригинал</a><button class="btn danger" id="cvDel" data-cam="delCur" style="display:none">🗑 Удалить снимок</button><button class="btn" data-cam="closeViewer">Закрыть</button></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
 <script src="map/polygon-map.js"></script>
@@ -1945,6 +1967,7 @@ const Admin = {
     this.renderModuleSelect();
     this.renderModuleList();
     this.renderModuleTable();
+    this.loadModuleSessions();
   },
 
   renderModuleSelect() {
@@ -2035,6 +2058,7 @@ const Admin = {
             <div class="mt-stat ${thr ? 'crit' : ''}"><b>${thr}</b><span>угроз</span></div>
             <div class="mt-stat ${unread ? 'warn' : ''}"><b>${unread}</b><span>✉ новых</span></div>
           </div>
+          ${this.moduleNowHtml(m, online)}
           ${res.length ? `<div class="mt-faces">${res.map(c => this.faceHtml(c, '')).join('')}</div>` : ''}
           ${this.moduleThreatsHtml(m.id)}
           <div class="mt-more">
@@ -2054,6 +2078,79 @@ const Admin = {
         </div>`;
     }).join('');
   },
+  // что сейчас у модуля: на экране (угроза / открытый объект / контент модуля) и кто вошёл
+  activeThreatsOf(moduleId) {
+    const now = Date.now();
+    return (this.activeAlertsCache || []).filter(a => {
+      if ((a.excluded_module_ids || []).includes(moduleId)) return false;
+      if (new Date(a.starts_at).getTime() > now) return false;
+      if (a.ends_at && new Date(a.ends_at).getTime() < now) return false;
+      return a.target_type === 'all' || a.target_module_id === moduleId || (a.target_module_ids || []).includes(moduleId);
+    });
+  },
+  contentShort(id) {
+    const c = this.contentItems.find(x => x.id === id);
+    return c ? c.trigger_code + (c.summary ? ' — ' + c.summary : '') : 'объект удалён';
+  },
+  moduleNowHtml(m, online) {
+    const s = (this.modSessions || {})[m.id] || {};
+    const hm = d => new Date(d).toLocaleTimeString().slice(0, 5);
+    const dt = d => { const x = new Date(d); return x.toLocaleDateString().slice(0, 5) + ' ' + hm(d); };
+    const thr = this.activeThreatsOf(m.id);
+    const inSys = s.active && online;
+    let screen;
+    if (thr.length) {
+      const d = (typeof THREAT_DEFS !== 'undefined' && THREAT_DEFS[thr[0].threat_type]) || { icon: '⚠' };
+      screen = `<b class="thr">${d.icon} ${this.escape(thr[0].label)}${thr.length > 1 ? ' +' + (thr.length - 1) : ''}</b>`;
+    } else if (inSys && s.lastOpen) screen = `<b>📄 ${this.escape(this.contentShort(s.lastOpen.id))}</b><i>открыт в ${hm(s.lastOpen.at)}</i>`;
+    else if (m.current_content_id) screen = `<b>📄 ${this.escape(this.contentShort(m.current_content_id))}</b><i>контент модуля</i>`;
+    else screen = `<b>${!online ? '— нет связи —' : inSys ? 'главный экран' : 'экран ожидания входа'}</b>`;
+    let who;
+    if (!s.login) who = `<span>ВХОД</span><b>—</b><i>${this.modSessionsLoaded ? 'входов не было' : '…'}</i>`;
+    else if (inSys) who = `<span>В СИСТЕМЕ</span><b class="on">● ${this.escape(s.login.name)}</b><i>с ${hm(s.login.at)}</i>`;
+    else who = `<span>ПОСЛЕДНИЙ ВХОД</span><b>${this.escape(s.login.name)}</b><i>${this.escape(this.timeAgo(s.login.at))} · ${dt(s.login.at)}${s.active && !online ? ' · связь потеряна' : ''}</i>`;
+    return `<div class="mt-now"><div class="mt-line"><span>НА ЭКРАНЕ</span>${screen}</div><div class="mt-line">${who}</div>
+      <button class="btn ghost mt-watch" data-mw="${m.id}" title="Как сейчас выглядит терминал у колонистов — только просмотр, модуль не отмечается онлайн">👁 Экран колонистов</button></div>`;
+  },
+  // входы/выходы и открытые объекты по журналу действий терминалов
+  async loadModuleSessions() {
+    const { data, error } = await sb.from('logs').select('module_id, character_id, action_type, details, timestamp, characters(name)')
+      .in('action_type', ['auth', 'session_end', 'content_open']).order('timestamp', { ascending: false }).limit(1500);
+    if (error) { console.error(error); return; }
+    const S = {};
+    for (const r of data || []) {
+      if (!r.module_id) continue;
+      const s = S[r.module_id] || (S[r.module_id] = {});
+      if (s.login) continue;
+      const d = r.details || {};
+      if (r.action_type === 'content_open') { if (!s.endAt && !s.lastOpen && !d.result && d.contentId) s.lastOpen = { id: d.contentId, at: r.timestamp }; continue; }
+      if (r.action_type === 'session_end') { if (!s.endAt) s.endAt = r.timestamp; continue; }
+      if (r.action_type === 'auth' && d.result === 'ok') {
+        s.login = { name: (r.characters && r.characters.name) || ((this.characters || []).find(c => c.id === r.character_id) || {}).name || 'неизвестный', at: r.timestamp, charId: r.character_id };
+        s.active = !s.endAt;
+        if (!s.active) s.lastOpen = null;
+      }
+    }
+    this.modSessions = S; this.modSessionsLoaded = true;
+    this.renderModuleTable();
+  },
+  // экран колонистов: терминал модуля в режиме наблюдения (без записи в базу, без «онлайн»)
+  openWatch(moduleId) {
+    const m = this.modules.find(x => x.id === moduleId); if (!m) return;
+    const v = document.getElementById('watchVeil');
+    document.getElementById('watchName').textContent = m.name || m.access_code || '';
+    const f = document.getElementById('watchFrame');
+    f.innerHTML = `<iframe src="terminal.html?module=${encodeURIComponent(m.access_code || '')}&watch=1" title="Экран колонистов"></iframe>`;
+    v.classList.add('open');
+    this.fitWatch();
+  },
+  fitWatch() {
+    const f = document.getElementById('watchFrame'), i = f && f.querySelector('iframe'); if (!i) return;
+    i.style.transform = `scale(${f.clientWidth / 1600})`;
+    i.style.height = (f.clientHeight / (f.clientWidth / 1600)) + 'px';
+  },
+  closeWatch() { document.getElementById('watchVeil').classList.remove('open'); document.getElementById('watchFrame').innerHTML = ''; },
+
   // действующие угрозы модуля (для таблицы модулей) с кнопкой снятия с этого модуля
   moduleThreatsHtml(moduleId) {
     const now = Date.now();
@@ -2131,6 +2228,10 @@ const Admin = {
           this.loadModuleJournal(this.editingModuleId);
         }
       })
+      .subscribe();
+    // входы и открытые объекты — журнал терминалов (если таблица logs в realtime; иначе обновится раз в 30 с)
+    sb.channel('admin-logs-channel')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'logs' }, () => { clearTimeout(this.logsDeb); this.logsDeb = setTimeout(() => this.loadModuleSessions(), 800); })
       .subscribe();
     sb.channel('admin-modules-channel')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'modules' }, () => this.loadModules())
@@ -2815,6 +2916,7 @@ const Admin = {
 
     this.choiceOptions = (item && item.choice_options) ? JSON.parse(JSON.stringify(item.choice_options)) : [];
     this.variants = (item && Array.isArray(item.variants)) ? JSON.parse(JSON.stringify(item.variants)) : [];
+    this.normVariants(); this.mainBlocks = this.blocks; this.vEdit = -1;
     const hasV2 = !this.contentItems.length || 'summary' in this.contentItems[0];
     document.getElementById('eSummary').value = (item && item.summary) || '';
     document.getElementById('eSummary').disabled = !hasV2;
@@ -2846,6 +2948,7 @@ const Admin = {
   },
   /* ---------- ветвление: новый объект во вложенном окне ---------- */
   captureEditor() {
+    if (this.vEdit >= 0) this.switchVariant(-1);
     const v = id => document.getElementById(id).value, sel = id => [...document.querySelectorAll('#' + id + ' input:checked')].map(i => i.value);
     return {
       editingContentId: this.editingContentId, uploadedMedia: this.uploadedMedia,
@@ -2860,6 +2963,7 @@ const Admin = {
   restoreEditor(st) {
     this.editingContentId = st.editingContentId; this.uploadedMedia = st.uploadedMedia;
     this.choiceOptions = st.choiceOptions; this.variants = st.variants; this.blocks = st.blocks;
+    this.normVariants(); this.mainBlocks = this.blocks; this.vEdit = -1;
     Object.entries(st.f).forEach(([id, val]) => document.getElementById(id).value = val);
     const radio = (name, val) => document.querySelectorAll(`input[name="${name}"]`).forEach(r => { r.checked = r.value === val; r.closest('.radio-chip').classList.toggle('checked', r.checked); });
     if (st.playback) radio('ePlayback', st.playback); if (st.interrupt) radio('eInterrupt', st.interrupt);
@@ -2902,7 +3006,8 @@ const Admin = {
     if (dupe) { errEl.textContent = 'Такой код уже используется другим объектом.'; return; }
 
     const isEvent = document.getElementById('eType').value === 'event';
-    const blocks = (this.blocks || []).filter(b => b.type === 'divider' || (b.type === 'text' ? (b.md || '').trim() : b.type === 'gallery' ? (b.urls || []).length : b.url));
+    const keep = b => b.type === 'divider' || (b.type === 'text' ? (b.md || '').trim() : b.type === 'gallery' ? (b.urls || []).length : b.url);
+    const blocks = (this.mainBlocks || this.blocks || []).filter(keep);
     const texts = blocks.filter(b => b.type === 'text').map(b => b.md.trim());
     const medias = blocks.filter(b => ['image', 'video', 'audio'].includes(b.type));
     // тип и «главное» медиа — для совместимости со старыми страницами и печатью
@@ -2954,7 +3059,9 @@ const Admin = {
       if (this.editingContentId) { const v = document.getElementById('eViewed').checked; row.viewed = v; const ex = this.contentItems.find(c => c.id === this.editingContentId); row.viewed_at = v ? ((ex && ex.viewed_at) || new Date().toISOString()) : null; }
     }
     if (!this.contentItems.length || 'variants' in this.contentItems[0])
-      row.variants = (this.variants || []).filter(v => (v.character_ids || []).length && (v.body || '').trim()).map(v => ({ character_ids: v.character_ids, body: v.body }));
+      row.variants = (this.variants || []).map(v => ({ character_ids: v.character_ids || [], blocks: (v.blocks || []).filter(keep) }))
+        .filter(v => v.character_ids.length && v.blocks.length)
+        .map(v => Object.assign(v, { body: v.blocks.filter(b => b.type === 'text').map(b => b.md.trim()).join('\n\n') }));
 
     let error;
     if (this.editingContentId) {
@@ -3073,16 +3180,36 @@ const Admin = {
   },
 
   /* ---------- контент: варианты по персонажам, предпросмотр, PDF всех QR ---------- */
+  // варианты страницы для конкретных персонажей: у каждого свои блоки (текст, картинки, видео…)
+  normVariants() {
+    (this.variants || []).forEach(v => {
+      if (!Array.isArray(v.blocks) || !v.blocks.length) v.blocks = [{ type: 'text', md: v.body || '', width: 'full', style: 'plain' }];
+      v.character_ids = v.character_ids || [];
+    });
+  },
+  switchVariant(i) {
+    if (this.vEdit < 0 || this.vEdit === undefined) this.mainBlocks = this.blocks;
+    this.vEdit = i;
+    this.blocks = i < 0 ? this.mainBlocks : this.variants[i].blocks;
+    this.renderVariants(); this.renderBlocks();
+  },
   renderVariants() {
-    const el = document.getElementById('eVariants'); if (!el) return;
+    const tabs = document.getElementById('eVarTabs'), el = document.getElementById('eVariants'); if (!el || !tabs) return;
     const chars = (this.characters || []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ru'));
-    el.innerHTML = (this.variants || []).map((v, i) => `
-      <div class="vr-item">
-        <div class="vr-head"><span>Вариант ${i + 1} · ${(v.character_ids || []).length ? (v.character_ids || []).map(id => this.escape((chars.find(c => c.id === id) || {}).name || '?')).join(', ') : 'выберите персонажей'}</span>
-          <button type="button" class="btn ghost" data-vr="del" data-i="${i}">✕ Удалить</button></div>
-        <div class="vr-chars">${chars.map(c => `<button type="button" class="${(v.character_ids || []).includes(c.id) ? 'on' : ''}" data-vr="toggle" data-i="${i}" data-id="${c.id}">${this.escape(c.name)}</button>`).join('') || '<span class="meta">Нет персонажей</span>'}</div>
-        <textarea class="input" rows="4" data-vr-body="${i}" placeholder="Текст для выбранных персонажей (Markdown)">${this.escape(v.body || '')}</textarea>
-      </div>`).join('');
+    const names = v => (v.character_ids || []).map(id => (chars.find(c => c.id === id) || {}).name || '?').join(', ') || 'персонажи не выбраны';
+    const cur = this.vEdit === undefined ? -1 : this.vEdit;
+    tabs.innerHTML = `<button type="button" class="vr-tab ${cur < 0 ? 'on' : ''}" data-vr="tab" data-i="-1">Основная страница</button>` +
+      (this.variants || []).map((v, i) => `<button type="button" class="vr-tab v ${cur === i ? 'on' : ''}" data-vr="tab" data-i="${i}" title="${this.escape(names(v))}">Вариант ${i + 1}: ${this.escape(names(v))}</button>`).join('') +
+      `<button type="button" class="vr-tab add" data-vr="add" title="Отдельная страница для выбранных персонажей">+ Вариант для персонажей</button>`;
+    const v = cur >= 0 ? this.variants[cur] : null;
+    el.innerHTML = !v ? ((this.variants || []).length ? '<div class="meta" style="margin-bottom:8px">Основную страницу видят все, кроме персонажей из вариантов.</div>' : '') : `
+      <div class="vr-item" style="margin:0 0 8px">
+        <div class="vr-head"><span>Вариант ${cur + 1} — кто видит эту страницу вместо основной</span>
+          <span><button type="button" class="btn ghost" data-vr="copyMain" title="Заменить блоки варианта копией основной страницы">⧉ Как основная</button>
+          <button type="button" class="btn ghost" data-vr="del" data-i="${cur}">✕ Удалить вариант</button></span></div>
+        <div class="vr-chars">${chars.map(c => `<button type="button" class="${(v.character_ids || []).includes(c.id) ? 'on' : ''}" data-vr="toggle" data-i="${cur}" data-id="${c.id}">${this.escape(c.name)}</button>`).join('') || '<span class="meta">Нет персонажей</span>'}</div>
+      </div>`;
+    const f = document.getElementById('eBlocksField'); if (f) f.classList.toggle('vr-editing', !!v);
   },
   async exportContentQrPdf() {
     const btn = document.getElementById('qrPdfBtn'); const old = btn.textContent; btn.textContent = 'Готовлю PDF…'; btn.disabled = true;
@@ -3262,7 +3389,7 @@ const Admin = {
     document.getElementById('cpViewTitle').textContent = 'Контент ' + c.trigger_code + (c.summary ? ' — ' + c.summary : '');
     const blocks = contentToBlocks(c);
     document.getElementById('cpViewBody').innerHTML = (blocks.length ? contentBlocksHtml(blocks, mdToHtml) : '<span class="meta">Пусто</span>') +
-      ((c.variants || []).length ? `<div class="meta" style="margin-top:10px">Есть варианты текста для: ${this.escape(c.variants.map(v => (v.character_ids || []).map(x => ((this.characters || []).find(ch => ch.id === x) || {}).name).filter(Boolean).join(', ')).join('; '))}</div>` : '');
+      ((c.variants || []).length ? `<div class="meta" style="margin-top:10px">Есть отдельные страницы для: ${this.escape(c.variants.map(v => (v.character_ids || []).map(x => ((this.characters || []).find(ch => ch.id === x) || {}).name).filter(Boolean).join(', ')).join('; '))}</div>` : '');
     document.getElementById('cpViewEdit').dataset.id = id;
     document.getElementById('cpViewModal').classList.add('open');
   },
@@ -4115,8 +4242,10 @@ document.addEventListener('change', (e) => {
 document.addEventListener('click', (e) => {
   const v = e.target.closest('[data-vr]'); if (!v) return;
   const a = v.dataset.vr, i = parseInt(v.dataset.i, 10);
-  if (a === 'add') { Admin.variants = Admin.variants || []; Admin.variants.push({ character_ids: [], body: ((Admin.blocks || []).find(b => b.type === 'text') || {}).md || '' }); Admin.renderVariants(); }
-  if (a === 'del') { Admin.variants.splice(i, 1); Admin.renderVariants(); }
+  if (a === 'add') { Admin.variants = Admin.variants || []; if (Admin.vEdit >= 0) Admin.switchVariant(-1); Admin.variants.push({ character_ids: [], blocks: JSON.parse(JSON.stringify(Admin.mainBlocks || Admin.blocks || [])) }); Admin.normVariants(); Admin.switchVariant(Admin.variants.length - 1); }
+  if (a === 'del') { Admin.switchVariant(-1); Admin.variants.splice(i, 1); Admin.renderVariants(); }
+  if (a === 'tab') Admin.switchVariant(i);
+  if (a === 'copyMain' && Admin.vEdit >= 0) { Admin.variants[Admin.vEdit].blocks = JSON.parse(JSON.stringify(Admin.mainBlocks)); Admin.blocks = Admin.variants[Admin.vEdit].blocks; Admin.renderBlocks(); }
   if (a === 'toggle') { const ids = Admin.variants[i].character_ids = Admin.variants[i].character_ids || []; const k = ids.indexOf(v.dataset.id); k < 0 ? ids.push(v.dataset.id) : ids.splice(k, 1); Admin.renderVariants(); }
   if (a === 'preview') { const p = document.getElementById('eBodyPreview'); const on = p.style.display === 'none'; p.style.display = on ? '' : 'none'; if (on) Admin.renderPagePreview(); }
   if (a === 'qrPdf') Admin.exportContentQrPdf();
@@ -4897,7 +5026,7 @@ Object.assign(Admin, {
     if (state.url) { img.src = state.url; img.style.display = 'block'; dl.href = state.url; dl.style.display = ''; }
     else { img.style.display = 'none'; img.removeAttribute('src'); dl.style.display = 'none'; }
   },
-  closeViewer() { document.getElementById('camViewer').classList.remove('open'); this.camWaitId = null; },
+  closeViewer() { document.getElementById('camViewer').classList.remove('open'); this.camWaitId = null; this.viewId = null; const d = document.getElementById('cvDel'); if (d) d.style.display = 'none'; },
 
   async requestSnapshot(moduleId) {
     const m = this.modules.find(x => x.id === moduleId);
@@ -4932,8 +5061,32 @@ Object.assign(Admin, {
     document.getElementById('moduleCamStatus').textContent = list.length ? `СНИМКОВ: ${list.filter(r => r.status === 'done').length}` : '';
     if (!list.length) { el.innerHTML = '<div class="empty-line">Снимков пока нет.</div>'; return; }
     el.innerHTML = list.map(r => r.status === 'done'
-      ? `<figure data-cam="view" data-url="${this.escape(this.photoUrl(r.photo_path))}" data-cap="${this.escape(new Date(r.taken_at).toLocaleString())}"><img loading="lazy" src="${this.escape(this.photoUrl(r.photo_path))}" alt=""><figcaption>${new Date(r.taken_at).toLocaleString()}</figcaption></figure>`
-      : `<figure><div class="ph-err">Ошибка: ${this.escape(r.error || '—')}</div><figcaption>${new Date(r.requested_at).toLocaleString()}</figcaption></figure>`).join('');
+      ? `<figure data-cam="view" data-id="${r.id}" data-url="${this.escape(this.photoUrl(r.photo_path))}" data-cap="${this.escape(new Date(r.taken_at).toLocaleString())}"><button type="button" class="ph-del" data-cam="del" data-id="${r.id}" title="Удалить снимок">✕</button><img loading="lazy" src="${this.escape(this.photoUrl(r.photo_path))}" alt=""><figcaption>${new Date(r.taken_at).toLocaleString()}</figcaption></figure>`
+      : `<figure><button type="button" class="ph-del" data-cam="del" data-id="${r.id}" title="Удалить запись">✕</button><div class="ph-err">Ошибка: ${this.escape(r.error || '—')}</div><figcaption>${new Date(r.requested_at).toLocaleString()}</figcaption></figure>`).join('');
+    this.camList = list;
+  },
+
+  // удаление снимков: файл из хранилища и запись camera_requests
+  confirmDeletePhotos(ids, text) {
+    if (!ids.length) return;
+    document.getElementById('confirmText').textContent = text;
+    document.getElementById('confirmModal').classList.add('open');
+    document.getElementById('confirmYesBtn').onclick = async () => { this.closeConfirm(); await this.deletePhotos(ids); };
+  },
+  async deletePhotos(ids) {
+    const st = document.getElementById('moduleCamStatus');
+    if (st) st.textContent = 'Удаление…';
+    const { data: rows } = await sb.from('camera_requests').select('id, photo_path').in('id', ids);
+    const paths = (rows || []).map(r => r.photo_path).filter(p => p && !/^https?:/.test(p));
+    let fileWarn = '';
+    if (paths.length) {
+      const { data: rm, error: e1 } = await sb.storage.from(MEDIA_BUCKET).remove(paths);
+      if (e1 || (rm || []).length < paths.length) fileWarn = ' Файлы в хранилище не удалены — выполните sql/snapshots_delete.sql.';
+    }
+    const { error } = await sb.from('camera_requests').delete().in('id', ids);
+    this.closeViewer();
+    if (this.editingModuleId) await this.loadModulePhotos(this.editingModuleId);
+    if (st) st.textContent = error ? 'Ошибка удаления: ' + error.message : `Удалено: ${ids.length}.` + fileWarn;
   },
 
   async loadModuleLog(moduleId) {
@@ -4984,7 +5137,10 @@ document.addEventListener('click', e => {
   if (act === 'snap') A.requestSnapshot(el.dataset.mod);
   if (act === 'snapEditor' && A.editingModuleId) A.requestSnapshot(A.editingModuleId);
   if (act === 'closeViewer') A.closeViewer();
-  if (act === 'view') A.viewer({ url: el.dataset.url, cap: el.dataset.cap });
+  if (act === 'del') { e.stopPropagation(); A.confirmDeletePhotos([el.dataset.id], 'Удалить этот снимок? Файл будет удалён из хранилища.'); return; }
+  if (act === 'delAll') { const ids = (A.camList || []).map(r => r.id); A.confirmDeletePhotos(ids, `Удалить все снимки модуля (${ids.length})? Это необратимо.`); }
+  if (act === 'delCur' && A.viewId) A.confirmDeletePhotos([A.viewId], 'Удалить этот снимок? Файл будет удалён из хранилища.');
+  if (act === 'view') { A.viewer({ url: el.dataset.url, cap: el.dataset.cap }); A.viewId = el.dataset.id || null; document.getElementById('cvDel').style.display = A.viewId ? '' : 'none'; }
   if (act === 'reloadLog' && A.editingModuleId) A.loadModuleLog(A.editingModuleId);
 });
 document.addEventListener('change', e => { if (e.target.id === 'moduleLogFilter' && Admin.editingModuleId) Admin.loadModuleLog(Admin.editingModuleId); });
@@ -4993,7 +5149,12 @@ document.addEventListener('toggle', e => {
   if (e.target.id === 'moduleHistoryFold') Admin.loadThreatHistory(Admin.editingModuleId);
   if (e.target.id === 'moduleLogSection') Admin.loadModuleLog(Admin.editingModuleId);
 }, true);
-document.addEventListener('keydown', e => { if (e.key === 'Escape') Admin.closeViewer(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { Admin.closeViewer(); Admin.closeWatch(); } });
+document.addEventListener('click', e => {
+  const w = e.target.closest('[data-mw]'); if (w) { e.stopPropagation(); Admin.openWatch(w.dataset.mw); return; }
+  if (e.target.closest('[data-mwc]')) Admin.closeWatch();
+}, true);
+addEventListener('resize', () => Admin.fitWatch());
 
 
 /* ---------- звук угрозы: запись с микрофона и библиотека ранее загруженных звуков ---------- */
