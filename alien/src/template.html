@@ -773,6 +773,7 @@ const DATA = /*DATA*/null;
     run.next = firstRec; setTimeout(() => { resize(); loop(); }, 1600);
   }
   $('#cRose').addEventListener('click', start);
+  addEventListener('alien-qr', () => resonance(run.rec || 1, run.epoch));   // для проверки кодов
 
   addEventListener('resize', resize);
   setInterval(tickGauges, 1600); tickGauges();
