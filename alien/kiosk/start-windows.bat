@@ -1,8 +1,8 @@
 @echo off
 rem Запуск инопланетного терминала во весь экран (режим киоска).
 rem Чтобы запускался при входе в Windows: Win+R -> shell:startup -> положить туда ярлык на этот файл.
-rem Настройки экрана — в строке OPTS (вид, письмо, QR). Выход из киоска: Alt+F4.
-set OPTS=view=beacon^&script=crystal^&qr=pulse
+rem Выход из киоска: Alt+F4.
+set OPTS=
 set PAGE=%~dp0..\index.html
 set PAGE=%PAGE:\=/%
 set CHROME=%ProgramFiles%\Google\Chrome\Application\chrome.exe

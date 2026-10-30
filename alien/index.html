@@ -153,22 +153,23 @@
   #cMem .fx { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 4; mix-blend-mode: screen; pointer-events: none; }
   #cMemEdge { position: absolute; left: 50%; top: 50%; width: 64%; height: 64%; transform: translate(-50%, -50%); z-index: 5; overflow: visible; opacity: 0; transition: opacity 1.6s; pointer-events: none; }
   #cMem.on + #cMemEdge { opacity: 1; }
+  /* ожидание: кристалл в центре, вращается и пульсирует; касание — старт */
+  #cRose { transition: left 1.6s ease; }
+  #cTx, #cHead { transition: opacity 1.2s; }
+  body.idle #cTx, body.idle #cHead { opacity: 0; }
+  body.idle #cRose { left: calc(50vw - 41vh); cursor: pointer; }
+  body.idle #cCluster { animation: rot 170s linear infinite, breath 3.2s ease-in-out infinite; }
+  body.idle #cRing2 { animation: rot 80s linear infinite, breath 3.2s ease-in-out infinite .4s; }
+  body.idle .sector { --k: 2.4; }
+  body.idle .sigil { stroke: #fff; filter: drop-shadow(0 0 5px var(--cy)); }
+  @keyframes breath { 0%, 100% { scale: 1; filter: drop-shadow(0 0 4px rgba(94, 234, 212, .25)); } 50% { scale: 1.06; filter: drop-shadow(0 0 22px rgba(94, 234, 212, .75)); } }
   #cTx { left: calc(6vw + 90vh); right: 5vw; top: 12vh; bottom: 10vh; -webkit-mask-image: linear-gradient(180deg, transparent, #000 12%); mask-image: linear-gradient(180deg, transparent, #000 12%); }
   #cHead { position: absolute; left: calc(6vw + 90vh); right: 5vw; top: 5vh; display: flex; align-items: center; gap: 2vh; }
 
   /* меню мастера: скрыто, клавиша M */
-  #menu { position: fixed; z-index: 100; left: 50%; top: 50%; transform: translate(-50%, -50%); background: rgba(2, 10, 18, .96); border: 1px solid var(--cy); padding: 22px 26px; color: #dff; font: 14px/1.5 system-ui, sans-serif; display: none; cursor: default; min-width: 520px; }
-  #menu.on { display: block; }
-  #menu h3 { margin: 0 0 10px; font-size: 15px; letter-spacing: 1px; color: var(--cy); }
-  #menu .row { display: flex; gap: 8px; margin: 6px 0 12px; flex-wrap: wrap; }
-  #menu button { background: transparent; border: 1px solid rgba(94, 234, 212, .4); color: #dff; padding: 6px 12px; cursor: pointer; font: inherit; }
-  #menu button.on { background: rgba(94, 234, 212, .2); border-color: var(--cy); }
-  #menu code { display: block; background: #000; padding: 8px; font-size: 12px; word-break: break-all; margin-top: 4px; color: #9ff; }
-  #menu small { color: #8aa; }
-  body.menu { cursor: default; }
 </style>
 </head>
-<body data-view="beacon" data-qr="pulse" data-script="crystal">
+<body class="idle" data-view="beacon" data-qr="pulse" data-script="crystal">
 <div id="bg"></div>
 <canvas id="dust"></canvas>
 
@@ -213,19 +214,6 @@
 <canvas id="pulse"></canvas>
 <div id="scan"></div>
 
-<div id="menu">
-  <h3>Настройки экрана (видит только мастер · M — закрыть)</h3>
-  <div>Вид экрана</div>
-  <div class="row" data-opt="view"><button data-v="archive">1 · Кристаллический архив</button><button data-v="cradle">2 · Колыбель Каменного Сна</button><button data-v="beacon">3 · Маяк Четырёх Домов</button></div>
-  <div>Письмо</div>
-  <div class="row" data-opt="script"><button data-v="piqad">Клингонское (как в документе)</button><button data-v="crystal">Кристаллические знаки</button></div>
-  <div>QR-коды записей</div>
-  <div class="row" data-opt="qr"><button data-v="pulse">Проявляется при «резонансе»</button><button data-v="mask">Всегда виден, замаскирован</button></div>
-  <div class="row"><button data-act="next">Следующая запись →</button><button data-act="qrnow">Показать QR сейчас</button></div>
-  <small>Адрес для автозапуска с этими настройками:</small>
-  <code id="menuUrl"></code>
-</div>
-
 <script>
 const DATA = {"texts": {"1": ["«chunDab chuq ghoSmeH ghanjaq rIn. tamtaHvIS nov Degh 'evDaq juH'a' maHvaD ja'. hotmeH Sut wIchenmoHta', wa'DIch Suvwi' tlhuHmo' lom meQbe' 'e' mevwI'.", "loS juHpu' wa' ghotvaD Sut nobbe'. motlh 'oH vum: loS quv ghotpu' quS'a'Daq ghoSlaH. loS tlhuH nov, loS ngeb chuq 'otlh tlhoy' tIqwIj De' poSmoH.", "wa'DIch mu' 'ay' 'ej Sut vIqeng. Hurgh bIQ'a'Daq wa'DIch jIghoS»."], "2": ["«nagh QongDaq yuvlu'pa', nov tuj nungta'. yotlh nov 'ej bIQ ngaSbogh yaghmey. ngaQmeH DIr tuQ, 'ach qoDDaq yIn neHwI' 'oH, nagh pe'wI'mey bIr 'oHbe'.", "DeSDu' 'Iq Dutu'. ghu'vam vIghov 'ej jIH je DeSDu' vI'Iq. wej pemmey tam chuq wImev. mu'mey nov rur tlhIngan mugh ghogh. pong «QoneS» [QaneS] ja'taH. tujnobmey nob 'ej nagh porgh ghovbe'. QaQ 'oH.", "wa'leS jIlengmo' 'oy'. qam vImev 'ej 'oH vIghoj vIneH. 'ach HovmeyDaq juH vum vIghoS»."], "3": ["«bas naghvo' lupDujwIj puv. chuq nom ghoS tagh.", "lojmItDaq loDnI'pu'wI' jIHvaD ghoS. cha'DIch 'avwI' cha'DIch ngaQHa'moHwI' loS julmey qaSpu'DI' leng. wejDIch 'avwI' wejDIch ngaQHa'moHwI' Hut julmey qaSpu'DI' leng. loSDIch tojwI' meq ghoq betelgeyzevo' cha'maH wa' julmey qaSpu'DI' mej.", "SIgmaDaq ghomDI' Dujmey, loS ghotpu' mu' tay'moH, He De' poSmoH, 'ej yIn gho'a'Daq juH'a' Duj wIchegh. juH'a'Daq maghom, loDnI'pu'»."], "4": ["«loS julmey qaSpu'. chal chakklaH. Hut julmey qaSpu'. ghoghvetlh tam. cha'maH wa' pemmey qaSpu'. pagh qulmey legh.", "nagh HeDaq wej vatlh pemmey jILo'. HoS chuqwIj rInchoH. nov muD tlhoy rur, 'ej QongDaq HoS polwI' Qapbe'choH. jIquvlaHbe' — chunDab tlhe'chugh, vIHegh.", "loDnI'pu', qew HovmeyDaq bIlengchugh pagh SuSvo' bImevchugh — yIghIjQo'. nagh QongDaq jI'el. lojmIt vIngaQmoH 'ej polwI' bIQDaq jIratlh.", "bIghoSDI', quvbe'moH ghopmey lo'Qo' — bIrmo' pIq'e'wIj, SuSchu' jIH HoH. chegh mIw [yInqa' mIw] yIchenmoH:", "HoS tIqmey yIHu': QongDaq HurDaq HoS bIQ'a' yInob, Hegh bIr yIghovmeH. nagh 'otlhDaq HoS tu'lu'.", "tIqmey yItlhutlhmoH: nov tlhegh bIQ yIlan, chunDab chuq yIHotlaH. nov yInvo' yISuq.", "juH chuq bom yIbom: 'otlhDaq 433 MHz chuq ghogh yIghoS — jup tu'lu' 'e' vI'Ij neH. De' jach 'oH. 'ach loSDIch 'avwI' ghoSlaH.", "mIw yItagh: pat yIwuv.", "hotghachlIj vILo'. nom yIghoS. mu' wImuv 'ej hotmeH Sut wItu' 'e' poQ»."]}, "qrs": [{"code": "T59PHD", "v": 1, "m": ["111111101110101111111", "100000100111101000001", "101110100000101011101", "101110101110001011101", "101110100001001011101", "100000100110101000001", "111111101010101111111", "000000000011100000000", "001011101000010001001", "100100010101011001011", "010011101001000011010", "101010001110110000000", "001000100011101011101", "000000001011001100100", "111111100101110100111", "100000101001110110101", "101110101011000100101", "101110100101011101010", "101110101010010010001", "100000100010110101111", "111111100001101010101"]}, {"code": "RXYKYG", "v": 1, "m": ["111111101101001111111", "100000100010101000001", "101110100110101011101", "101110101010101011101", "101110100010001011101", "100000100011101000001", "111111101010101111111", "000000000011100000000", "001011101111110001001", "011010011010101000110", "101001101000010010101", "111110001010001001011", "000100100010001011110", "000000001111010100110", "111111100000001101111", "100000101000110111101", "101110101001011100101", "101110100110100101010", "101110101011101010001", "100000100100001101111", "111111100011011010101"]}, {"code": "A99GZW", "v": 1, "m": ["111111100111001111111", "100000100001101000001", "101110101110101011101", "101110101101101011101", "101110100110101011101", "100000100100001000001", "111111101010101111111", "000000000100100000000", "000110110011100001100", "100110001111100110110", "001010111110010100000", "000101011010100110100", "010110100101101111100", "000000001100010000001", "111111101010111001010", "100000100011101000010", "101110101111010010101", "101110101001010011100", "101110100111100110111", "100000100110001001010", "111111100111010110110"]}, {"code": "9SUJHW", "v": 1, "m": ["111111100000001111111", "100000101111001000001", "101110100100001011101", "101110100010001011101", "101110100111101011101", "100000101001001000001", "111111101010101111111", "000000001101000000000", "000011110010101100010", "011011001010101100001", "010100100100101111100", "010000011001010011111", "101000100110000001010", "000000001000100000101", "111111101101111001100", "100000101011111100111", "101110101110001110111", "101110100010100001111", "101110100000100110100", "100000100001011110001", "111111100110111000111"]}], "lines": {"1": [[940, 38], [1068, 38], [1055, 40], [964, 40], [985, 41], [1033, 41], [1014, 41], [1008, 41], [884, 40], [1014, 40]], "2": [[932, 37], [1071, 37], [996, 40], [1004, 40], [1075, 41], [921, 41], [979, 40], [1033, 40], [995, 40], [1030, 40], [809, 40], [827, 40]], "3": [[971, 39], [1040, 39], [902, 40], [1086, 40], [1007, 40], [980, 40], [966, 40], [1054, 40], [966, 40], [1027, 40], [736, 40], [914, 40]], "4": [[1084, 39], [933, 39], [968, 40], [1055, 40], [1030, 40], [977, 40], [1002, 41], [1019, 41], [994, 40], [972, 40], [965, 41], [1034, 41], [1046, 40], [965, 40], [1020, 40], [982, 40], [984, 40], [1033, 40], [1012, 40], [1008, 40], [1093, 40], [915, 40], [821, 40], [943, 40]]}};
 (() => {
@@ -237,19 +225,17 @@ const DATA = {"texts": {"1": ["«chunDab chuq ghoSmeH ghanjaq rIn. tamtaHvIS nov
     memory: 12,           // с — воспоминание-голограмма
     qrHold: 18,           // с — QR при «резонансе» неподвижен и читается
     qrBuild: 3.5, qrBreak: 3.5,
-    between: 3            // с — пауза между записями
+    between: 3,           // с — пауза между записями
+    idle: 180             // с — кристалл ждёт касания, потом сценарий стартует сам
   };
   const params0 = new URLSearchParams(location.search);
-  if (params0.get('fast')) { const f = +params0.get('fast') || 6; ['holdAfterText', 'memory', 'between'].forEach(k => T[k] /= f); T.segSpeed *= f; T.crystalCps *= f; T.fast = f; }   // для проверки
+  if (params0.get('fast')) { const f = +params0.get('fast') || 6; ['holdAfterText', 'memory', 'between', 'idle'].forEach(k => T[k] /= f); T.segSpeed *= f; T.crystalCps *= f; T.fast = f; }   // для проверки
   // воспоминания каждой записи: фото (img/…) или схема (ключ ILL)
   const MEMS = { 1: ['img/memory_cave.jpg', 'shell'], 2: ['img/memory_witness.jpg'], 3: ['img/memory_peaks.jpg', 'starmap'], 4: ['cradle', 'shell'] };
   const params = new URLSearchParams(location.search);
-  let saved = {}; try { saved = JSON.parse(localStorage.getItem('alien_cfg') || '{}'); } catch (e) {}
-  const cfg = {
-    view: params.get('view') || saved.view || 'beacon',
-    script: params.get('script') || saved.script || 'crystal',
-    qr: params.get('qr') || saved.qr || 'pulse'
-  };
+  // один вариант экрана: маяк Четырёх Домов, кристаллические знаки, QR при резонансе
+  const cfg = { view: 'beacon', script: 'crystal', qr: 'pulse' };
+
   const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
   const sleep = s => new Promise(r => setTimeout(r, s * 1000));
 
@@ -755,7 +741,7 @@ const DATA = {"texts": {"1": ["«chunDab chuq ghoSmeH ghanjaq rIn. tamtaHvIS nov
   async function loop() {
     const epoch = ++run.epoch;
     while (epoch === run.epoch) {
-      const rec = run.next; run.rec = rec; run.next = rec % 4 + 1;
+      const rec = run.next; run.rec = rec; run.next = rec + 1;
       clearText(); setRecUI(rec); await sleep(1.2);
       if (epoch !== run.epoch) return;
       cfg.script === 'crystal' ? await writeCrystal(rec, epoch) : await writePiqad(rec, epoch);
@@ -768,44 +754,33 @@ const DATA = {"texts": {"1": ["«chunDab chuq ghoSmeH ghanjaq rIn. tamtaHvIS nov
       else await sleep(6);
       if (epoch !== run.epoch) return;
       fadeText(true); await sleep(T.between); fadeText(false);
+      if (rec >= 4) return idle();
     }
   }
 
-  function apply() {
-    document.body.dataset.view = cfg.view; document.body.dataset.qr = cfg.qr; document.body.dataset.script = cfg.script;
-    try { localStorage.setItem('alien_cfg', JSON.stringify(cfg)); } catch (e) {}
-    $$('#menu [data-opt]').forEach(r => r.querySelectorAll('button').forEach(b => b.classList.toggle('on', cfg[r.dataset.opt] === b.dataset.v)));
-    const base = location.href.split('?')[0];
-    $('#menuUrl').textContent = `${base}?view=${cfg.view}&script=${cfg.script}&qr=${cfg.qr}`;
-    endPulse(); if (run.rec) run.next = run.rec; setTimeout(() => { resize(); loop(); }, 50);
+  // ожидание: вращающийся пульсирующий кристалл; старт по касанию или сам через 3 минуты
+  let idleTimer = null;
+  function idle() {
+    run.epoch++; endPulse(); clearText(); run.rec = 0;
+    $$('.mem').forEach(m => m.classList.remove('on'));
+    $$('.sector').forEach(s => s.classList.remove('on', 'past')); $$('.sigil').forEach(s => s.classList.remove('on'));
+    document.body.classList.add('idle');
+    clearTimeout(idleTimer); idleTimer = setTimeout(start, T.idle * 1000);
   }
-  document.addEventListener('keydown', e => {
-    const k = e.key.toLowerCase();
-    if (k === 'm' || k === 'ь') { $('#menu').classList.toggle('on'); document.body.classList.toggle('menu'); }
-    if (k === '1' || k === '2' || k === '3') { cfg.view = ['archive', 'cradle', 'beacon'][+k - 1]; apply(); }
-    if (k === 's' || k === 'ы') { cfg.script = cfg.script === 'piqad' ? 'crystal' : 'piqad'; apply(); }
-    if (k === 'q' || k === 'й') { cfg.qr = cfg.qr === 'pulse' ? 'mask' : 'pulse'; apply(); }
-    if (k === 'n' || k === 'т') { run.rec = 0; apply(); }
-  });
-  // на сенсорном экране: 5 быстрых касаний в левом верхнем углу — меню
-  let taps = []; document.addEventListener('pointerdown', e => {
-    if (e.clientX > 120 || e.clientY > 120) return;
-    taps = taps.filter(t => Date.now() - t < 2000).concat(Date.now());
-    if (taps.length >= 5) { taps = []; $('#menu').classList.toggle('on'); document.body.classList.toggle('menu'); }
-  });
-  $('#menu').addEventListener('click', e => {
-    const b = e.target.closest('button'); if (!b) return;
-    if (b.dataset.act === 'next') { run.rec = 0; return apply(); }
-    if (b.dataset.act === 'qrnow') { const ep = run.epoch; resonance(run.rec || 1, ep); return; }
-    const opt = b.closest('[data-opt]').dataset.opt; cfg[opt] = b.dataset.v; apply();
-  });
+  function start() {
+    if (!document.body.classList.contains('idle')) return;
+    clearTimeout(idleTimer); document.body.classList.remove('idle');
+    run.next = firstRec; setTimeout(() => { resize(); loop(); }, 1600);
+  }
+  $('#cRose').addEventListener('click', start);
 
   addEventListener('resize', resize);
   setInterval(tickGauges, 1600); tickGauges();
   (function frame(now) { drawDust(now); drawPulse(now); drawEcg(now); requestAnimationFrame(frame); })(performance.now());
   // стартовая запись: ?rec=2 — начать со второй
-  run.next = Math.max(1, Math.min(4, parseInt(params.get('rec') || '1', 10) || 1));
-  apply();
+  const firstRec = Math.max(1, Math.min(4, parseInt(params.get('rec') || '1', 10) || 1));
+  document.body.dataset.view = cfg.view; document.body.dataset.qr = cfg.qr; document.body.dataset.script = cfg.script;
+  resize(); idle();
 })();
 </script>
 </body>
