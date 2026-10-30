@@ -60,6 +60,18 @@
   .mem img { width: 100%; height: 100%; object-fit: cover; filter: saturate(.55) contrast(1.15) brightness(1.05) sepia(.2) hue-rotate(140deg); mix-blend-mode: screen; }
   .mem::before { content: ''; position: absolute; inset: 0; z-index: 2; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .35) 0 2px, transparent 2px 4px); }
   .mem::after { content: ''; position: absolute; inset: 0; z-index: 3; background: linear-gradient(180deg, rgba(94, 234, 212, .2), transparent 30%, transparent 70%, rgba(167, 139, 250, .25)); }
+  .mem .ill { position: absolute; inset: 0; display: none; background: #020a10; }
+  .mem .ill svg { width: 100%; height: 100%; display: block; }
+  .mem.svg .ill { display: block; }
+  .mem.svg img { display: none; }
+  .mem.glitch .ill { animation: glitch .35s steps(2) 3; }
+  .ill .dash { animation: dash 3s linear infinite; }
+  @keyframes dash { to { stroke-dashoffset: -40; } }
+  .ill .blink { animation: blink 2.4s ease-in-out infinite; }
+  .ill .blink.d1 { animation-delay: .6s; } .ill .blink.d2 { animation-delay: 1.2s; } .ill .blink.d3 { animation-delay: 1.8s; }
+  @keyframes blink { 50% { opacity: .25; } }
+  .ill .ghost { animation: ghost 4s steps(1) infinite; }
+  @keyframes ghost { 0%, 100% { opacity: 1; } 43% { opacity: .35; } 46% { opacity: 1; } 71% { opacity: .55; transform: translateX(3px); } 73% { opacity: 1; transform: none; } }
   .mem.glitch img { animation: glitch .35s steps(2) 3; }
   @keyframes glitch { 0% { transform: translate(1.2%, 0) skewX(-4deg); clip-path: inset(12% 0 50% 0); } 50% { transform: translate(-1.5%, .5%); clip-path: inset(55% 0 8% 0); } 100% { transform: none; clip-path: none; } }
 
@@ -121,17 +133,26 @@
   /* ---------- C. Маяк Четырёх Домов ---------- */
   #cRose { position: absolute; left: 6vw; top: 50%; transform: translateY(-50%); width: 82vh; height: 82vh; }
   #cRose svg.rose { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-  .sector { fill: rgba(94, 234, 212, .05); stroke: var(--line); stroke-width: 1.5; transition: fill 1.5s, stroke 1.5s; }
-  .sector.on { fill: rgba(94, 234, 212, .22); stroke: var(--ice); filter: drop-shadow(0 0 12px rgba(94, 234, 212, .6)); }
-  .sector.past { fill: rgba(94, 234, 212, .1); }
-  .sigil { fill: none; stroke: var(--cy); stroke-width: 2.2; transition: stroke 1.5s; }
-  .sigil.on { stroke: #fff; filter: drop-shadow(0 0 6px var(--cy)); }
-  #cRing { position: absolute; inset: -3%; animation: rot 90s linear infinite; }
-  #cRing2 { position: absolute; inset: 6%; animation: rot 140s linear infinite reverse; opacity: .6; }
+  #cCluster { animation: rot 170s linear infinite; }
+  #cRing { position: absolute; inset: -4%; animation: rot 120s linear infinite reverse; opacity: .8; }
+  #cRing2 { position: absolute; inset: 7%; animation: rot 80s linear infinite; opacity: .5; }
   @keyframes rot { to { transform: rotate(360deg); } }
-  #cCore { position: absolute; left: 50%; top: 50%; width: 38%; height: 38%; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, rgba(2, 12, 20, .95) 60%, rgba(94, 234, 212, .15)); border: 1px solid var(--line); overflow: hidden; }
+  .shard { stroke: rgba(94, 234, 212, .38); stroke-width: .5; stroke-linejoin: bevel; }
+  .shard .fa { stroke: rgba(191, 248, 240, .22); stroke-width: .35; }
+  .shard .fa { fill: rgba(94, 234, 212, calc(var(--a) * var(--k, 1))); }
+  .sector { stroke: var(--line); stroke-width: .9; transition: stroke 1.5s, filter 1.5s; }
+  .sector.on { stroke: var(--ice); filter: drop-shadow(0 0 10px rgba(94, 234, 212, .7)); }
+  .sector.on { --k: 3.4; }
+  .sector.past { --k: 1.8; }
+  .heart { animation: beat 5s ease-in-out infinite; transform-origin: 0 0; }
+  @keyframes beat { 50% { transform: scale(1.08); filter: drop-shadow(0 0 8px rgba(94, 234, 212, .8)); } }
+  .sigil { fill: none; stroke: var(--cy); stroke-width: 1.6; transition: stroke 1.5s; }
+  .sigil.on { stroke: #fff; filter: drop-shadow(0 0 5px var(--cy)); }
   #cSeal { left: 50%; top: 50%; width: 30%; height: 30%; transform: translate(-50%, -50%); z-index: 3; }
-  #cMem { inset: 0; border-radius: 50%; overflow: hidden; z-index: 2; }
+  #cMem { left: 50%; top: 50%; width: 64%; height: 64%; transform: translate(-50%, -50%); z-index: 4; background: #020a10; }
+  #cMem .fx { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 4; mix-blend-mode: screen; pointer-events: none; }
+  #cMemEdge { position: absolute; left: 50%; top: 50%; width: 64%; height: 64%; transform: translate(-50%, -50%); z-index: 5; overflow: visible; opacity: 0; transition: opacity 1.6s; pointer-events: none; }
+  #cMem.on + #cMemEdge { opacity: 1; }
   #cTx { left: calc(6vw + 90vh); right: 5vw; top: 12vh; bottom: 10vh; -webkit-mask-image: linear-gradient(180deg, transparent, #000 12%); mask-image: linear-gradient(180deg, transparent, #000 12%); }
   #cHead { position: absolute; left: calc(6vw + 90vh); right: 5vw; top: 5vh; display: flex; align-items: center; gap: 2vh; }
 
@@ -147,14 +168,14 @@
   body.menu { cursor: default; }
 </style>
 </head>
-<body data-view="archive" data-qr="pulse" data-script="piqad">
+<body data-view="beacon" data-qr="pulse" data-script="crystal">
 <div id="bg"></div>
 <canvas id="dust"></canvas>
 
 <!-- A. Кристаллический архив -->
 <section class="stage" id="vArchive">
   <div id="aCrystal"><div class="ring"></div><div class="ring r2"></div><div class="cr" id="aCr"></div><div class="core"></div></div>
-  <div class="mem" id="aMem"><img alt=""></div>
+  <div class="mem" id="aMem"><img alt=""><div class="ill"></div></div>
   <div id="aHead"><div class="facets" data-facets></div><span class="lbl" data-lbl="archive"></span><div class="bar"></div><span class="lbl" data-num></span></div>
   <div class="tx" id="aTx"><div class="tx-in"></div></div>
   <div class="seal" id="aSeal"><canvas></canvas></div>
@@ -169,7 +190,7 @@
   </div>
   <div id="bMid">
     <div id="bTxWrap"><div style="position:absolute;top:-1vh;left:2vw"><div class="facets" data-facets></div></div><div class="tx" id="bTx" style="top:5vh"><div class="tx-in"></div></div></div>
-    <div style="position:relative"><div id="bHexEmpty"></div><div class="mem" id="bMem" style="position:absolute;inset:0"><img alt=""></div></div>
+    <div style="position:relative"><div id="bHexEmpty"></div><div class="mem" id="bMem" style="position:absolute;inset:0"><img alt=""><div class="ill"></div></div></div>
   </div>
   <div id="bSteps"></div>
   <div class="seal" id="bSeal"><canvas></canvas></div>
@@ -180,9 +201,10 @@
   <div id="cRose">
     <svg class="rose" id="cRing" viewBox="-100 -100 200 200"></svg>
     <svg class="rose" id="cRing2" viewBox="-100 -100 200 200"></svg>
-    <svg class="rose" id="cSectors" viewBox="-100 -100 200 200"></svg>
-    <div id="cCore"><div class="mem" id="cMem" style="position:absolute"><img alt=""></div></div>
+    <svg class="rose" id="cCluster" viewBox="-100 -100 200 200"></svg>
     <div class="seal" id="cSeal"><canvas></canvas></div>
+    <div class="mem" id="cMem"><img alt=""><div class="ill"></div><svg class="fx" viewBox="0 0 100 100" preserveAspectRatio="none"></svg></div>
+    <svg id="cMemEdge" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
   </div>
   <div id="cHead"><span class="lbl" data-lbl="beacon"></span><div class="bar" style="flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)"></div><span class="lbl" data-num></span></div>
   <div class="tx" id="cTx"><div class="tx-in"></div></div>
@@ -219,12 +241,13 @@ const DATA = /*DATA*/null;
   };
   const params0 = new URLSearchParams(location.search);
   if (params0.get('fast')) { const f = +params0.get('fast') || 6; ['holdAfterText', 'memory', 'between'].forEach(k => T[k] /= f); T.segSpeed *= f; T.crystalCps *= f; T.fast = f; }   // для проверки
-  const MEMS = { 1: 'img/memory_cave.jpg', 2: 'img/memory_witness.jpg', 3: 'img/memory_peaks.jpg', 4: 'img/memory_cave.jpg' };
+  // воспоминания каждой записи: фото (img/…) или схема (ключ ILL)
+  const MEMS = { 1: ['img/memory_cave.jpg', 'shell'], 2: ['img/memory_witness.jpg'], 3: ['img/memory_peaks.jpg', 'starmap'], 4: ['cradle', 'shell'] };
   const params = new URLSearchParams(location.search);
   let saved = {}; try { saved = JSON.parse(localStorage.getItem('alien_cfg') || '{}'); } catch (e) {}
   const cfg = {
-    view: params.get('view') || saved.view || 'archive',
-    script: params.get('script') || saved.script || 'piqad',
+    view: params.get('view') || saved.view || 'beacon',
+    script: params.get('script') || saved.script || 'crystal',
     qr: params.get('qr') || saved.qr || 'pulse'
   };
   const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
@@ -359,8 +382,8 @@ const DATA = /*DATA*/null;
     const cells = [];
     for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (q.m[y][x] === '1') cells.push({ x: tg.x + (x + Q) * s, y: tg.y + (y + Q) * s });
     const src = (document.querySelector(`body[data-view="${cfg.view}"] .stage .tx`) || document.body).getBoundingClientRect();
-    parts = cells.map(c => ({ tx: c.x, ty: c.y, x: src.left + Math.random() * src.width, y: src.top + Math.random() * src.height, r: Math.random() * Math.PI }));
-    pState = { tg, s, t0: performance.now(), phase: 'build' };
+    parts = cells.map(c => ({ tx: c.x, ty: c.y, x: src.left + Math.random() * src.width, y: src.top + Math.random() * src.height, r: (Math.random() - .5) * 4 * Math.PI, d: .45 + Math.random() * .5 }));
+    pState = { tg, s, t0: performance.now(), phase: 'build', frame: crystalFrame(rec, tg, s) };
     fadeText(true);
     await sleep(T.qrBuild); if (epoch !== run.epoch) return endPulse();
     pState.phase = 'hold'; await sleep(T.qrHold); if (epoch !== run.epoch) return endPulse();
@@ -369,26 +392,62 @@ const DATA = /*DATA*/null;
     await sleep(T.qrBreak); endPulse(); fadeText(false);
   }
   function endPulse() { pState = null; parts = []; px2.clearRect(0, 0, pc.width, pc.height); fadeText(false); }
+  // неровный кристалл вокруг QR: внешний контур + грани; тихая зона внутри остаётся ровным тёмным квадратом
+  function crystalFrame(rec, tg, s) {
+    const r = rng(900 + rec * 31), cx = tg.x + tg.size / 2, cy = tg.y + tg.size / 2, h = tg.size / 2 + s * .5, K = 12, pts = [];
+    for (let i = 0; i < K; i++) {
+      const a = (i + (r() - .5) * .55) / K * Math.PI * 2 - Math.PI / 2, b = h / Math.max(Math.abs(Math.cos(a)), Math.abs(Math.sin(a)));
+      const rr = b * (1.1 + r() * .3) + (i % 4 === 1 ? h * (.25 + r() * .3) : 0);   // иногда — выступающий шип
+      pts.push([Math.max(10, Math.min(innerWidth - 10, cx + Math.cos(a) * rr)), Math.max(10, Math.min(innerHeight - 10, cy + Math.sin(a) * rr))]);
+    }
+    const sq = [[cx - h, cy - h], [cx + h, cy - h], [cx + h, cy + h], [cx - h, cy + h]];
+    const near = q => sq.reduce((b, x) => Math.hypot(x[0] - q[0], x[1] - q[1]) < Math.hypot(b[0] - q[0], b[1] - q[1]) ? x : b);
+    return { pts, sq, near, al: pts.map(() => .05 + r() * .16), cx, cy };
+  }
+  function drawFrame(F, alpha) {
+    const c = px2, n = F.pts.length;
+    c.save(); c.globalAlpha = alpha;
+    for (let i = 0; i < n; i++) {
+      const a = F.pts[i], b = F.pts[(i + 1) % n];
+      c.beginPath(); c.moveTo(F.cx, F.cy); c.lineTo(...a); c.lineTo(...b); c.closePath();
+      c.fillStyle = `rgba(94,234,212,${F.al[i]})`; c.fill();
+      c.beginPath(); c.moveTo(...a); c.lineTo(...F.near(a)); c.strokeStyle = 'rgba(191,248,240,.3)'; c.lineWidth = 1; c.stroke();
+    }
+    c.beginPath(); F.pts.forEach((q, i) => i ? c.lineTo(...q) : c.moveTo(...q)); c.closePath();
+    c.strokeStyle = '#bff8f0'; c.lineWidth = 1.6; c.shadowColor = '#5eead4'; c.shadowBlur = 14; c.stroke(); c.shadowBlur = 0;
+    // тихая зона — тёмная, без неё код не читается
+    c.fillStyle = '#020a10'; c.fillRect(F.sq[0][0], F.sq[0][1], F.sq[1][0] - F.sq[0][0], F.sq[2][1] - F.sq[0][1]);
+    c.strokeStyle = 'rgba(94,234,212,.35)'; c.lineWidth = 1; c.strokeRect(F.sq[0][0], F.sq[0][1], F.sq[1][0] - F.sq[0][0], F.sq[2][1] - F.sq[0][1]);
+    c.restore();
+  }
+  // кубик: лицевая грань светлая, верх и бок — объём; при d = 0 остаётся ровный квадрат модуля
+  function cube(x, y, sz, d, rot) {
+    const c = px2;
+    c.save(); c.translate(x + sz / 2, y + sz / 2); if (rot) c.rotate(rot);
+    const h = sz / 2;
+    if (d > .4) {
+      c.fillStyle = '#ffffff'; c.beginPath(); c.moveTo(-h, -h); c.lineTo(-h + d, -h - d); c.lineTo(h + d, -h - d); c.lineTo(h, -h); c.closePath(); c.fill();
+      c.fillStyle = '#2bb5a6'; c.beginPath(); c.moveTo(h, -h); c.lineTo(h + d, -h - d); c.lineTo(h + d, h - d); c.lineTo(h, h); c.closePath(); c.fill();
+    }
+    c.fillStyle = '#bff8f0'; c.fillRect(-h - .4, -h - .4, sz + .8, sz + .8);
+    c.restore();
+  }
   function drawPulse(now) {
     px2.clearRect(0, 0, pc.width, pc.height);
     if (!pState) return;
-    const { tg, s } = pState;
+    const { s } = pState;
     if (pState.phase !== 'break') {
       const k = Math.min(1, (now - pState.t0) / (T.qrBuild * 1000)), e = 1 - Math.pow(1 - k, 3);
-      px2.globalAlpha = Math.min(1, k * 1.4);
-      px2.fillStyle = '#020a10'; px2.fillRect(tg.x - s * .5, tg.y - s * .5, tg.size + s, tg.size + s);   // тихая зона
-      px2.strokeStyle = 'rgba(94,234,212,.5)'; px2.lineWidth = 1.5; px2.strokeRect(tg.x - s * .5, tg.y - s * .5, tg.size + s, tg.size + s);
-      px2.globalAlpha = 1;
+      drawFrame(pState.frame, Math.min(1, k * 1.4));
       for (const p of parts) {
-        const x = p.x + (p.tx - p.x) * e, y = p.y + (p.ty - p.y) * e, sz = s * (.35 + .65 * e);
-        px2.save(); px2.translate(x + s / 2, y + s / 2); px2.rotate(p.r * (1 - e));
-        px2.fillStyle = '#bff8f0'; px2.shadowColor = '#5eead4'; px2.shadowBlur = pState.phase === 'hold' ? 0 : 10 * (1 - e);
-        px2.fillRect(-sz / 2, -sz / 2, sz + .5, sz + .5); px2.restore();
+        const x = p.x + (p.tx - p.x) * e, y = p.y + (p.ty - p.y) * e, sz = s * (.4 + .6 * e);
+        cube(x, y, sz, sz * p.d * (1 - e), p.r * (1 - e));
       }
     } else {
       const k = Math.min(1, (now - pState.t1) / (T.qrBreak * 1000)), e = k * k;
+      drawFrame(pState.frame, 1 - k);
       px2.globalAlpha = 1 - k;
-      for (const p of parts) { const x = p.bx + (p.ex - p.bx) * e, y = p.by + (p.ey - p.by) * e; px2.fillStyle = '#bff8f0'; px2.fillRect(x, y, s * (1 - e * .7), s * (1 - e * .7)); }
+      for (const p of parts) { const x = p.bx + (p.ex - p.bx) * e, y = p.by + (p.ey - p.by) * e, sz = s * (1 - e * .5); cube(x, y, sz, sz * p.d * Math.min(1, e * 3), p.r * e); }
       px2.globalAlpha = 1;
     }
   }
@@ -442,29 +501,194 @@ const DATA = /*DATA*/null;
   }
 
   /* ---------------- вид C: роза четырёх домов ---------------- */
-  (function buildRose() {
-    const S = $('#cSectors'); let html = '';
-    const arc = (a0, a1, r0, r1) => { const p = (a, r) => `${(Math.cos(a) * r).toFixed(2)} ${(Math.sin(a) * r).toFixed(2)}`; return `M${p(a0, r1)} A${r1} ${r1} 0 0 1 ${p(a1, r1)} L${p(a1, r0)} A${r0} ${r0} 0 0 0 ${p(a0, r0)} Z`; };
-    for (let i = 0; i < 4; i++) {
-      const a0 = -Math.PI / 2 + i * Math.PI / 2 + .06, a1 = a0 + Math.PI / 2 - .12, am = (a0 + a1) / 2;
-      html += `<path class="sector" data-sec="${i}" d="${arc(a0, a1, 22, 78)}"/>`;
-      const cx = Math.cos(am) * 52, cy = Math.sin(am) * 52;
-      html += `<g class="sigil" data-sig="${i}" transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) scale(.9)">${['<path d="M0 -12 L9 0 L0 12 L-9 0Z M0 -12 L0 12"/>', '<path d="M-10 -8 L10 -8 L0 12Z M-4 -2 L4 -2"/>', '<path d="M-9 -9 L9 9 M9 -9 L-9 9 M0 -13 L0 13"/>', '<path d="M0 -12 L11 -4 L7 10 L-7 10 L-11 -4Z M0 -12 L0 2 L7 10 M0 2 L-7 10"/>'][i]}</g>`;
+  /* ---------------- вид C: маяк — скопление кристаллов ---------------- */
+  const gD = k => glyph(k).match(/d="([^"]+)"/)[1];
+  const P = (x, y) => `${x.toFixed(1)} ${y.toFixed(1)}`;
+  // один кристалл-осколок: основание у центра, остриё наружу, 4 грани разной яркости
+  function shardSvg(r, ang, r0, L, w, cls, extra) {
+    const ca = Math.cos(ang), sa = Math.sin(ang), T = (x, y) => [r0 * ca + x * ca - y * sa, r0 * sa + x * sa + y * ca];
+    const pts = [[0, -w * .45], [L * (.62 + r() * .14), -w * (.42 + r() * .2)], [L, (r() - .5) * w * .25], [L * (.6 + r() * .14), w * (.42 + r() * .2)], [0, w * .45]];
+    const M = [L * (.5 + r() * .15), (r() - .5) * w * .2], O = [0, (r() - .5) * w * .2];
+    const faces = [[pts[0], pts[1], M, O], [pts[1], pts[2], M], [pts[2], pts[3], M], [pts[3], pts[4], O, M]];
+    const poly = a => 'M' + a.map(q => P(...T(...q))).join(' L') + 'Z';
+    let h = `<g class="shard ${cls || ''}" ${extra || ''}>`;
+    faces.forEach((f, i) => { const al = [.05, .1, .03, .07][i] * (.7 + r() * .6); h += `<path class="fa" d="${poly(f)}" style="--a:${al.toFixed(3)}"/>`; });
+    h += `<path d="${poly(pts)}" fill="none"/></g>`;
+    return h;
+  }
+  // неровный многоугольник вокруг центра
+  function ragged(r, K, r0, r1) {
+    return Array.from({ length: K }, (_, i) => { const a = (i + (r() - .5) * .5) / K * Math.PI * 2 - Math.PI / 2, rr = r0 + r() * (r1 - r0); return [Math.cos(a) * rr, Math.sin(a) * rr]; });
+  }
+  const SIGILS = ['<path d="M0 -12 L9 0 L0 12 L-9 0Z M0 -12 L0 12"/>', '<path d="M-10 -8 L10 -8 L0 12Z M-4 -2 L4 -2"/>', '<path d="M-9 -9 L9 9 M9 -9 L-9 9 M0 -13 L0 13"/>', '<path d="M0 -12 L11 -4 L7 10 L-7 10 L-11 -4Z M0 -12 L0 2 L7 10 M0 2 L-7 10"/>'];
+  (function buildCluster() {
+    const r = rng(4073); let h = '';
+    // мелкие кристаллы — фон скопления
+    for (let i = 0; i < 22; i++) {
+      const a = (i / 22) * Math.PI * 2 + (r() - .5) * .25;
+      h += shardSvg(r, a, 8 + r() * 14, 26 + r() * 40, 7 + r() * 11);
     }
-    S.innerHTML = html;
-    const ring = (el, r, count, key) => {
-      let h = `<circle r="${r}" fill="none" stroke="rgba(94,234,212,.25)" stroke-dasharray="1 3"/>`;
+    // четыре Дома — большие кристаллы со знаками
+    for (let i = 0; i < 4; i++) {
+      const a = -Math.PI / 2 + i * Math.PI / 2 + (r() - .5) * .18, L = 74 + r() * 12, w = 30 + r() * 8;
+      h += shardSvg(r, a, 10, L, w, 'sector', `data-sec="${i}"`);
+      const d = 10 + L * .5;
+      h += `<g class="sigil" data-sig="${i}" transform="translate(${P(Math.cos(a) * d, Math.sin(a) * d).replace(' ', ' ')}) rotate(${(a * 180 / Math.PI + 90).toFixed(1)}) scale(.75)">${SIGILS[i]}</g>`;
+    }
+    // сердце скопления
+    const hp = ragged(r, 7, 9, 15);
+    h += `<g class="heart">` + hp.map((q, i) => { const n = hp[(i + 1) % hp.length]; return `<path d="M0 0 L${P(...q)} L${P(...n)}Z" style="fill:rgba(191,248,240,${(.08 + r() * .2).toFixed(2)})" stroke="rgba(191,248,240,.5)" stroke-width=".4"/>`; }).join('') + `</g>`;
+    $('#cCluster').innerHTML = h;
+    // внешние кольца знаков — неровные многоугольники
+    const ring = (el, K, r0, r1, count, key) => {
+      const pts = ragged(r, K, r0, r1); pts.push(pts[0]);
+      const seg = []; let tot = 0;
+      for (let i = 0; i < K; i++) { const [a, b] = [pts[i], pts[i + 1]], l = Math.hypot(b[0] - a[0], b[1] - a[1]); seg.push({ a, b, l, s: tot }); tot += l; }
+      let g = `<path d="M${pts.map(q => P(...q)).join(' L')}" fill="none" stroke="rgba(94,234,212,.28)" stroke-width=".5" stroke-dasharray="1 2.5"/>`;
+      pts.slice(0, K).forEach(q => g += `<path d="M${P(q[0], q[1] - 2.2)} L${P(q[0] + 1.6, q[1])} L${P(q[0], q[1] + 2.2)} L${P(q[0] - 1.6, q[1])}Z" fill="rgba(191,248,240,.55)"/>`);
       for (let i = 0; i < count; i++) {
-        const a = i / count * 360;
-        h += `<g transform="rotate(${a}) translate(0 ${-r - 2}) scale(.35)" opacity=".75">${glyph(key + i).replace('<svg viewBox="0 0 20 30">', '').replace('</svg>', '').replace('<path', '<path transform="translate(-10 -15)" fill="none" stroke="#5eead4" stroke-width="2"')}</g>`;
+        const d = (i + .5) / count * tot, sg = seg.find(x => d >= x.s && d < x.s + x.l) || seg[seg.length - 1], k = (d - sg.s) / sg.l;
+        const x = sg.a[0] + (sg.b[0] - sg.a[0]) * k, y = sg.a[1] + (sg.b[1] - sg.a[1]) * k, an = Math.atan2(sg.b[1] - sg.a[1], sg.b[0] - sg.a[0]) * 180 / Math.PI;
+        g += `<g transform="translate(${P(x, y)}) rotate(${an.toFixed(1)}) translate(0 -3.5) scale(.3)" opacity=".75"><path transform="translate(-10 -15)" d="${gD(key + i)}" fill="none" stroke="#5eead4" stroke-width="2"/></g>`;
       }
-      el.innerHTML = h;
+      el.innerHTML = g;
     };
-    ring($('#cRing'), 92, 64, 'ring'); ring($('#cRing2'), 82, 40, 'ringb');
+    ring($('#cRing'), 13, 88, 97, 60, 'ring'); ring($('#cRing2'), 9, 80, 88, 36, 'ringb');
+    // окно воспоминаний — неоднородный кристалл: неровный контур + грани поверх
+    const rm = rng(1977), K = 9;
+    const out = Array.from({ length: K }, (_, i) => { const a = (i + (rm() - .5) * .7) / K * Math.PI * 2 - Math.PI / 2, rr = (i % 3 === 2 ? 36 : 43) + rm() * 8; return [50 + Math.cos(a) * rr, 50 + Math.sin(a) * rr]; });
+    const inn = [[38 + rm() * 8, 36 + rm() * 8], [58 + rm() * 8, 44 + rm() * 10], [42 + rm() * 10, 60 + rm() * 8]];
+    $('#cMem').style.clipPath = `polygon(${out.map(q => `${q[0].toFixed(1)}% ${q[1].toFixed(1)}%`).join(',')})`;
+    let fx = '';
+    out.forEach((q, i) => {
+      const n = out[(i + 1) % K], c = inn.reduce((b, x) => Math.hypot(x[0] - q[0], x[1] - q[1]) < Math.hypot(b[0] - q[0], b[1] - q[1]) ? x : b);
+      fx += `<path d="M${P(...q)} L${P(...n)} L${P(...c)}Z" fill="rgba(191,248,240,${(rm() * .13).toFixed(3)})" stroke="rgba(191,248,240,.28)" stroke-width=".25" vector-effect="non-scaling-stroke"/>`;
+    });
+    fx += `<path d="M${inn.map(q => P(...q)).join(' L')}Z" fill="rgba(167,139,250,.06)" stroke="rgba(191,248,240,.22)" stroke-width=".25" vector-effect="non-scaling-stroke"/>`;
+    $('#cMem .fx').innerHTML = fx;
+    $('#cMemEdge').innerHTML = `<path d="M${out.map(q => P(...q)).join(' L')}Z" fill="none" stroke="#bff8f0" stroke-width="1.5" vector-effect="non-scaling-stroke" style="filter:drop-shadow(0 0 6px #5eead4)"/>` +
+      out.map((q, i) => i % 3 ? '' : (() => { const a = Math.atan2(q[1] - 50, q[0] - 50), l = 6 + rm() * 7, w = .9; return `<path d="M${P(q[0] - Math.sin(a) * w * 3, q[1] + Math.cos(a) * w * 3)} L${P(q[0] + Math.cos(a) * l, q[1] + Math.sin(a) * l)} L${P(q[0] + Math.sin(a) * w * 3, q[1] - Math.cos(a) * w * 3)}Z" fill="rgba(94,234,212,.25)" stroke="#bff8f0" stroke-width=".8" vector-effect="non-scaling-stroke"/>`; })()).join('');
   })();
 
   /* ---------------- кристалл вида A ---------------- */
   (function buildCrystal() { const c = $('#aCr'); for (let i = 0; i < 6; i++) { const f = document.createElement('div'); f.className = 'face'; f.style.transform = `rotateY(${i * 60}deg) translateZ(11vh)`; c.appendChild(f); } })();
+
+  /* ---------------- схемы-воспоминания (без читаемого текста) ---------------- */
+  const ILL = (() => {
+    const bg = '<rect width="400" height="400" fill="#020a10"/>';
+    const lbl = (key, x, y, sc, col) => `<g transform="translate(${x} ${y}) scale(${sc || .7})"><path transform="translate(-10 -15)" d="${gD(key)}" fill="none" stroke="${col || '#5eead4'}" stroke-width="2"/></g>`;
+    const word = (key, n, x, y, sc) => Array.from({ length: n }, (_, i) => lbl(key + i, x + i * 10 * (sc || .6) * 1.6, y, sc || .6)).join('');
+    const dots = (n, x, y) => Array.from({ length: n }, (_, i) => `<path d="M${x + i * 7} ${y - 3} L${x + i * 7 + 2.5} ${y} L${x + i * 7} ${y + 3} L${x + i * 7 - 2.5} ${y}Z" fill="#bff8f0"/>`).join('');
+    const pts = a => 'M' + a.map(q => q.join(' ')).join(' L') + 'Z';
+    const mir = a => a.map(([x, y]) => [400 - x, y]);
+
+    // 03: путь Бетельгейзе → точка Сигма, четыре траектории Стражей
+    function starmap() {
+      const r = rng(303), B = [88, 104], S = [302, 296];
+      let h = `<svg viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet"><defs><radialGradient id="smB"><stop offset="0" stop-color="#fff1dc"/><stop offset=".35" stop-color="#fdba74" stop-opacity=".85"/><stop offset="1" stop-color="#f97316" stop-opacity="0"/></radialGradient>
+        <radialGradient id="smN"><stop offset="0" stop-color="#a78bfa" stop-opacity=".18"/><stop offset="1" stop-color="#a78bfa" stop-opacity="0"/></radialGradient></defs>${bg}
+        <ellipse cx="210" cy="190" rx="190" ry="90" transform="rotate(38 210 190)" fill="url(#smN)"/>`;
+      for (let i = 1; i <= 5; i++) h += `<circle cx="${S[0]}" cy="${S[1]}" r="${i * 42}" fill="none" stroke="rgba(94,234,212,.1)" stroke-dasharray="2 5"/>`;
+      for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; h += `<path d="M${S[0]} ${S[1]} L${(S[0] + Math.cos(a) * 260).toFixed(0)} ${(S[1] + Math.sin(a) * 260).toFixed(0)}" stroke="rgba(94,234,212,.06)"/>`; }
+      const st = [];
+      for (let i = 0; i < 150; i++) { const x = r() * 400, y = r() * 400, s = .3 + r() * r() * 1.6; st.push([x, y]); h += `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${s.toFixed(2)}" fill="#bff8f0" opacity="${(.3 + r() * .6).toFixed(2)}" ${r() < .08 ? `class="blink d${i % 4}"` : ''}/>`; }
+      for (let i = 0; i < 9; i++) { const a = st[Math.floor(r() * st.length)], b = st.reduce((m, q) => q !== a && Math.hypot(q[0] - a[0], q[1] - a[1]) < Math.hypot(m[0] - a[0], m[1] - a[1]) ? q : m, [9e9, 9e9]); h += `<path d="M${a.map(v => v.toFixed(0)).join(' ')} L${b.map(v => v.toFixed(0)).join(' ')}" stroke="rgba(167,139,250,.3)" stroke-width=".7"/>`; }
+      // четыре траектории: первая пройдена почти целиком, остальные вылетели позже (через 4, 9 и 21 светило)
+      const C = [[[150, 30], [330, 150]], [[210, 120], [250, 210]], [[70, 250], [190, 330]], [[20, 170], [120, 390]]];
+      const prog = [.9, .64, .4, .12], col = ['#bff8f0', '#5eead4', '#7dd3fc', '#a78bfa'], dash = ['', '7 5', '4 4', '1.5 4'];
+      const bz = (c, t) => [0, 1].map(k => (1 - t) ** 3 * B[k] + 3 * (1 - t) ** 2 * t * c[0][k] + 3 * (1 - t) * t * t * c[1][k] + t ** 3 * S[k]);
+      C.forEach((c, i) => {
+        h += `<path d="M${B.join(' ')} C${c[0].join(' ')} ${c[1].join(' ')} ${S.join(' ')}" fill="none" stroke="${col[i]}" stroke-opacity="${i ? .7 : .9}" stroke-width="${i ? 1.1 : 1.6}" ${dash[i] ? `stroke-dasharray="${dash[i]}" class="dash"` : ''}/>`;
+        const [x, y] = bz(c, prog[i]), [x2, y2] = bz(c, prog[i] + .01), a = Math.atan2(y2 - y, x2 - x) * 180 / Math.PI;
+        h += `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${a.toFixed(1)})"><path d="M8 0 L-6 -5 L-3 0 L-6 5Z" fill="${col[i]}" style="filter:drop-shadow(0 0 4px ${col[i]})"/></g>`;
+        h += `<g transform="translate(${(x + 10).toFixed(0)} ${(y + 12).toFixed(0)})">${dots(i + 1, 0, 0)}</g>`;
+      });
+      // Бетельгейзе — красный сверхгигант
+      h += `<circle cx="${B[0]}" cy="${B[1]}" r="40" fill="url(#smB)"/><circle cx="${B[0]}" cy="${B[1]}" r="9" fill="#fff1dc"/>`;
+      for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + .2, l = i % 2 ? 22 : 34; h += `<path d="M${(B[0] + Math.cos(a) * 12).toFixed(1)} ${(B[1] + Math.sin(a) * 12).toFixed(1)} L${(B[0] + Math.cos(a) * l).toFixed(1)} ${(B[1] + Math.sin(a) * l).toFixed(1)}" stroke="#fdba74" stroke-width="${i % 2 ? .8 : 1.4}"/>`; }
+      h += `<circle cx="${B[0]}" cy="${B[1]}" r="48" fill="none" stroke="rgba(253,186,116,.4)" stroke-dasharray="3 4"/>` + word('betel', 3, B[0] - 22, B[1] + 66, .6);
+      // точка Сигма — место встречи каравана
+      h += `<g transform="translate(${S[0]} ${S[1]})"><circle r="16" fill="none" stroke="#bff8f0" class="blink"/><circle r="27" fill="none" stroke="rgba(94,234,212,.5)" stroke-dasharray="2 3" class="blink d2"/>
+        <path d="M0 -12 L7 0 L0 12 L-7 0Z M0 -12 L0 12 M-7 0 L7 0" fill="rgba(191,248,240,.3)" stroke="#fff" stroke-width="1.2" style="filter:drop-shadow(0 0 6px #5eead4)"/>
+        ${[0, 1, 2, 3].map(k => `<path d="M0 -34 L0 -40" stroke="#bff8f0" transform="rotate(${k * 90 + 45})"/>`).join('')}</g>` + word('sigma', 3, S[0] - 16, S[1] - 52, .6);
+      return h + '</svg>';
+    }
+
+    // 04: колыбель — внешние гребни, инфузионный клапан, приёмный кристалл (подсказка к Обратному Протоколу)
+    function cradle() {
+      let h = `<svg viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet">${bg}`;
+      for (let i = 0; i <= 400; i += 20) h += `<path d="M${i} 0 V400 M0 ${i} H400" stroke="rgba(94,234,212,.055)"/>`;
+      const line = 'stroke="#5eead4" stroke-width="1.3" stroke-linejoin="bevel"';
+      // корпус
+      h += `<path d="M58 210 L92 164 L318 164 L344 210 L318 256 L92 256Z" fill="rgba(94,234,212,.05)" ${line}/>
+        <path d="M70 210 L98 172 L312 172 L334 210 L312 248 L98 248Z" fill="none" stroke="rgba(94,234,212,.35)" stroke-dasharray="3 3"/>
+        <path d="M205 164 V256" stroke="rgba(191,248,240,.4)" stroke-dasharray="6 3"/>`;
+      // спящий внутри
+      h += `<path d="M104 210 L146 190 L264 192 L298 210 L264 228 L146 230Z" fill="rgba(191,248,240,.07)" stroke="rgba(191,248,240,.55)"/><path d="M104 210 L298 210 M146 190 L180 210 L146 230 M264 192 L240 210 L264 228" stroke="rgba(191,248,240,.25)" fill="none"/>`;
+      // капилляры
+      for (let k = 0; k < 4; k++) { let d = `M${112 + k * 4} ${200 + k * 4}`; for (let x = 130; x <= 290; x += 16) d += ` L${x} ${(196 + k * 5 + Math.sin(x * .2 + k) * 4).toFixed(1)}`; h += `<path d="${d}" fill="none" stroke="rgba(167,139,250,.45)" stroke-width=".7"/>`; }
+      // 1 — внешние гребни и поток энергии от кристаллов
+      let rid = '';
+      for (let i = 0; i < 7; i++) { const x = 96 + i * 24; rid += `<path d="M${x} 164 L${x + 5} 140 L${x + 14} 140 L${x + 19} 164" fill="rgba(94,234,212,.12)" stroke="#bff8f0" stroke-width="1.1"/>`; }
+      h += `<g class="blink">${rid}</g>`;
+      h += `<path d="M150 62 L160 50 L170 62 L170 84 L160 96 L150 84Z" fill="rgba(191,248,240,.18)" stroke="#bff8f0" stroke-width="1.2"/><path d="M160 50 L160 96" stroke="rgba(191,248,240,.5)"/>`;
+      for (let i = 0; i < 7; i += 2) { const x = 105 + i * 24; h += `<path d="M160 98 L${(160 + x) / 2 - 6} 112 L${(160 + x) / 2 + 6} 120 L${x} 138" fill="none" stroke="#fde68a" stroke-width="1" stroke-dasharray="4 3" class="dash"/>`; }
+      h += dots(1, 186, 74) + word('crg', 2, 214, 74, .55);
+      // 2 — инфузионный клапан
+      h += `<g class="blink d1"><circle cx="122" cy="246" r="12" fill="rgba(2,10,16,.9)" stroke="#bff8f0" stroke-width="1.3"/><path d="M114 238 L130 254 M130 238 L114 254" stroke="#bff8f0"/></g>
+        <path d="M122 258 V306 L92 306" fill="none" stroke="#5eead4" stroke-width="3" stroke-opacity=".5"/><path d="M122 258 V306 L92 306" fill="none" stroke="#bff8f0" stroke-dasharray="2 5" class="dash"/>
+        <path d="M78 290 C70 304 70 318 80 322 C90 318 90 304 82 290Z" fill="rgba(167,139,250,.3)" stroke="#a78bfa"/>` + dots(2, 136, 300) + word('inf', 2, 162, 300, .55);
+      // 3 — приёмный кристалл и звуковая волна
+      h += `<path d="M300 164 V136" stroke="#5eead4" stroke-width="2"/><path d="M300 92 L312 104 L312 128 L300 140 L288 128 L288 104Z" fill="rgba(191,248,240,.2)" stroke="#fff" stroke-width="1.3" style="filter:drop-shadow(0 0 6px #5eead4)"/><path d="M300 92 V140 M288 104 L312 128" stroke="rgba(191,248,240,.4)"/>`;
+      for (let i = 1; i <= 3; i++) { const R = 14 + i * 11; h += `<path d="M${(300 + R * Math.cos(-1)).toFixed(1)} ${(116 + R * Math.sin(-1)).toFixed(1)} A${R} ${R} 0 0 1 ${(300 + R * Math.cos(.7)).toFixed(1)} ${(116 + R * Math.sin(.7)).toFixed(1)}" fill="none" stroke="#7dd3fc" stroke-width="1.2" class="blink d${i}"/>`; }
+      h += dots(3, 268, 74) + word('rcv', 2, 300, 62, .55);
+      // 4 — касание контроллера
+      h += `<path d="M318 256 L318 300" stroke="rgba(94,234,212,.5)" stroke-dasharray="2 3"/><rect x="298" y="300" width="40" height="26" rx="3" fill="rgba(94,234,212,.08)" stroke="#bff8f0"/><circle cx="318" cy="313" r="6" fill="#bff8f0" class="blink d2"/>` + dots(4, 300, 342);
+      // размерная линия
+      h += `<path d="M58 280 H344 M58 274 V286 M344 274 V286" stroke="rgba(94,234,212,.4)"/>` + word('dim', 3, 176, 292, .45);
+      return h + '</svg>';
+    }
+
+    // 01/04: силуэт Оболочки Касания — пропавший доспех
+    function shell() {
+      const L = {
+        pauldron: [[168, 122], [140, 116], [122, 138], [130, 162], [156, 150]],
+        upper: [[132, 166], [152, 158], [148, 208], [128, 210]],
+        fore: [[128, 214], [148, 212], [144, 264], [124, 264]],
+        thigh: [[170, 250], [197, 250], [193, 306], [172, 306]],
+        shin: [[172, 310], [193, 310], [190, 360], [168, 360]],
+        foot: [[164, 364], [194, 364], [196, 374], [158, 374]]
+      };
+      const C = {
+        helm: [[200, 50], [223, 63], [227, 92], [212, 108], [188, 108], [173, 92], [177, 63]],
+        collar: [[186, 110], [214, 110], [222, 120], [178, 120]],
+        torso: [[168, 122], [232, 122], [247, 140], [238, 196], [222, 222], [178, 222], [162, 196], [153, 140]],
+        hips: [[176, 226], [224, 226], [232, 246], [168, 246]]
+      };
+      const missing = new Set(['R:fore', 'L:shin']);   // этих пластин нет — только пунктир
+      const plate = (a, miss) => miss ? `<path d="${pts(a)}" fill="none" stroke="#a78bfa" stroke-dasharray="3 3" class="blink"/>` : `<path d="${pts(a)}" fill="rgba(94,234,212,.08)" stroke="#bff8f0" stroke-width="1.1" stroke-linejoin="bevel"/>`;
+      let fig = '';
+      Object.values(C).forEach(a => fig += plate(a));
+      Object.entries(L).forEach(([k, a]) => { fig += plate(a, missing.has('L:' + k)) + plate(mir(a), missing.has('R:' + k)); });
+      fig += `<path d="M184 80 L216 80 L209 93 L191 93Z" fill="rgba(94,234,212,.45)" stroke="#fff" stroke-width=".8"/>
+        <path d="M200 122 V222 M162 160 H238 M170 190 H230 M200 50 V78" stroke="rgba(191,248,240,.3)" fill="none"/>
+        <path d="M200 138 L211 155 L200 173 L189 155Z" fill="rgba(191,248,240,.35)" stroke="#fff" class="blink" style="filter:drop-shadow(0 0 6px #5eead4)"/>`;
+      // ладони — по три отростка (у правой руки пропала и кисть)
+      fig += `<path d="M124 268 L119 292 M134 268 L134 296 M144 268 L148 292" stroke="#bff8f0" stroke-width="1.4"/>`;
+      let h = `<svg viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet">${bg}`;
+      for (let i = 0; i <= 400; i += 25) h += `<path d="M0 ${i} H400" stroke="rgba(94,234,212,.04)"/>`;
+      // контейнер, в котором Оболочки нет
+      h += [[96, 36, 1, 1], [304, 36, -1, 1], [96, 384, 1, -1], [304, 384, -1, -1]].map(([x, y, sx, sy]) => `<path d="M${x} ${y + sy * 22} V${y} H${x + sx * 22}" fill="none" stroke="#5eead4" stroke-width="1.6"/>`).join('');
+      h += `<g transform="translate(-5 -3)" opacity=".5">${fig.replace(/#bff8f0/g, '#a78bfa').replace(/rgba\(94,234,212,\.08\)/g, 'none')}</g>`;
+      h += `<g class="ghost">${fig}</g>`;
+      h += `<rect x="100" y="40" width="200" height="2" fill="rgba(191,248,240,.5)"><animate attributeName="y" values="40;380;40" dur="7s" repeatCount="indefinite"/></rect>`;
+      for (let i = 0; i < 6; i++) h += lbl('shl' + i, 62, 80 + i * 44, .55) + lbl('shr' + i, 338, 100 + i * 44, .55);
+      h += dots(1, 54, 52) + dots(4, 318, 52);
+      return h + '</svg>';
+    }
+    return { starmap, cradle, shell };
+  })();
+  window.ILL = ILL;
 
   /* ---------------- сценарий ---------------- */
   const run = { rec: 0, next: 1, epoch: 0 };
@@ -474,15 +698,24 @@ const DATA = /*DATA*/null;
     $$('.sector').forEach(s => { const i = +s.dataset.sec + 1; s.classList.toggle('on', i === rec); s.classList.toggle('past', i < rec); });
     $$('.sigil').forEach(s => s.classList.toggle('on', +s.dataset.sig + 1 === rec));
     $$('.seal canvas').forEach(c => drawQR(c, rec, { frame: true }));
-    $$('.mem img').forEach(i => i.src = MEMS[rec]);
+  }
+  function setMem(m, item) {
+    const svg = !/\.(jpe?g|png|webp)$/i.test(item);
+    m.classList.toggle('svg', svg);
+    if (svg) m.querySelector('.ill').innerHTML = ILL[item](); else m.querySelector('img').src = item;
   }
   async function memory(epoch) {
     const el = { archive: '#aMem', cradle: '#bMem', beacon: '#cMem' }[cfg.view];
-    const m = $(el); m.classList.add('on');
+    const m = $(el), list = MEMS[run.rec] || [];
     if (cfg.view === 'beacon') $('#cSeal').style.opacity = '0';
-    const g = setInterval(() => { m.classList.add('glitch'); setTimeout(() => m.classList.remove('glitch'), 1100); }, 3800);
-    await sleep(T.memory);
-    clearInterval(g); m.classList.remove('on'); $('#cSeal').style.opacity = '';
+    for (let i = 0; i < list.length && epoch === run.epoch; i++) {
+      setMem(m, list[i]); m.classList.add('on');
+      const g = setInterval(() => { m.classList.add('glitch'); setTimeout(() => m.classList.remove('glitch'), 1100); }, 3800);
+      await sleep(T.memory);
+      clearInterval(g); m.classList.remove('on');
+      await sleep(i < list.length - 1 ? 1.8 / (T.fast || 1) : 0);
+    }
+    $('#cSeal').style.opacity = '';
   }
   async function loop() {
     const epoch = ++run.epoch;

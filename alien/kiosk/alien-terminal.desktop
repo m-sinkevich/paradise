@@ -3,5 +3,5 @@
 # Выход из киоска: Alt+F4.
 Type=Application
 Name=Alien terminal
-Exec=sh -c 'sleep 5; chromium --kiosk --incognito --noerrdialogs --disable-session-crashed-bubble --disable-pinch --overscroll-history-navigation=0 "file:///home/pi/alien/index.html?view=archive&script=piqad&qr=pulse" || chromium-browser --kiosk "file:///home/pi/alien/index.html?view=archive&script=piqad&qr=pulse"'
+Exec=sh -c 'sleep 5; chromium --kiosk --incognito --noerrdialogs --disable-session-crashed-bubble --disable-pinch --overscroll-history-navigation=0 "file:///home/pi/alien/index.html?view=beacon&script=crystal&qr=pulse" || chromium-browser --kiosk "file:///home/pi/alien/index.html?view=beacon&script=crystal&qr=pulse"'
 X-GNOME-Autostart-enabled=true
