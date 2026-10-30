@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>⟡</title>
+<style>
+  :root {
+    --bg: #02050a; --ice: #bff8f0; --cy: #5eead4; --cy2: #22d3ee; --vio: #a78bfa; --amb: #fbbf24; --red: #fb7185;
+    --dim: rgba(94, 234, 212, .18); --line: rgba(94, 234, 212, .28);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ice); cursor: none; user-select: none; }
+  body { font-family: system-ui, sans-serif; }
+  #bg { position: fixed; inset: 0; z-index: 0;
+    background: radial-gradient(70% 60% at 30% 40%, rgba(34, 211, 238, .10), transparent 70%),
+                radial-gradient(60% 50% at 85% 70%, rgba(167, 139, 250, .08), transparent 70%),
+                radial-gradient(120% 100% at 50% 50%, transparent 55%, rgba(0, 0, 0, .75) 100%); }
+  #dust { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+  #scan { position: fixed; inset: 0; z-index: 50; pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(255, 255, 255, .025) 0 1px, transparent 1px 3px); mix-blend-mode: overlay; }
+  #scan::after { content: ''; position: absolute; left: 0; right: 0; height: 22vh; top: -22vh;
+    background: linear-gradient(180deg, transparent, rgba(94, 234, 212, .05), transparent); animation: sweep 9s linear infinite; }
+  @keyframes sweep { to { top: 110vh; } }
+  .stage { position: fixed; inset: 0; z-index: 2; display: none; }
+  body[data-view="archive"] #vArchive, body[data-view="cradle"] #vCradle, body[data-view="beacon"] #vBeacon { display: block; }
+
+  /* ---------- общие: панель текста ---------- */
+  .tx { position: absolute; overflow: hidden; }
+  .tx-in { position: absolute; left: 0; right: 0; top: 0; display: flex; flex-direction: column; gap: 1.1vh; transition: transform .8s ease; }
+  .seg { position: relative; height: 3.3vh; }
+  .seg img { height: 100%; display: block; clip-path: inset(0 100% 0 0); filter: drop-shadow(0 0 .5vh rgba(94, 234, 212, .55)); }
+  .seg.on img { animation: write var(--d, 2s) linear forwards; }
+  .seg.done img { clip-path: none; opacity: .78; filter: drop-shadow(0 0 .3vh rgba(94, 234, 212, .35)); transition: opacity 1.2s; }
+  .seg.on::after { content: ''; position: absolute; top: -10%; bottom: -10%; width: .35vh; left: 0; background: #e6fffb;
+    box-shadow: 0 0 1.4vh 0.4vh var(--cy); animation: cursor var(--d, 2s) linear forwards; }
+  .seg.done::after { display: none; }
+  @keyframes write { to { clip-path: inset(0 0 0 0); } }
+  @keyframes cursor { to { left: var(--w, 100%); } }
+  .cline { display: flex; flex-wrap: wrap; gap: .9vh 0; align-items: flex-end; }
+  .cg { width: calc(var(--gw, 1) * 2.1vh); height: 4.2vh; opacity: 0; transform: translateY(.6vh) scale(.6); transition: opacity .25s, transform .25s; }
+  .cg.on { opacity: 1; transform: none; }
+  .cg svg { width: 100%; height: 100%; overflow: visible; }
+  .cg path { fill: rgba(94, 234, 212, .16); stroke: var(--ice); stroke-width: 2; stroke-linejoin: miter; filter: drop-shadow(0 0 3px rgba(94, 234, 212, .8)); }
+  .cg.fresh path { stroke: #fff; fill: rgba(191, 248, 240, .5); }
+  .cg.sp { width: 2vh; }
+  .cw { display: inline-flex; align-items: flex-end; position: relative; padding-top: .45vh; }
+  .cw::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(191, 248, 240, .75), transparent); opacity: 0; transition: opacity .6s; }
+  .cw:has(.cg.on)::before { opacity: 1; }
+  .tx.fade .tx-in { opacity: .15; transition: opacity 1.5s; }
+
+  /* знаки-подписи интерфейса (без латиницы и кириллицы) */
+  .lbl { display: inline-flex; gap: .3vh; height: 1.8vh; align-items: flex-end; opacity: .8; }
+  .lbl svg { height: 100%; width: 1.25vh; overflow: visible; }
+  .lbl path { fill: none; stroke: var(--cy); stroke-width: 2; }
+
+  /* голограмма-воспоминание */
+  .mem { position: absolute; opacity: 0; transition: opacity 1.6s; pointer-events: none; }
+  .mem.on { opacity: 1; }
+  .mem img { width: 100%; height: 100%; object-fit: cover; filter: saturate(.55) contrast(1.15) brightness(1.05) sepia(.2) hue-rotate(140deg); mix-blend-mode: screen; }
+  .mem::before { content: ''; position: absolute; inset: 0; z-index: 2; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .35) 0 2px, transparent 2px 4px); }
+  .mem::after { content: ''; position: absolute; inset: 0; z-index: 3; background: linear-gradient(180deg, rgba(94, 234, 212, .2), transparent 30%, transparent 70%, rgba(167, 139, 250, .25)); }
+  .mem.glitch img { animation: glitch .35s steps(2) 3; }
+  @keyframes glitch { 0% { transform: translate(1.2%, 0) skewX(-4deg); clip-path: inset(12% 0 50% 0); } 50% { transform: translate(-1.5%, .5%); clip-path: inset(55% 0 8% 0); } 100% { transform: none; clip-path: none; } }
+
+  /* QR: замаскированная печать */
+  .seal { position: absolute; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 1.4s; }
+  body[data-qr="mask"] .seal { opacity: 1; }
+  .seal canvas { width: 100%; height: 100%; display: block; }
+  #pulse { position: fixed; inset: 0; z-index: 40; pointer-events: none; }
+
+  /* ---------- A. Кристаллический архив ---------- */
+  #aCrystal { position: absolute; left: 4vw; top: 10vh; width: 40vw; height: 80vh; display: flex; align-items: center; justify-content: center; perspective: 1400px; }
+  #aCrystal .cr { width: 26vh; height: 60vh; transform-style: preserve-3d; animation: spin 26s linear infinite; position: relative; }
+  #aCrystal .face { position: absolute; inset: 0; clip-path: polygon(50% 0, 100% 18%, 100% 82%, 50% 100%, 0 82%, 0 18%);
+    background: linear-gradient(160deg, rgba(191, 248, 240, .35), rgba(34, 211, 238, .08) 40%, rgba(167, 139, 250, .18) 80%, rgba(191, 248, 240, .3));
+    border: 1px solid rgba(191, 248, 240, .4); backface-visibility: visible; }
+  @keyframes spin { to { transform: rotateY(360deg); } }
+  #aCrystal .core { position: absolute; width: 8vh; height: 8vh; border-radius: 50%; background: radial-gradient(circle, #e6fffb, var(--cy) 35%, transparent 70%); filter: blur(2px); animation: beat 3.2s ease-in-out infinite; }
+  @keyframes beat { 0%, 100% { transform: scale(.8); opacity: .7; } 15% { transform: scale(1.15); opacity: 1; } 30% { transform: scale(.9); } }
+  #aCrystal .ring { position: absolute; width: 36vh; height: 36vh; border: 1px dashed rgba(94, 234, 212, .35); border-radius: 50%; animation: orbit 40s linear infinite; transform: rotateX(70deg); }
+  #aCrystal .ring.r2 { width: 46vh; height: 46vh; border-style: dotted; animation-duration: 60s; animation-direction: reverse; transform: rotateX(75deg) rotateZ(20deg); }
+  @keyframes orbit { to { transform: rotateX(70deg) rotateZ(360deg); } }
+  #aMem { left: 9vw; top: 18vh; width: 30vw; height: 64vh; clip-path: polygon(50% 0, 100% 15%, 100% 85%, 50% 100%, 0 85%, 0 15%); }
+  #aHead { position: absolute; left: 48vw; top: 7vh; right: 5vw; display: flex; align-items: center; gap: 2vh; }
+  .facets { display: flex; gap: 1.4vh; }
+  .facet { width: 3.4vh; height: 3.4vh; transform: rotate(45deg); border: 1px solid var(--line); background: rgba(94, 234, 212, .05); transition: all 1s; }
+  .facet.on { background: rgba(94, 234, 212, .55); border-color: var(--ice); box-shadow: 0 0 2vh var(--cy); }
+  .facet.past { background: rgba(94, 234, 212, .2); }
+  #aHead .bar { flex: 1; height: 1px; background: linear-gradient(90deg, var(--line), transparent); }
+  #aTx { left: 48vw; right: 5vw; top: 15vh; bottom: 8vh; mask-image: linear-gradient(180deg, transparent, #000 12%); -webkit-mask-image: linear-gradient(180deg, transparent, #000 12%); }
+  #aSeal { right: 5vw; bottom: 5vh; width: 26vh; height: 26vh; }
+  body[data-qr="mask"] #aTx { bottom: 34vh; }
+
+  /* ---------- B. Колыбель Каменного Сна ---------- */
+  #bTop { position: absolute; left: 4vw; right: 4vw; top: 4vh; height: 16vh; display: grid; grid-template-columns: 1.2fr 2fr 1fr; gap: 2vw; }
+  .gauge { border: 1px solid var(--line); background: rgba(2, 12, 20, .55); padding: 1.4vh 1.6vh; position: relative; clip-path: polygon(0 0, calc(100% - 2vh) 0, 100% 2vh, 100% 100%, 2vh 100%, 0 calc(100% - 2vh)); }
+  .gauge .lbl { margin-bottom: 1.2vh; }
+  .ebar { display: flex; gap: .5vh; height: 5vh; align-items: flex-end; }
+  .ebar i { flex: 1; background: var(--cy); opacity: .85; box-shadow: 0 0 1vh var(--cy); transition: height 2s, background 2s, opacity 2s; }
+  .ebar i.low { background: var(--amb); box-shadow: 0 0 1vh var(--amb); }
+  .ebar i.off { opacity: .1; box-shadow: none; }
+  #bEcg { width: 100%; height: 9vh; display: block; }
+  .dial { display: flex; align-items: center; gap: 2vh; }
+  .dial > svg { width: 9vh; height: 9vh; flex: none; }
+  .dial circle { fill: none; stroke-width: 6; }
+  #bMid { position: absolute; left: 4vw; right: 4vw; top: 24vh; bottom: 33vh; display: grid; grid-template-columns: 1fr 34vh; gap: 3vw; }
+  #bTxWrap { position: relative; border-left: 2px solid var(--line); padding-left: 2vw; }
+  #bTx { left: 2vw; right: 0; top: 0; bottom: 0; -webkit-mask-image: linear-gradient(180deg, transparent, #000 12%); mask-image: linear-gradient(180deg, transparent, #000 12%); }
+  #bMem { position: relative; opacity: 0; clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); background: rgba(94, 234, 212, .08); }
+  #bMem.on { opacity: 1; }
+  #bHexEmpty { position: absolute; inset: 0; clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); border: 0; background: radial-gradient(circle, rgba(94, 234, 212, .12), transparent 70%); }
+  #bSteps { position: absolute; left: 4vw; right: calc(8vw + 26vh); bottom: 5vh; height: 22vh; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2vw; }
+  .step { border: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1vh; background: rgba(2, 12, 20, .5); transition: all 1s; }
+  .step svg { width: 6vh; height: 6vh; }
+  .step svg * { fill: none; stroke: var(--cy); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+  .step.on { border-color: var(--ice); box-shadow: 0 0 3vh rgba(94, 234, 212, .4) inset, 0 0 2vh rgba(94, 234, 212, .35); }
+  .step.on svg * { stroke: #fff; }
+  #bSeal { right: 4vw; bottom: 4vh; width: 26vh; height: 26vh; }
+
+  /* ---------- C. Маяк Четырёх Домов ---------- */
+  #cRose { position: absolute; left: 6vw; top: 50%; transform: translateY(-50%); width: 82vh; height: 82vh; }
+  #cRose svg.rose { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .sector { fill: rgba(94, 234, 212, .05); stroke: var(--line); stroke-width: 1.5; transition: fill 1.5s, stroke 1.5s; }
+  .sector.on { fill: rgba(94, 234, 212, .22); stroke: var(--ice); filter: drop-shadow(0 0 12px rgba(94, 234, 212, .6)); }
+  .sector.past { fill: rgba(94, 234, 212, .1); }
+  .sigil { fill: none; stroke: var(--cy); stroke-width: 2.2; transition: stroke 1.5s; }
+  .sigil.on { stroke: #fff; filter: drop-shadow(0 0 6px var(--cy)); }
+  #cRing { position: absolute; inset: -3%; animation: rot 90s linear infinite; }
+  #cRing2 { position: absolute; inset: 6%; animation: rot 140s linear infinite reverse; opacity: .6; }
+  @keyframes rot { to { transform: rotate(360deg); } }
+  #cCore { position: absolute; left: 50%; top: 50%; width: 38%; height: 38%; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, rgba(2, 12, 20, .95) 60%, rgba(94, 234, 212, .15)); border: 1px solid var(--line); overflow: hidden; }
+  #cSeal { left: 50%; top: 50%; width: 30%; height: 30%; transform: translate(-50%, -50%); z-index: 3; }
+  #cMem { inset: 0; border-radius: 50%; overflow: hidden; z-index: 2; }
+  #cTx { left: calc(6vw + 90vh); right: 5vw; top: 12vh; bottom: 10vh; -webkit-mask-image: linear-gradient(180deg, transparent, #000 12%); mask-image: linear-gradient(180deg, transparent, #000 12%); }
+  #cHead { position: absolute; left: calc(6vw + 90vh); right: 5vw; top: 5vh; display: flex; align-items: center; gap: 2vh; }
+
+  /* меню мастера: скрыто, клавиша M */
+  #menu { position: fixed; z-index: 100; left: 50%; top: 50%; transform: translate(-50%, -50%); background: rgba(2, 10, 18, .96); border: 1px solid var(--cy); padding: 22px 26px; color: #dff; font: 14px/1.5 system-ui, sans-serif; display: none; cursor: default; min-width: 520px; }
+  #menu.on { display: block; }
+  #menu h3 { margin: 0 0 10px; font-size: 15px; letter-spacing: 1px; color: var(--cy); }
+  #menu .row { display: flex; gap: 8px; margin: 6px 0 12px; flex-wrap: wrap; }
+  #menu button { background: transparent; border: 1px solid rgba(94, 234, 212, .4); color: #dff; padding: 6px 12px; cursor: pointer; font: inherit; }
+  #menu button.on { background: rgba(94, 234, 212, .2); border-color: var(--cy); }
+  #menu code { display: block; background: #000; padding: 8px; font-size: 12px; word-break: break-all; margin-top: 4px; color: #9ff; }
+  #menu small { color: #8aa; }
+  body.menu { cursor: default; }
+</style>
+</head>
+<body data-view="archive" data-qr="pulse" data-script="piqad">
+<div id="bg"></div>
+<canvas id="dust"></canvas>
+
+<!-- A. Кристаллический архив -->
+<section class="stage" id="vArchive">
+  <div id="aCrystal"><div class="ring"></div><div class="ring r2"></div><div class="cr" id="aCr"></div><div class="core"></div></div>
+  <div class="mem" id="aMem"><img alt=""></div>
+  <div id="aHead"><div class="facets" data-facets></div><span class="lbl" data-lbl="archive"></span><div class="bar"></div><span class="lbl" data-num></span></div>
+  <div class="tx" id="aTx"><div class="tx-in"></div></div>
+  <div class="seal" id="aSeal"><canvas></canvas></div>
+</section>
+
+<!-- B. Колыбель Каменного Сна -->
+<section class="stage" id="vCradle">
+  <div id="bTop">
+    <div class="gauge"><span class="lbl" data-lbl="energy"></span><div class="ebar" id="bEnergy"></div></div>
+    <div class="gauge"><span class="lbl" data-lbl="pulse"></span><canvas id="bEcg"></canvas></div>
+    <div class="gauge dial"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" stroke="rgba(94,234,212,.15)"/><circle id="bIso" cx="50" cy="50" r="40" stroke="#fbbf24" stroke-dasharray="251" stroke-dashoffset="80" transform="rotate(-90 50 50)" stroke-linecap="round"/></svg><div><span class="lbl" data-lbl="isotope"></span><br><span class="lbl" data-num-iso></span></div></div>
+  </div>
+  <div id="bMid">
+    <div id="bTxWrap"><div style="position:absolute;top:-1vh;left:2vw"><div class="facets" data-facets></div></div><div class="tx" id="bTx" style="top:5vh"><div class="tx-in"></div></div></div>
+    <div style="position:relative"><div id="bHexEmpty"></div><div class="mem" id="bMem" style="position:absolute;inset:0"><img alt=""></div></div>
+  </div>
+  <div id="bSteps"></div>
+  <div class="seal" id="bSeal"><canvas></canvas></div>
+</section>
+
+<!-- C. Маяк Четырёх Домов -->
+<section class="stage" id="vBeacon">
+  <div id="cRose">
+    <svg class="rose" id="cRing" viewBox="-100 -100 200 200"></svg>
+    <svg class="rose" id="cRing2" viewBox="-100 -100 200 200"></svg>
+    <svg class="rose" id="cSectors" viewBox="-100 -100 200 200"></svg>
+    <div id="cCore"><div class="mem" id="cMem" style="position:absolute"><img alt=""></div></div>
+    <div class="seal" id="cSeal"><canvas></canvas></div>
+  </div>
+  <div id="cHead"><span class="lbl" data-lbl="beacon"></span><div class="bar" style="flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)"></div><span class="lbl" data-num></span></div>
+  <div class="tx" id="cTx"><div class="tx-in"></div></div>
+</section>
+
+<canvas id="pulse"></canvas>
+<div id="scan"></div>
+
+<div id="menu">
+  <h3>Настройки экрана (видит только мастер · M — закрыть)</h3>
+  <div>Вид экрана</div>
+  <div class="row" data-opt="view"><button data-v="archive">1 · Кристаллический архив</button><button data-v="cradle">2 · Колыбель Каменного Сна</button><button data-v="beacon">3 · Маяк Четырёх Домов</button></div>
+  <div>Письмо</div>
+  <div class="row" data-opt="script"><button data-v="piqad">Клингонское (как в документе)</button><button data-v="crystal">Кристаллические знаки</button></div>
+  <div>QR-коды записей</div>
+  <div class="row" data-opt="qr"><button data-v="pulse">Проявляется при «резонансе»</button><button data-v="mask">Всегда виден, замаскирован</button></div>
+  <div class="row"><button data-act="next">Следующая запись →</button><button data-act="qrnow">Показать QR сейчас</button></div>
+  <small>Адрес для автозапуска с этими настройками:</small>
+  <code id="menuUrl"></code>
+</div>
+
+<script>
+const DATA = /*DATA*/null;
+(() => {
+  /* ---------------- настройки ---------------- */
+  const T = {
+    segSpeed: 520,        // пикселей картинки в секунду при «написании» строки клингонского текста
+    crystalCps: 26,       // знаков в секунду для кристаллического письма
+    holdAfterText: 8,     // с — пауза после текста
+    memory: 12,           // с — воспоминание-голограмма
+    qrHold: 18,           // с — QR при «резонансе» неподвижен и читается
+    qrBuild: 3, qrBreak: 2.5,
+    between: 3            // с — пауза между записями
+  };
+  const params0 = new URLSearchParams(location.search);
+  if (params0.get('fast')) { const f = +params0.get('fast') || 6; ['holdAfterText', 'memory', 'between'].forEach(k => T[k] /= f); T.segSpeed *= f; T.crystalCps *= f; T.fast = f; }   // для проверки
+  const MEMS = { 1: 'img/memory_cave.jpg', 2: 'img/memory_witness.jpg', 3: 'img/memory_peaks.jpg', 4: 'img/memory_cave.jpg' };
+  const params = new URLSearchParams(location.search);
+  let saved = {}; try { saved = JSON.parse(localStorage.getItem('alien_cfg') || '{}'); } catch (e) {}
+  const cfg = {
+    view: params.get('view') || saved.view || 'archive',
+    script: params.get('script') || saved.script || 'piqad',
+    qr: params.get('qr') || saved.qr || 'pulse'
+  };
+  const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+  const sleep = s => new Promise(r => setTimeout(r, s * 1000));
+
+  /* ---------------- кристаллические знаки ---------------- */
+  // детерминированный генератор: у каждой буквы свой «осколок» из граней
+  function rng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
+  const GL = {};
+  function glyph(key) {
+    if (GL[key]) return GL[key];
+    let h = 0; for (const c of key) h = (h * 131 + c.charCodeAt(0)) >>> 0;
+    const r = rng(h + 7), W = 20, H = 30, parts = [];
+    // главный осколок: вытянутый ромб во всю высоту знака, слегка наклонён
+    const cx = 7 + r() * 6, w = 2.2 + r() * 2.5, tilt = (r() - .5) * 5, my = 9 + r() * 12;
+    parts.push(`M${(cx + tilt).toFixed(1)} 1 L${(cx + w).toFixed(1)} ${my.toFixed(1)} L${(cx - tilt * .4).toFixed(1)} 29 L${(cx - w).toFixed(1)} ${(my + (r() - .5) * 5).toFixed(1)} Z`);
+    // 0–2 прилегающих грани слева/справа
+    const k = Math.floor(r() * 3);
+    for (let i = 0; i < k; i++) {
+      const side = r() < .5 ? -1 : 1, y0 = 3 + r() * 20, len = 4 + r() * 5, y1 = y0 + 3 + r() * 6;
+      const bx = cx + side * (w * .6);
+      parts.push(`M${bx.toFixed(1)} ${y0.toFixed(1)} L${(bx + side * len).toFixed(1)} ${((y0 + y1) / 2 - 2 + r() * 4).toFixed(1)} L${bx.toFixed(1)} ${y1.toFixed(1)} Z`);
+    }
+    if (r() < .35) { const y = 4 + r() * 22; parts.push(`M${(cx - 7).toFixed(1)} ${y.toFixed(1)} L${(cx + 7).toFixed(1)} ${(y + (r() - .5) * 3).toFixed(1)}`); }
+    return (GL[key] = `<svg viewBox="0 0 ${W} ${H}"><path d="${parts.join(' ')}"/></svg>`);
+  }
+  const KL = ['tlh', 'ch', 'gh', 'ng'];
+  function tokens(text) {
+    const out = []; let i = 0;
+    while (i < text.length) {
+      const t3 = KL.find(k => text.startsWith(k, i));
+      if (t3) { out.push(t3); i += t3.length; continue; }
+      const c = text[i++];
+      out.push(/\s/.test(c) ? ' ' : c);
+    }
+    return out;
+  }
+  // знаки-подписи интерфейса и числа
+  function word(key, len) { let s = ''; for (let i = 0; i < len; i++) s += glyph(key + '#' + i); return s; }
+  function num(n) { return String(n).split('').map(d => glyph('digit' + d)).join(''); }
+  const LBL = { archive: 5, energy: 4, pulse: 3, isotope: 6, beacon: 5 };
+  $$('[data-lbl]').forEach(el => el.innerHTML = word(el.dataset.lbl, LBL[el.dataset.lbl] || 4));
+
+  /* ---------------- QR: печать из граней ---------------- */
+  function drawQR(canvas, rec, opts) {
+    const q = DATA.qrs[rec - 1], m = q.m, n = m.length, Q = 4, N = n + Q * 2;
+    const px = Math.max(240, Math.round(canvas.clientWidth * (window.devicePixelRatio || 1)));
+    canvas.width = canvas.height = px;
+    const c = canvas.getContext('2d'), s = px / N;
+    c.clearRect(0, 0, px, px);
+    // тёмная подложка — «тихая зона», без неё код не читается
+    c.fillStyle = '#020a10'; c.fillRect(0, 0, px, px);
+    if (opts && opts.frame) {
+      c.strokeStyle = 'rgba(94,234,212,.35)'; c.lineWidth = Math.max(1, s * .12);
+      c.strokeRect(s * .6, s * .6, px - s * 1.2, px - s * 1.2);
+      for (let k = 0; k < 4; k++) { const x = k % 2 ? px - s * 1.6 : s * 1.6, y = k < 2 ? s * 1.6 : px - s * 1.6; c.beginPath(); c.moveTo(x, y - s * .5); c.lineTo(x + s * .5, y); c.lineTo(x, y + s * .5); c.lineTo(x - s * .5, y); c.closePath(); c.stroke(); }
+    }
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+      if (m[y][x] !== '1') continue;
+      const X = (x + Q) * s, Y = (y + Q) * s;
+      // светлая грань с лёгким скосом — выглядит как кристалл, контраст для сканера сохраняется
+      c.fillStyle = '#bff8f0'; c.fillRect(X, Y, s + .5, s + .5);
+      c.fillStyle = 'rgba(34,211,238,.35)'; c.beginPath(); c.moveTo(X + s, Y); c.lineTo(X + s, Y + s); c.lineTo(X, Y + s); c.closePath(); c.fill();
+    }
+    return { s, Q, n };
+  }
+
+  /* ---------------- текст записи ---------------- */
+  function txEls() { return $$('.stage .tx .tx-in'); }
+  function clearText() { txEls().forEach(el => { el.innerHTML = ''; el.style.transform = ''; el.parentNode.classList.remove('fade'); }); }
+  function fadeText(on) { $$('.stage .tx').forEach(t => t.classList.toggle('fade', on)); }
+  function activeTx() { return $(`body[data-view="${cfg.view}"] .stage .tx .tx-in`) || txEls()[0]; }
+  // строки пишутся сверху; когда панель заполнена — текст плавно уезжает вверх
+  function scrollFix() { txEls().forEach(inner => { const over = inner.scrollHeight - inner.parentNode.clientHeight; inner.style.transform = over > 0 ? `translateY(${-over}px)` : ''; }); }
+  async function writePiqad(rec, epoch) {
+    const segs = DATA.lines[rec];
+    for (let k = 0; k < segs.length; k++) {
+      if (epoch !== run.epoch) return;
+      const [w, h] = segs[k], dur = Math.max(1.2 / (T.fast || 1), w / T.segSpeed);
+      txEls().forEach(inner => {
+        const d = document.createElement('div'); d.className = 'seg';
+        const hpx = inner.parentNode.clientHeight ? null : null;
+        d.innerHTML = `<img src="img/r${rec}_${k}.png" alt="">`;
+        d.style.setProperty('--d', dur + 's');
+        inner.appendChild(d);
+        const img = d.firstChild;
+        const setW = () => d.style.setProperty('--w', img.getBoundingClientRect().width + 'px');
+        img.complete ? setW() : img.onload = setW;
+        requestAnimationFrame(() => d.classList.add('on'));
+        setTimeout(() => d.classList.add('done'), dur * 1000 + 200);
+      });
+      scrollFix();
+      await sleep(dur + .25);
+    }
+  }
+  async function writeCrystal(rec, epoch) {
+    const paras = DATA.texts[rec];
+    for (const p of paras) {
+      if (epoch !== run.epoch) return;
+      const toks = tokens(p);
+      const lines = txEls().map(inner => { const l = document.createElement('div'); l.className = 'cline'; inner.appendChild(l); return l; });
+      const groups = lines.map(() => []);
+      const words = lines.map(l => { const w = document.createElement('span'); w.className = 'cw'; l.appendChild(w); return w; });
+      toks.forEach(t => lines.forEach((l, i) => {
+        const g = document.createElement('span');
+        if (t === ' ') { g.className = 'cg sp'; l.appendChild(g); words[i] = document.createElement('span'); words[i].className = 'cw'; l.appendChild(words[i]); }
+        else { g.className = 'cg'; g.innerHTML = glyph(/^[0-9]$/.test(t) ? 'digit' + t : t); if (t.length > 1) g.style.setProperty('--gw', 1.25); if ("'.,:;«»—!?-[]()".includes(t)) g.style.setProperty('--gw', .55); words[i].appendChild(g); }
+        groups[i].push(g);
+      }));
+      for (let k = 0; k < toks.length; k++) {
+        if (epoch !== run.epoch) return;
+        groups.forEach(gs => { const g = gs[k]; g.classList.add('on', 'fresh'); setTimeout(() => g.classList.remove('fresh'), 500); });
+        if (k % 2) await sleep(2 / T.crystalCps);
+        if (k % 24 === 0) scrollFix();
+      }
+      scrollFix(); await sleep(.6);
+    }
+  }
+
+  /* ---------------- резонанс: знаки собираются в QR ---------------- */
+  const pc = $('#pulse'), px2 = pc.getContext('2d');
+  let parts = [], pState = null;
+  function resize() { pc.width = innerWidth; pc.height = innerHeight; dust.width = innerWidth; dust.height = innerHeight; ['#aSeal', '#bSeal', '#cSeal'].forEach(s => { if (run.rec) drawQR($(s + ' canvas'), run.rec, { frame: true }); }); }
+  function qrTarget() {
+    if (cfg.view === 'beacon') { const r = $('#cRose').getBoundingClientRect(); const size = r.width * .42; return { x: r.left + r.width / 2 - size / 2, y: r.top + r.height / 2 - size / 2, size }; }
+    const size = Math.min(innerHeight * .46, innerWidth * .3);
+    if (cfg.view === 'archive') { const r = $('#aCrystal').getBoundingClientRect(); return { x: r.left + r.width / 2 - size / 2, y: r.top + r.height / 2 - size / 2, size }; }
+    const r = $('#bMid').getBoundingClientRect(); return { x: r.right - size, y: r.top + (r.height - size) / 2, size };
+  }
+  async function resonance(rec, epoch) {
+    const q = DATA.qrs[rec - 1], n = q.m.length, Q = 4, N = n + Q * 2, tg = qrTarget(), s = tg.size / N;
+    const cells = [];
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (q.m[y][x] === '1') cells.push({ x: tg.x + (x + Q) * s, y: tg.y + (y + Q) * s });
+    const src = (document.querySelector(`body[data-view="${cfg.view}"] .stage .tx`) || document.body).getBoundingClientRect();
+    parts = cells.map(c => ({ tx: c.x, ty: c.y, x: src.left + Math.random() * src.width, y: src.top + Math.random() * src.height, r: Math.random() * Math.PI }));
+    pState = { tg, s, t0: performance.now(), phase: 'build' };
+    fadeText(true);
+    await sleep(T.qrBuild); if (epoch !== run.epoch) return endPulse();
+    pState.phase = 'hold'; await sleep(T.qrHold); if (epoch !== run.epoch) return endPulse();
+    pState.phase = 'break'; pState.t1 = performance.now();
+    parts.forEach(p => { p.bx = p.tx; p.by = p.ty; p.ex = p.tx + (Math.random() - .5) * innerWidth * .8; p.ey = p.ty + (Math.random() - .5) * innerHeight * .8; });
+    await sleep(T.qrBreak); endPulse(); fadeText(false);
+  }
+  function endPulse() { pState = null; parts = []; px2.clearRect(0, 0, pc.width, pc.height); fadeText(false); }
+  function drawPulse(now) {
+    px2.clearRect(0, 0, pc.width, pc.height);
+    if (!pState) return;
+    const { tg, s } = pState;
+    if (pState.phase !== 'break') {
+      const k = Math.min(1, (now - pState.t0) / (T.qrBuild * 1000)), e = 1 - Math.pow(1 - k, 3);
+      px2.globalAlpha = Math.min(1, k * 1.4);
+      px2.fillStyle = '#020a10'; px2.fillRect(tg.x - s * .5, tg.y - s * .5, tg.size + s, tg.size + s);   // тихая зона
+      px2.strokeStyle = 'rgba(94,234,212,.5)'; px2.lineWidth = 1.5; px2.strokeRect(tg.x - s * .5, tg.y - s * .5, tg.size + s, tg.size + s);
+      px2.globalAlpha = 1;
+      for (const p of parts) {
+        const x = p.x + (p.tx - p.x) * e, y = p.y + (p.ty - p.y) * e, sz = s * (.35 + .65 * e);
+        px2.save(); px2.translate(x + s / 2, y + s / 2); px2.rotate(p.r * (1 - e));
+        px2.fillStyle = '#bff8f0'; px2.shadowColor = '#5eead4'; px2.shadowBlur = pState.phase === 'hold' ? 0 : 10 * (1 - e);
+        px2.fillRect(-sz / 2, -sz / 2, sz + .5, sz + .5); px2.restore();
+      }
+    } else {
+      const k = Math.min(1, (now - pState.t1) / (T.qrBreak * 1000)), e = k * k;
+      px2.globalAlpha = 1 - k;
+      for (const p of parts) { const x = p.bx + (p.ex - p.bx) * e, y = p.by + (p.ey - p.by) * e; px2.fillStyle = '#bff8f0'; px2.fillRect(x, y, s * (1 - e * .7), s * (1 - e * .7)); }
+      px2.globalAlpha = 1;
+    }
+  }
+
+  /* ---------------- пыль / частицы ---------------- */
+  const dust = $('#dust'), dx = dust.getContext('2d');
+  const motes = Array.from({ length: 90 }, () => ({ x: Math.random(), y: Math.random(), v: .00004 + Math.random() * .00012, s: .5 + Math.random() * 1.8, p: Math.random() * 6.28 }));
+  function drawDust(now) {
+    dx.clearRect(0, 0, dust.width, dust.height);
+    for (const m of motes) {
+      m.y -= m.v * 16; if (m.y < -.02) { m.y = 1.02; m.x = Math.random(); }
+      const a = .25 + .25 * Math.sin(now / 900 + m.p);
+      dx.fillStyle = `rgba(160,245,235,${a})`; dx.fillRect(m.x * dust.width, m.y * dust.height, m.s, m.s * 2.2);
+    }
+  }
+
+  /* ---------------- вид B: показания колыбели ---------------- */
+  const en = $('#bEnergy'); for (let i = 0; i < 16; i++) en.appendChild(document.createElement('i'));
+  const ecg = $('#bEcg'), ec = ecg.getContext('2d'); let ecgX = 0, ecgLast = 0;
+  function drawEcg(now) {
+    if (cfg.view !== 'cradle') return;
+    const w = ecg.width = ecg.clientWidth, h = ecg.height = ecg.clientHeight;
+    ec.clearRect(0, 0, w, h); ec.strokeStyle = '#5eead4'; ec.lineWidth = 2; ec.shadowColor = '#5eead4'; ec.shadowBlur = 8; ec.beginPath();
+    const period = 4200;   // очень медленное «сердце» Каменного Сна
+    for (let x = 0; x <= w; x += 2) {
+      const t = ((now - (w - x) * 8) % period) / period;
+      let y = .55;
+      if (t > .1 && t < .14) y -= (t - .1) * 6; else if (t >= .14 && t < .18) y += (t - .14) * 14 - .24; else if (t >= .18 && t < .22) y = .55 + .32 - (t - .18) * 8;
+      y += Math.sin(x / 13 + now / 700) * .015;
+      x ? ec.lineTo(x, y * h) : ec.moveTo(x, y * h);
+    }
+    ec.stroke();
+  }
+  const STEP_ICONS = [
+    '<svg viewBox="0 0 48 48"><path d="M27 4 12 27h11l-3 17 16-24H25z"/></svg>',
+    '<svg viewBox="0 0 48 48"><path d="M24 5c7 10 12 17 12 23a12 12 0 0 1-24 0c0-6 5-13 12-23z"/><path d="M18 30a6 6 0 0 0 6 6"/></svg>',
+    '<svg viewBox="0 0 48 48"><path d="M24 30v12"/><circle cx="24" cy="26" r="3"/><path d="M15 17a13 13 0 0 1 18 0M9 11a21 21 0 0 1 30 0"/></svg>',
+    '<svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="14"/><circle cx="24" cy="24" r="6"/><path d="M24 4v6M24 38v6"/></svg>'
+  ];
+  $('#bSteps').innerHTML = STEP_ICONS.map((ic, i) => `<div class="step">${ic}<span class="lbl">${word('step' + i, 3)}</span></div>`).join('');
+  let gaugeT = 0;
+  function tickGauges() {
+    const lvl = 4 + Math.round(3 * Math.sin(Date.now() / 20000)) + (Math.random() < .2 ? -1 : 0);
+    [...en.children].forEach((b, i) => { b.style.height = (35 + Math.random() * 65) + '%'; b.className = i >= lvl ? 'off' : i < 3 ? 'low' : ''; });
+    const iso = 60 + Math.round(15 * Math.sin(Date.now() / 30000));
+    $('#bIso').setAttribute('stroke-dashoffset', 251 - 251 * iso / 100);
+    $('#bIso').setAttribute('stroke', iso < 55 ? '#fb7185' : '#fbbf24');
+    $('[data-num-iso]').innerHTML = num(iso);
+    $$('#bSteps .step').forEach((s, i) => s.classList.toggle('on', i === (gaugeT % 4)));
+    gaugeT++;
+  }
+
+  /* ---------------- вид C: роза четырёх домов ---------------- */
+  (function buildRose() {
+    const S = $('#cSectors'); let html = '';
+    const arc = (a0, a1, r0, r1) => { const p = (a, r) => `${(Math.cos(a) * r).toFixed(2)} ${(Math.sin(a) * r).toFixed(2)}`; return `M${p(a0, r1)} A${r1} ${r1} 0 0 1 ${p(a1, r1)} L${p(a1, r0)} A${r0} ${r0} 0 0 0 ${p(a0, r0)} Z`; };
+    for (let i = 0; i < 4; i++) {
+      const a0 = -Math.PI / 2 + i * Math.PI / 2 + .06, a1 = a0 + Math.PI / 2 - .12, am = (a0 + a1) / 2;
+      html += `<path class="sector" data-sec="${i}" d="${arc(a0, a1, 22, 78)}"/>`;
+      const cx = Math.cos(am) * 52, cy = Math.sin(am) * 52;
+      html += `<g class="sigil" data-sig="${i}" transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) scale(.9)">${['<path d="M0 -12 L9 0 L0 12 L-9 0Z M0 -12 L0 12"/>', '<path d="M-10 -8 L10 -8 L0 12Z M-4 -2 L4 -2"/>', '<path d="M-9 -9 L9 9 M9 -9 L-9 9 M0 -13 L0 13"/>', '<path d="M0 -12 L11 -4 L7 10 L-7 10 L-11 -4Z M0 -12 L0 2 L7 10 M0 2 L-7 10"/>'][i]}</g>`;
+    }
+    S.innerHTML = html;
+    const ring = (el, r, count, key) => {
+      let h = `<circle r="${r}" fill="none" stroke="rgba(94,234,212,.25)" stroke-dasharray="1 3"/>`;
+      for (let i = 0; i < count; i++) {
+        const a = i / count * 360;
+        h += `<g transform="rotate(${a}) translate(0 ${-r - 2}) scale(.35)" opacity=".75">${glyph(key + i).replace('<svg viewBox="0 0 20 30">', '').replace('</svg>', '').replace('<path', '<path transform="translate(-10 -15)" fill="none" stroke="#5eead4" stroke-width="2"')}</g>`;
+      }
+      el.innerHTML = h;
+    };
+    ring($('#cRing'), 92, 64, 'ring'); ring($('#cRing2'), 82, 40, 'ringb');
+  })();
+
+  /* ---------------- кристалл вида A ---------------- */
+  (function buildCrystal() { const c = $('#aCr'); for (let i = 0; i < 6; i++) { const f = document.createElement('div'); f.className = 'face'; f.style.transform = `rotateY(${i * 60}deg) translateZ(11vh)`; c.appendChild(f); } })();
+
+  /* ---------------- сценарий ---------------- */
+  const run = { rec: 0, next: 1, epoch: 0 };
+  function setRecUI(rec) {
+    $$('[data-facets]').forEach(el => el.innerHTML = [1, 2, 3, 4].map(i => `<div class="facet ${i === rec ? 'on' : i < rec ? 'past' : ''}"></div>`).join(''));
+    $$('[data-num]').forEach(el => el.innerHTML = num(rec));
+    $$('.sector').forEach(s => { const i = +s.dataset.sec + 1; s.classList.toggle('on', i === rec); s.classList.toggle('past', i < rec); });
+    $$('.sigil').forEach(s => s.classList.toggle('on', +s.dataset.sig + 1 === rec));
+    $$('.seal canvas').forEach(c => drawQR(c, rec, { frame: true }));
+    $$('.mem img').forEach(i => i.src = MEMS[rec]);
+  }
+  async function memory(epoch) {
+    const el = { archive: '#aMem', cradle: '#bMem', beacon: '#cMem' }[cfg.view];
+    const m = $(el); m.classList.add('on');
+    if (cfg.view === 'beacon') $('#cSeal').style.opacity = '0';
+    const g = setInterval(() => { m.classList.add('glitch'); setTimeout(() => m.classList.remove('glitch'), 1100); }, 3800);
+    await sleep(T.memory);
+    clearInterval(g); m.classList.remove('on'); $('#cSeal').style.opacity = '';
+  }
+  async function loop() {
+    const epoch = ++run.epoch;
+    while (epoch === run.epoch) {
+      const rec = run.next; run.rec = rec; run.next = rec % 4 + 1;
+      clearText(); setRecUI(rec); await sleep(1.2);
+      if (epoch !== run.epoch) return;
+      cfg.script === 'crystal' ? await writeCrystal(rec, epoch) : await writePiqad(rec, epoch);
+      if (epoch !== run.epoch) return;
+      await sleep(T.holdAfterText);
+      if (epoch !== run.epoch) return;
+      await memory(epoch);
+      if (epoch !== run.epoch) return;
+      if (cfg.qr === 'pulse') await resonance(rec, epoch);
+      else await sleep(6);
+      if (epoch !== run.epoch) return;
+      fadeText(true); await sleep(T.between); fadeText(false);
+    }
+  }
+
+  function apply() {
+    document.body.dataset.view = cfg.view; document.body.dataset.qr = cfg.qr; document.body.dataset.script = cfg.script;
+    try { localStorage.setItem('alien_cfg', JSON.stringify(cfg)); } catch (e) {}
+    $$('#menu [data-opt]').forEach(r => r.querySelectorAll('button').forEach(b => b.classList.toggle('on', cfg[r.dataset.opt] === b.dataset.v)));
+    const base = location.href.split('?')[0];
+    $('#menuUrl').textContent = `${base}?view=${cfg.view}&script=${cfg.script}&qr=${cfg.qr}`;
+    endPulse(); if (run.rec) run.next = run.rec; setTimeout(() => { resize(); loop(); }, 50);
+  }
+  document.addEventListener('keydown', e => {
+    const k = e.key.toLowerCase();
+    if (k === 'm' || k === 'ь') { $('#menu').classList.toggle('on'); document.body.classList.toggle('menu'); }
+    if (k === '1' || k === '2' || k === '3') { cfg.view = ['archive', 'cradle', 'beacon'][+k - 1]; apply(); }
+    if (k === 's' || k === 'ы') { cfg.script = cfg.script === 'piqad' ? 'crystal' : 'piqad'; apply(); }
+    if (k === 'q' || k === 'й') { cfg.qr = cfg.qr === 'pulse' ? 'mask' : 'pulse'; apply(); }
+    if (k === 'n' || k === 'т') { run.rec = 0; apply(); }
+  });
+  // на сенсорном экране: 5 быстрых касаний в левом верхнем углу — меню
+  let taps = []; document.addEventListener('pointerdown', e => {
+    if (e.clientX > 120 || e.clientY > 120) return;
+    taps = taps.filter(t => Date.now() - t < 2000).concat(Date.now());
+    if (taps.length >= 5) { taps = []; $('#menu').classList.toggle('on'); document.body.classList.toggle('menu'); }
+  });
+  $('#menu').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.act === 'next') { run.rec = 0; return apply(); }
+    if (b.dataset.act === 'qrnow') { const ep = run.epoch; resonance(run.rec || 1, ep); return; }
+    const opt = b.closest('[data-opt]').dataset.opt; cfg[opt] = b.dataset.v; apply();
+  });
+
+  addEventListener('resize', resize);
+  setInterval(tickGauges, 1600); tickGauges();
+  (function frame(now) { drawDust(now); drawPulse(now); drawEcg(now); requestAnimationFrame(frame); })(performance.now());
+  // стартовая запись: ?rec=2 — начать со второй
+  run.next = Math.max(1, Math.min(4, parseInt(params.get('rec') || '1', 10) || 1));
+  apply();
+})();
+</script>
+</body>
+</html>
