@@ -3850,7 +3850,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       if (!item) {
         const { data: cr } = await sb.from('crystals').select('id').eq('code', String(code).trim().toUpperCase()).limit(1);
         if (cr && cr.length) {
-          errEl.textContent = "Это кристалл. Им оплачивают доступ к закрытым данным — отсканируйте его, когда терминал запросит оплату.";
+          errEl.textContent = "Это кристалл — источник энергии. Отсканируйте его, когда терминалу потребуется дополнительная энергия для доступа к данным.";
           await this.log('scan', { code, result: 'crystal' });
           return;
         }
@@ -4049,9 +4049,9 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     renderPayGate(item, paid) {
       const price = Number(item.price) || 0;
       const gems = Array.from({ length: price }, (_, i) => `<span class="tui-gem ${i < paid ? 'on' : ''}">◆</span>`).join('');
-      this.renderGate('ТРЕБУЕТСЯ ОПЛАТА', item.type,
-        `<div>Доступ к этим данным открывается за кристаллы. Оплата вносится один раз — затем данные доступны вам без ограничений.</div>
-         <div class="tui-pay-row"><span class="tui-gems">${gems}</span><span>внесено <b>${paid}</b> из <b>${price}</b></span></div>
+      this.renderGate('ТРЕБУЕТСЯ ДОПОЛНИТЕЛЬНАЯ ЭНЕРГИЯ', item.type,
+        `<div>Для расшифровки этих данных нужна энергия кристаллов. Энергия вносится один раз — затем данные доступны вам без ограничений.</div>
+         <div class="tui-pay-row"><span class="tui-gems">${gems}</span><span>энергия <b>${paid}</b> из <b>${price}</b></span></div>
          <button class="tui-modal-btn" data-action="payCrystal" style="margin-top:12px;width:100%">◈ Сканировать кристалл</button>`);
     },
 
@@ -4072,24 +4072,24 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
         p_code: code, p_character: this.currentCharacter.id, p_content: item.id,
         p_module: DB.moduleRow ? DB.moduleRow.id : null, p_source: 'terminal'
       });
-      if (error || !data) { this.crystalSeen.delete(code); errEl.textContent = 'Нет связи с хранилищем: ' + (error ? error.message : '—'); again(); return; }
+      if (error || !data) { this.crystalSeen.delete(code); errEl.textContent = 'Нет связи с энергосетью колонии: ' + (error ? error.message : '—'); again(); return; }
       const r = data;
       await this.log(r.result === 'ok' ? 'crystal_spend' : 'crystal_reject', { code, contentId: item.id, result: r.result, paid: r.paid, price: r.price });
       if (r.result === 'ok' || r.result === 'already_paid') {
         if (r.completed || r.result === 'already_paid') {
-          document.getElementById('modalReadout').textContent = '✓ Оплата завершена';
+          document.getElementById('modalReadout').textContent = '✓ Энергии достаточно';
           this.closeScannerModal(true);
           this.payItem = null;
           await this.openContent(item.id);
           return;
         }
         errEl.style.color = 'var(--tui-cyan)';
-        errEl.textContent = `◆ Кристалл ${code} принят · внесено ${r.paid} из ${r.price}. Сканируйте следующий.`;
+        errEl.textContent = `◆ Энергия кристалла ${code} принята · ${r.paid} из ${r.price}. Сканируйте следующий кристалл.`;
         this.renderPayGate(item, r.paid);
         document.getElementById('contentModal').classList.add('open');
       } else {
         errEl.style.color = '';
-        errEl.textContent = r.result === 'spent' ? `Кристалл ${code} уже израсходован и не принимается.` : `Код ${code} — не кристалл.`;
+        errEl.textContent = r.result === 'spent' ? `Кристалл ${code} истощён — энергии в нём нет.` : `Код ${code} — не кристалл.`;
       }
       again();
     },
