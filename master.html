@@ -746,6 +746,7 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
 .watch-frame iframe{ position:absolute; left:0; top:0; width:1600px; height:900px; border:0; transform-origin:0 0; }
 .photo-grid .ph-del{ position:absolute; top:4px; right:4px; z-index:2; background:rgba(2,6,14,.85); border:1px solid var(--red); color:var(--red); font-size:11px; line-height:1; padding:4px 6px; cursor:pointer; opacity:.75; }
 .photo-grid .ph-del:hover{ opacity:1; background:rgba(255,107,107,.2); }
+.vr-sub{ font-size:9.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--ink-400); }
 .vr-tabs{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
 .vr-tab{ background:transparent; border:1px solid var(--edge); color:var(--ink-100); font-family:var(--font-mono); font-size:10.5px; letter-spacing:.5px; padding:6px 10px; cursor:pointer; max-width:320px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .vr-tab.on{ border-color:var(--cyan); background:rgba(94,234,212,.12); color:#fff; }
@@ -1314,7 +1315,7 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
 
     <!-- ---- Ветвление ---- -->
     <div class="editor-section">
-      <div class="sec-title">Ветвление (выбор после этого объекта)</div>
+      <div class="sec-title" id="eChoiceTitle">Ветвление (выбор после этого объекта)</div>
       <div class="choice-list" id="choiceList"></div>
       <button class="btn ghost" style="margin-top:10px;" data-action="addChoiceOption">+ Добавить вариант выбора</button>
     </div>
@@ -2916,7 +2917,7 @@ const Admin = {
 
     this.choiceOptions = (item && item.choice_options) ? JSON.parse(JSON.stringify(item.choice_options)) : [];
     this.variants = (item && Array.isArray(item.variants)) ? JSON.parse(JSON.stringify(item.variants)) : [];
-    this.normVariants(); this.mainBlocks = this.blocks; this.vEdit = -1;
+    this.normVariants(); this.mainBlocks = this.blocks; this.mainChoices = this.choiceOptions; this.vEdit = -1;
     const hasV2 = !this.contentItems.length || 'summary' in this.contentItems[0];
     document.getElementById('eSummary').value = (item && item.summary) || '';
     document.getElementById('eSummary').disabled = !hasV2;
@@ -2948,11 +2949,12 @@ const Admin = {
   },
   /* ---------- ветвление: новый объект во вложенном окне ---------- */
   captureEditor() {
-    if (this.vEdit >= 0) this.switchVariant(-1);
+    const main = this.vEdit >= 0;
     const v = id => document.getElementById(id).value, sel = id => [...document.querySelectorAll('#' + id + ' input:checked')].map(i => i.value);
     return {
       editingContentId: this.editingContentId, uploadedMedia: this.uploadedMedia,
-      choiceOptions: JSON.parse(JSON.stringify(this.choiceOptions || [])), variants: JSON.parse(JSON.stringify(this.variants || [])), blocks: JSON.parse(JSON.stringify(this.blocks || [])),
+      choiceOptions: JSON.parse(JSON.stringify((main ? this.mainChoices : this.choiceOptions) || [])), variants: JSON.parse(JSON.stringify(this.variants || [])),
+      blocks: JSON.parse(JSON.stringify((main ? this.mainBlocks : this.blocks) || [])), vEdit: main ? this.vEdit : -1,
       f: Object.fromEntries(['eTriggerCode', 'eType', 'eSummary', 'eBody', 'eMediaUrl', 'eUnlockType', 'eTimerMinutes', 'eEventId'].map(id => [id, v(id)])),
       playback: (document.querySelector('input[name="ePlayback"]:checked') || {}).value, interrupt: (document.querySelector('input[name="eInterrupt"]:checked') || {}).value,
       mods: sel('eModuleScope'), chars: sel('eCharScope'), prev: sel('eRequiresPrevious'), viewed: document.getElementById('eViewed').checked,
@@ -2963,7 +2965,7 @@ const Admin = {
   restoreEditor(st) {
     this.editingContentId = st.editingContentId; this.uploadedMedia = st.uploadedMedia;
     this.choiceOptions = st.choiceOptions; this.variants = st.variants; this.blocks = st.blocks;
-    this.normVariants(); this.mainBlocks = this.blocks; this.vEdit = -1;
+    this.normVariants(); this.mainBlocks = this.blocks; this.mainChoices = this.choiceOptions; this.vEdit = -1;
     Object.entries(st.f).forEach(([id, val]) => document.getElementById(id).value = val);
     const radio = (name, val) => document.querySelectorAll(`input[name="${name}"]`).forEach(r => { r.checked = r.value === val; r.closest('.radio-chip').classList.toggle('checked', r.checked); });
     if (st.playback) radio('ePlayback', st.playback); if (st.interrupt) radio('eInterrupt', st.interrupt);
@@ -2972,6 +2974,7 @@ const Admin = {
     document.getElementById('editorTitle').textContent = st.title; document.getElementById('deleteContentBtn').style.display = st.delDisplay; document.getElementById('eViewSection').style.display = st.viewDisplay;
     document.getElementById('editorError').textContent = ''; document.getElementById('editorOk').textContent = '';
     this.onTypeChange(); this.onUnlockTypeChange(); this.renderChoiceList(); this.renderVariants(); this.renderBlocks(); this.renderQr(); this.renderCrumb();
+    if (st.vEdit >= 0 && this.variants[st.vEdit]) this.switchVariant(st.vEdit);
     setTimeout(() => document.querySelectorAll('#contentEditorModal .ce-col').forEach((c, i) => c.scrollTop = (st.scroll || [])[i] || 0), 0);
   },
   renderCrumb() {
@@ -2988,7 +2991,7 @@ const Admin = {
     // наследуем доступ родителя; открывается только через выбор
     this.renderModuleScopeCheckboxes(parent.mods); this.renderCharScope(parent.chars);
     document.getElementById('eUnlockType').value = 'player_choice'; this.onUnlockTypeChange();
-    document.getElementById('editorTitle').textContent = `Новый объект для варианта «${opt.label || 'без названия'}»`;
+    document.getElementById('editorTitle').textContent = `Новый объект для варианта «${opt.label || 'без названия'}»` + (parent.vEdit >= 0 ? ` · ветка страницы-варианта ${parent.vEdit + 1}` : '');
     document.getElementById('eSummary').value = opt.label ? 'Ветка: ' + opt.label : '';
     this.renderCrumb();
     document.querySelectorAll('#contentEditorModal .ce-col').forEach(c => c.scrollTop = 0);
@@ -3027,7 +3030,8 @@ const Admin = {
     if (unlockType === 'after_timer') unlockCondition.timerMinutes = parseInt(document.getElementById('eTimerMinutes').value, 10) || 10;
     if (unlockType === 'master_event') unlockCondition.eventId = document.getElementById('eEventId').value.trim() || null;
 
-    const cleanChoices = this.choiceOptions.filter(o => o.label && o.nextContentId);
+    const cleanCh = list => (list || []).filter(o => o.label && o.nextContentId);
+    const cleanChoices = cleanCh(this.vEdit >= 0 ? this.mainChoices : this.choiceOptions);
 
     let mediaPath = null;
     if (this.uploadedMedia) {
@@ -3059,8 +3063,8 @@ const Admin = {
       if (this.editingContentId) { const v = document.getElementById('eViewed').checked; row.viewed = v; const ex = this.contentItems.find(c => c.id === this.editingContentId); row.viewed_at = v ? ((ex && ex.viewed_at) || new Date().toISOString()) : null; }
     }
     if (!this.contentItems.length || 'variants' in this.contentItems[0])
-      row.variants = (this.variants || []).map(v => ({ character_ids: v.character_ids || [], blocks: (v.blocks || []).filter(keep) }))
-        .filter(v => v.character_ids.length && v.blocks.length)
+      row.variants = (this.variants || []).map(v => ({ character_ids: v.character_ids || [], module_ids: v.module_ids || [], blocks: (v.blocks || []).filter(keep), choice_options: cleanCh(v.choice_options) }))
+        .filter(v => (v.character_ids.length || v.module_ids.length) && v.blocks.length)
         .map(v => Object.assign(v, { body: v.blocks.filter(b => b.type === 'text').map(b => b.md.trim()).join('\n\n') }));
 
     let error;
@@ -3076,7 +3080,8 @@ const Admin = {
     await this.loadContentItems();
     if ((this.editorStack || []).length) {   // сохранили объект ветки — возвращаемся в родителя и привязываем
       const parent = this.editorStack.pop(), newId = this.editingContentId || this.lastSavedId;
-      if (newId && parent.choiceOptions[parent.branchIdx]) parent.choiceOptions[parent.branchIdx].nextContentId = newId;
+      const opts = parent.vEdit >= 0 ? (parent.variants[parent.vEdit] || {}).choice_options : parent.choiceOptions;
+      if (newId && opts && opts[parent.branchIdx]) opts[parent.branchIdx].nextContentId = newId;
       this.restoreEditor(parent);
       document.getElementById('editorOk').textContent = `Объект ${row.trigger_code} создан и привязан к варианту. Сохраните этот объект.`;
       return;
@@ -3184,29 +3189,43 @@ const Admin = {
   normVariants() {
     (this.variants || []).forEach(v => {
       if (!Array.isArray(v.blocks) || !v.blocks.length) v.blocks = [{ type: 'text', md: v.body || '', width: 'full', style: 'plain' }];
-      v.character_ids = v.character_ids || [];
+      v.character_ids = v.character_ids || []; v.module_ids = v.module_ids || [];
+      // своё ветвление; у старых вариантов его не было — берут ветвление основной страницы
+      if (!Array.isArray(v.choice_options)) v.choice_options = JSON.parse(JSON.stringify(this.choiceOptions || []));
     });
   },
+  // вкладка редактора: основная страница или вариант — у каждого свои блоки и своё ветвление
   switchVariant(i) {
-    if (this.vEdit < 0 || this.vEdit === undefined) this.mainBlocks = this.blocks;
+    if (this.vEdit < 0 || this.vEdit === undefined) { this.mainBlocks = this.blocks; this.mainChoices = this.choiceOptions; }
     this.vEdit = i;
     this.blocks = i < 0 ? this.mainBlocks : this.variants[i].blocks;
-    this.renderVariants(); this.renderBlocks();
+    this.choiceOptions = i < 0 ? this.mainChoices : this.variants[i].choice_options;
+    const ttl = document.getElementById('eChoiceTitle');
+    if (ttl) ttl.textContent = i < 0 ? 'Ветвление (выбор после этого объекта)' : `Ветвление варианта ${i + 1} — свой выбор после страницы-варианта`;
+    this.renderVariants(); this.renderBlocks(); this.renderChoiceList();
+  },
+  variantWho(v) {
+    const ch = (v.character_ids || []).map(id => ((this.characters || []).find(c => c.id === id) || {}).name || '?');
+    const md = (v.module_ids || []).map(id => '▣ ' + (((this.modules || []).find(m => m.id === id) || {}).name || '?'));
+    return md.concat(ch).join(', ') || 'никто не выбран';
   },
   renderVariants() {
     const tabs = document.getElementById('eVarTabs'), el = document.getElementById('eVariants'); if (!el || !tabs) return;
     const chars = (this.characters || []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ru'));
-    const names = v => (v.character_ids || []).map(id => (chars.find(c => c.id === id) || {}).name || '?').join(', ') || 'персонажи не выбраны';
+    const mods = (this.modules || []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ru'));
     const cur = this.vEdit === undefined ? -1 : this.vEdit;
     tabs.innerHTML = `<button type="button" class="vr-tab ${cur < 0 ? 'on' : ''}" data-vr="tab" data-i="-1">Основная страница</button>` +
-      (this.variants || []).map((v, i) => `<button type="button" class="vr-tab v ${cur === i ? 'on' : ''}" data-vr="tab" data-i="${i}" title="${this.escape(names(v))}">Вариант ${i + 1}: ${this.escape(names(v))}</button>`).join('') +
-      `<button type="button" class="vr-tab add" data-vr="add" title="Отдельная страница для выбранных персонажей">+ Вариант для персонажей</button>`;
+      (this.variants || []).map((v, i) => `<button type="button" class="vr-tab v ${cur === i ? 'on' : ''}" data-vr="tab" data-i="${i}" title="${this.escape(this.variantWho(v))}">Вариант ${i + 1}: ${this.escape(this.variantWho(v))}</button>`).join('') +
+      `<button type="button" class="vr-tab add" data-vr="add" title="Отдельная страница со своим ветвлением для выбранных модулей или персонажей">+ Вариант для модулей / персонажей</button>`;
     const v = cur >= 0 ? this.variants[cur] : null;
-    el.innerHTML = !v ? ((this.variants || []).length ? '<div class="meta" style="margin-bottom:8px">Основную страницу видят все, кроме персонажей из вариантов.</div>' : '') : `
+    el.innerHTML = !v ? ((this.variants || []).length ? '<div class="meta" style="margin-bottom:8px">Основную страницу видят все, кому не назначен вариант. Персонаж важнее модуля: если вошедшему назначен свой вариант, он видит его, иначе — вариант своего модуля.</div>' : '') : `
       <div class="vr-item" style="margin:0 0 8px">
-        <div class="vr-head"><span>Вариант ${cur + 1} — кто видит эту страницу вместо основной</span>
-          <span><button type="button" class="btn ghost" data-vr="copyMain" title="Заменить блоки варианта копией основной страницы">⧉ Как основная</button>
+        <div class="vr-head"><span>Вариант ${cur + 1} — кто видит эту страницу и её ветвление вместо основной</span>
+          <span><button type="button" class="btn ghost" data-vr="copyMain" title="Заменить блоки и ветвление варианта копией основной страницы">⧉ Как основная</button>
           <button type="button" class="btn ghost" data-vr="del" data-i="${cur}">✕ Удалить вариант</button></span></div>
+        <div class="vr-sub">Модули — на терминале этих модулей (в том числе без входа)</div>
+        <div class="vr-chars">${mods.map(m => `<button type="button" class="${(v.module_ids || []).includes(m.id) ? 'on' : ''}" data-vr="toggleMod" data-i="${cur}" data-id="${m.id}">▣ ${this.escape(m.name || m.access_code)}</button>`).join('') || '<span class="meta">Нет модулей</span>'}</div>
+        <div class="vr-sub">Персонажи — вошедшие на любом терминале (важнее модуля)</div>
         <div class="vr-chars">${chars.map(c => `<button type="button" class="${(v.character_ids || []).includes(c.id) ? 'on' : ''}" data-vr="toggle" data-i="${cur}" data-id="${c.id}">${this.escape(c.name)}</button>`).join('') || '<span class="meta">Нет персонажей</span>'}</div>
       </div>`;
     const f = document.getElementById('eBlocksField'); if (f) f.classList.toggle('vr-editing', !!v);
@@ -3389,7 +3408,7 @@ const Admin = {
     document.getElementById('cpViewTitle').textContent = 'Контент ' + c.trigger_code + (c.summary ? ' — ' + c.summary : '');
     const blocks = contentToBlocks(c);
     document.getElementById('cpViewBody').innerHTML = (blocks.length ? contentBlocksHtml(blocks, mdToHtml) : '<span class="meta">Пусто</span>') +
-      ((c.variants || []).length ? `<div class="meta" style="margin-top:10px">Есть отдельные страницы для: ${this.escape(c.variants.map(v => (v.character_ids || []).map(x => ((this.characters || []).find(ch => ch.id === x) || {}).name).filter(Boolean).join(', ')).join('; '))}</div>` : '');
+      ((c.variants || []).length ? `<div class="meta" style="margin-top:10px">Есть отдельные страницы для: ${this.escape(c.variants.map(v => this.variantWho(v)).join('; '))}</div>` : '');
     document.getElementById('cpViewEdit').dataset.id = id;
     document.getElementById('cpViewModal').classList.add('open');
   },
@@ -4242,10 +4261,11 @@ document.addEventListener('change', (e) => {
 document.addEventListener('click', (e) => {
   const v = e.target.closest('[data-vr]'); if (!v) return;
   const a = v.dataset.vr, i = parseInt(v.dataset.i, 10);
-  if (a === 'add') { Admin.variants = Admin.variants || []; if (Admin.vEdit >= 0) Admin.switchVariant(-1); Admin.variants.push({ character_ids: [], blocks: JSON.parse(JSON.stringify(Admin.mainBlocks || Admin.blocks || [])) }); Admin.normVariants(); Admin.switchVariant(Admin.variants.length - 1); }
+  if (a === 'add') { Admin.variants = Admin.variants || []; if (Admin.vEdit >= 0) Admin.switchVariant(-1); Admin.variants.push({ character_ids: [], module_ids: [], blocks: JSON.parse(JSON.stringify(Admin.mainBlocks || Admin.blocks || [])), choice_options: JSON.parse(JSON.stringify(Admin.mainChoices || Admin.choiceOptions || [])) }); Admin.normVariants(); Admin.switchVariant(Admin.variants.length - 1); }
+  if (a === 'toggleMod') { const ids = Admin.variants[i].module_ids = Admin.variants[i].module_ids || []; const k = ids.indexOf(v.dataset.id); k < 0 ? ids.push(v.dataset.id) : ids.splice(k, 1); Admin.renderVariants(); }
   if (a === 'del') { Admin.switchVariant(-1); Admin.variants.splice(i, 1); Admin.renderVariants(); }
   if (a === 'tab') Admin.switchVariant(i);
-  if (a === 'copyMain' && Admin.vEdit >= 0) { Admin.variants[Admin.vEdit].blocks = JSON.parse(JSON.stringify(Admin.mainBlocks)); Admin.blocks = Admin.variants[Admin.vEdit].blocks; Admin.renderBlocks(); }
+  if (a === 'copyMain' && Admin.vEdit >= 0) { const vv = Admin.variants[Admin.vEdit]; vv.blocks = JSON.parse(JSON.stringify(Admin.mainBlocks)); vv.choice_options = JSON.parse(JSON.stringify(Admin.mainChoices || [])); Admin.switchVariant(Admin.vEdit); }
   if (a === 'toggle') { const ids = Admin.variants[i].character_ids = Admin.variants[i].character_ids || []; const k = ids.indexOf(v.dataset.id); k < 0 ? ids.push(v.dataset.id) : ids.splice(k, 1); Admin.renderVariants(); }
   if (a === 'preview') { const p = document.getElementById('eBodyPreview'); const on = p.style.display === 'none'; p.style.display = on ? '' : 'none'; if (on) Admin.renderPagePreview(); }
   if (a === 'qrPdf') Admin.exportContentQrPdf();

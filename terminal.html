@@ -3941,7 +3941,8 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       // отдельная страница для вошедшего персонажа (вариант со своими блоками) заменяет основную целиком
       const vp = this.variantFor(item);
       if (vp && Array.isArray(vp.blocks) && vp.blocks.length && item.type !== 'event')
-        item = Object.assign({}, item, { blocks: vp.blocks, body: vp.body || '', variants: [], type: 'text', media_url: null });
+        item = Object.assign({}, item, { blocks: vp.blocks, body: vp.body || '', variants: [], type: 'text', media_url: null },
+          Array.isArray(vp.choice_options) ? { choice_options: vp.choice_options } : {});
       document.getElementById('contentTitle').textContent = "ДАННЫЕ ОБЪЕКТА";
       document.getElementById('contentTypeTag').textContent = item.type.toUpperCase();
 
@@ -4043,9 +4044,13 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     },
 
     // вариант текста для вошедшего персонажа (content_items.variants), иначе основной текст
+    // вариант страницы: сначала для вошедшего персонажа, затем для этого модуля
     variantFor(item) {
-      const ch = this.currentCharacter;
-      return ch && Array.isArray(item.variants) ? item.variants.find(x => x && (x.character_ids || []).includes(ch.id) && ((x.body || '').trim() || (x.blocks || []).length)) || null : null;
+      if (!Array.isArray(item.variants) || !item.variants.length) return null;
+      const ok = x => x && ((x.body || '').trim() || (x.blocks || []).length);
+      const ch = this.currentCharacter, mod = DB.moduleRow && DB.moduleRow.id;
+      return (ch && item.variants.find(x => ok(x) && (x.character_ids || []).includes(ch.id)))
+        || (mod && item.variants.find(x => ok(x) && (x.module_ids || []).includes(mod))) || null;
     },
     variantBody(item) {
       const v = this.variantFor(item);
