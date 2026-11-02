@@ -2521,9 +2521,10 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     },
 
     // оплата объекта кристаллами (sql/crystals.sql); нет таблицы — считаем, что платить не нужно
-    async getPayment(characterId, contentId) {
+    // variant: '' — основная страница, иначе id варианта (у каждого своя цена и своя оплата)
+    async getPayment(characterId, contentId, variant) {
       const { data, error } = await sb.from('content_payments').select('*')
-        .eq('character_id', characterId).eq('content_id', contentId).maybeSingle();
+        .eq('character_id', characterId).eq('content_id', contentId).eq('variant', variant || '').maybeSingle();
       if (error) return { paid: 0, completed_at: /content_payments/.test(error.message) ? 'n/a' : null };
       return data;
     },
@@ -3935,14 +3936,16 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
         return;
       }
 
-      // платный объект: персонаж вносит кристаллы один раз, потом открывает свободно
-      const price = Number(item.price) || 0;
+      // энергия кристаллов: у основной страницы и у каждого варианта своя цена; вносится один раз
+      const pv = this.variantFor(item);
+      const variant = pv ? (pv.id || '') : '';
+      const price = pv ? (Number(pv.price) || 0) : (Number(item.price) || 0);
       if (price > 0) {
-        const pay = await DB.getPayment(this.currentCharacter.id, contentId);
+        const pay = await DB.getPayment(this.currentCharacter.id, contentId, variant);
         if (!pay || !pay.completed_at) {
-          await this.log('content_open', { contentId, type: item.type, result: 'unpaid' });
-          this.payItem = item;
-          this.renderPayGate(item, pay ? pay.paid : 0);
+          await this.log('content_open', { contentId, type: item.type, result: 'unpaid', variant: variant || undefined });
+          this.payItem = item; this.payVariant = variant;
+          this.renderPayGate(item, pay ? pay.paid : 0, price);
           return;
         }
       }
@@ -4046,8 +4049,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       document.getElementById('contentModal').classList.add('open');
     },
 
-    renderPayGate(item, paid) {
-      const price = Number(item.price) || 0;
+    renderPayGate(item, paid, price) {
       const gems = Array.from({ length: price }, (_, i) => `<span class="tui-gem ${i < paid ? 'on' : ''}">◆</span>`).join('');
       this.renderGate('ТРЕБУЕТСЯ ДОПОЛНИТЕЛЬНАЯ ЭНЕРГИЯ', item.type,
         `<div>Для расшифровки этих данных нужна энергия кристаллов. Энергия вносится один раз — затем данные доступны вам без ограничений.</div>
@@ -4073,11 +4075,11 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       this.crystalSeen.add(code);
       const { data, error } = await sb.rpc('spend_crystal', {
         p_code: code, p_character: this.currentCharacter.id, p_content: item.id,
-        p_module: DB.moduleRow ? DB.moduleRow.id : null, p_source: 'terminal'
+        p_module: DB.moduleRow ? DB.moduleRow.id : null, p_source: 'terminal', p_variant: this.payVariant || ''
       });
       if (error || !data) { this.crystalSeen.delete(code); errEl.textContent = 'Нет связи с энергосетью колонии: ' + (error ? error.message : '—'); again(); return; }
       const r = data;
-      await this.log(r.result === 'ok' ? 'crystal_spend' : 'crystal_reject', { code, contentId: item.id, result: r.result, paid: r.paid, price: r.price });
+      await this.log(r.result === 'ok' ? 'crystal_spend' : 'crystal_reject', { code, contentId: item.id, variant: this.payVariant || undefined, result: r.result, paid: r.paid, price: r.price });
       if (r.result === 'ok' || r.result === 'already_paid') {
         if (r.completed || r.result === 'already_paid') {
           document.getElementById('modalReadout').textContent = '✓ Энергии достаточно';
@@ -4088,7 +4090,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
         }
         errEl.style.color = 'var(--tui-cyan)';
         errEl.textContent = `◆ Энергия кристалла ${code} принята · ${r.paid} из ${r.price}. Сканируйте следующий кристалл.`;
-        this.renderPayGate(item, r.paid);
+        this.renderPayGate(item, r.paid, r.price);
         document.getElementById('contentModal').classList.add('open');
       } else {
         errEl.style.color = '';

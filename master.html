@@ -1436,7 +1436,7 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
         </div>
       </div>
       <div class="field" id="ePriceField">
-        <label>Цена в кристаллах (0 — бесплатно). Персонаж платит один раз — дальше объект открывается без оплаты</label>
+        <label>Энергия кристаллов для основной страницы (0 — бесплатно). У вариантов цена своя — задаётся на вкладке варианта. Персонаж вносит энергию один раз; снятие отметки «просмотрено» сбрасывает её и возвращает кристаллы в оборот</label>
         <input type="number" class="input" id="ePrice" min="0" max="99" value="0" style="max-width:140px">
       </div>
       <div class="field">
@@ -2621,7 +2621,8 @@ const Admin = {
       const condType = c.unlock_condition && c.unlock_condition.type ? c.unlock_condition.type : 'always';
       const opened = (this.contentProgress || []).filter(x => x.content_id === c.id);
       const viewed = !!c.viewed || (c.viewed == null && opened.length > 0);
-      const extra = [c.price > 0 ? `💎 ${c.price}` : '', c.playback === 'once' ? 'один раз' : '', COND[condType] || '', (c.choice_options || []).length ? `${c.choice_options.length} веток` : '', vars ? `свой текст для ${vars} вар.` : '',
+      const vPrices = (c.variants || []).map(v => +v.price || 0).filter(x => x > 0);
+      const extra = [c.price > 0 || vPrices.length ? `💎 ${c.price || 0}${vPrices.length ? ' / вар. ' + vPrices.join(', ') : ''}` : '', c.playback === 'once' ? 'один раз' : '', COND[condType] || '', (c.choice_options || []).length ? `${c.choice_options.length} веток` : '', vars ? `свой текст для ${vars} вар.` : '',
         opened.length ? `открыли: ${opened.map(x => ((this.characters || []).find(ch => ch.id === x.character_id) || {}).name || '?').join(', ')}` : ''].filter(Boolean).join(' · ');
       return `
         <div class="content-row clickable" data-action="openContentEditor" data-id="${c.id}" title="Открыть">
@@ -2684,8 +2685,23 @@ const Admin = {
   },
   // «не просмотрено» — объект снова закрыт: внесённая энергия кристаллов сбрасывается (сами кристаллы остаются истощёнными)
   async resetPayments(contentId) {
-    const { error } = await sb.from('content_payments').delete().eq('content_id', contentId);
-    if (error && !/content_payments/.test(error.message)) tuiShowErrorToast('Энергия не сброшена: ' + error.message);
+    const { data, error } = await sb.rpc('reset_content_energy', { p_content: contentId });
+    if (error) {
+      tuiShowErrorToast('Энергия кристаллов не сброшена: ' + error.message + (/reset_content_energy|function/.test(error.message) ? ' — выполните sql/crystals_v2.sql в Supabase.' : ''));
+      return;
+    }
+    if (data && (data.payments || data.crystals)) this.info(`Энергия объекта сброшена: оплат ${data.payments}, кристаллов снова активно ${data.crystals}.`);
+    if (window.Cr && Cr.all.length) Cr.load();
+  },
+  info(msg) {
+    let el = document.getElementById('adminInfoToast');
+    if (!el) {
+      el = document.createElement('div'); el.id = 'adminInfoToast';
+      el.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#06231f;color:#CCFBF1;border:1px solid #5EEAD4;padding:10px 16px;font-family:monospace;font-size:12px;max-width:600px;box-shadow:0 4px 20px rgba(0,0,0,.5)';
+      document.body.appendChild(el);
+    }
+    el.textContent = msg; el.style.display = '';
+    clearTimeout(el._t); el._t = setTimeout(() => { el.style.display = 'none'; }, 6000);
   },
   renderCharScope(selected) {
     selected = selected || [];
@@ -3171,7 +3187,7 @@ const Admin = {
       }
     }
     if (!this.contentItems.length || 'variants' in this.contentItems[0])
-      row.variants = (this.variants || []).map(v => ({ character_ids: v.character_ids || [], module_ids: v.module_ids || [], blocks: (v.blocks || []).filter(keep), choice_options: cleanCh(v.choice_options) }))
+      row.variants = (this.variants || []).map(v => ({ id: v.id, price: Math.max(0, parseInt(v.price, 10) || 0), character_ids: v.character_ids || [], module_ids: v.module_ids || [], blocks: (v.blocks || []).filter(keep), choice_options: cleanCh(v.choice_options) }))
         .filter(v => (v.character_ids.length || v.module_ids.length) && v.blocks.length)
         .map(v => Object.assign(v, { body: v.blocks.filter(b => b.type === 'text').map(b => b.md.trim()).join('\n\n') }));
 
@@ -3299,6 +3315,8 @@ const Admin = {
     (this.variants || []).forEach(v => {
       if (!Array.isArray(v.blocks) || !v.blocks.length) v.blocks = [{ type: 'text', md: v.body || '', width: 'full', style: 'plain' }];
       v.character_ids = v.character_ids || []; v.module_ids = v.module_ids || [];
+      if (!v.id) v.id = 'v' + Math.random().toString(36).slice(2, 8);   // постоянный id: к нему привязана энергия кристаллов
+      v.price = Math.max(0, parseInt(v.price, 10) || 0);
       // своё ветвление; у старых вариантов его не было — берут ветвление основной страницы
       if (!Array.isArray(v.choice_options)) v.choice_options = JSON.parse(JSON.stringify(this.choiceOptions || []));
     });
@@ -3332,6 +3350,8 @@ const Admin = {
         <div class="vr-head"><span>Вариант ${cur + 1} — кто видит эту страницу и её ветвление вместо основной</span>
           <span><button type="button" class="btn ghost" data-vr="copyMain" title="Заменить блоки и ветвление варианта копией основной страницы">⧉ Как основная</button>
           <button type="button" class="btn ghost" data-vr="del" data-i="${cur}">✕ Удалить вариант</button></span></div>
+        <div class="vr-sub">Энергия кристаллов для этого варианта (0 — бесплатно; отдельно от основной страницы)</div>
+        <input type="number" class="input" min="0" max="99" value="${v.price || 0}" data-vr-price="${cur}" style="max-width:120px;margin-bottom:8px">
         <div class="vr-sub">Модули — на терминале этих модулей (в том числе без входа)</div>
         <div class="vr-chars">${mods.map(m => `<button type="button" class="${(v.module_ids || []).includes(m.id) ? 'on' : ''}" data-vr="toggleMod" data-i="${cur}" data-id="${m.id}">▣ ${this.escape(m.name || m.access_code)}</button>`).join('') || '<span class="meta">Нет модулей</span>'}</div>
         <div class="vr-sub">Персонажи — вошедшие на любом терминале (важнее модуля)</div>
@@ -4367,6 +4387,7 @@ document.addEventListener('click', (e) => {
   if (a === 'qrPdf') Admin.exportContentQrPdf();
 });
 document.addEventListener('input', (e) => {
+  if (e.target.dataset && e.target.dataset.vrPrice !== undefined) Admin.variants[parseInt(e.target.dataset.vrPrice, 10)].price = Math.max(0, parseInt(e.target.value, 10) || 0);
   if (e.target.dataset && e.target.dataset.vrBody !== undefined) Admin.variants[parseInt(e.target.dataset.vrBody, 10)].body = e.target.value;
   const bl = e.target.closest && e.target.closest('[data-bi]');
   if (bl && e.target.dataset.f) { const b = Admin.blocks[+bl.dataset.bi]; b[e.target.dataset.f] = e.target.value; Admin.renderPagePreview(true); }
@@ -5764,7 +5785,7 @@ const Jr = {
       case 'scan': return [d.code, d.result === 'not_found' ? 'не найден' : d.result === 'crystal' ? 'это кристалл' : '', cn].filter(Boolean).join(' · ');
       case 'content_open': return [cn, d.result === 'blocked' ? 'доступ закрыт' : d.result === 'unpaid' ? 'нужна энергия кристаллов' : '', d.type].filter(Boolean).join(' · ');
       case 'content_choice': return [cn, d.label ? '→ ' + d.label : '', d.nextContentId ? this.contentName(d.nextContentId) : ''].filter(Boolean).join(' · ');
-      case 'crystal_spend': case 'crystal_reject': case 'crystal_revive': return [d.code ? 'кристалл ' + d.code : '', cn, { ok: 'принят', spent: 'истощён', unknown: 'не кристалл', already_paid: 'энергии уже достаточно' }[d.result] || d.result, d.price ? `энергия ${d.paid || 0}/${d.price}` : ''].filter(Boolean).join(' · ');
+      case 'crystal_spend': case 'crystal_reject': case 'crystal_revive': return [d.code ? 'кристалл ' + d.code : '', cn + (d.variant && window.Cr ? Cr.variantLabel(d.contentId, d.variant) : ''), { ok: 'принят', spent: 'истощён', unknown: 'не кристалл', already_paid: 'энергии уже достаточно' }[d.result] || d.result, d.price ? `энергия ${d.paid || 0}/${d.price}` : ''].filter(Boolean).join(' · ');
       case 'journal_entry': return d.type === 'audio' ? 'голосовая' + (d.text ? ': ' + d.text : '') : (d.text || '');
     }
     if (r.action_type.startsWith('threat_') || r.action_type.startsWith('silence_')) {
@@ -5958,9 +5979,15 @@ const Cr = {
       <div class="cr-grid">${list.map(c => `<div class="cr-c ${c.spent_at ? 'spent' : ''}">
       <img src="${this.canvas(c.code)}" alt="">
       <div><b>${this.esc(c.code)}</b>${c.spent_at
-        ? `<span class="cr-used">ИСПОЛЬЗОВАН</span><small>${new Date(c.spent_at).toLocaleString()}<br>${this.esc(chName(c.spent_by) || '—')}${c.spent_for ? ' → ' + this.esc(Jr.contentName(c.spent_for)) : ''}<br>${c.spent_source === 'scanner' ? 'сканер' : this.esc(modName(c.spent_module) || 'терминал')}</small>
+        ? `<span class="cr-used">ИСПОЛЬЗОВАН</span><small>${new Date(c.spent_at).toLocaleString()}<br>${this.esc(chName(c.spent_by) || '—')}${c.spent_for ? ' → ' + this.esc(Jr.contentName(c.spent_for)) + this.esc(this.variantLabel(c.spent_for, c.spent_variant)) : ''}<br>${c.spent_source === 'scanner' ? 'сканер' : this.esc(modName(c.spent_module) || 'терминал')}</small>
            <button type="button" class="cr-on" data-cr="revive" data-id="${c.id}" title="Кристалл снова примут как источник энергии">↺ включить снова</button>`
         : '<small>свободен</small>'}</div></div>`).join('') || '<div class="empty-line">Нет кристаллов.</div>'}</div>`;
+  },
+  variantLabel(contentId, vid) {
+    if (!vid) return '';
+    const c = (Admin.contentItems || []).find(x => x.id === contentId);
+    const i = c ? (c.variants || []).findIndex(v => v.id === vid) : -1;
+    return i >= 0 ? ` (вариант ${i + 1})` : ' (вариант)';
   },
   async revive(id) {
     const c = this.all.find(x => x.id === id); if (!c) return;
