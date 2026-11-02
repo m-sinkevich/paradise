@@ -731,6 +731,28 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
 .mt-faces{ display:flex; gap:6px; margin-top:12px; flex-wrap:wrap; }
 .mt-faces img, .mt-faces .none{ width:34px; height:42px; object-fit:cover; object-position:50% 25%; border:1px solid color-mix(in srgb, var(--mc) 50%, transparent); background:#0B1626; }
 .mt-faces .none{ display:grid; place-items:center; font-size:12px; color:var(--ink-400); }
+.jr-filters{ display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+.jr-f{ display:flex; gap:10px; align-items:flex-start; }
+.jr-f > b{ flex:0 0 92px; font-size:9.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--ink-400); font-weight:600; padding-top:5px; }
+.jr-chips{ display:flex; flex-wrap:wrap; gap:5px; }
+.jr-chips button{ background:transparent; border:1px solid var(--edge); color:var(--ink-100); font-family:var(--font-mono); font-size:10.5px; padding:4px 9px; cursor:pointer; }
+.jr-chips button.on{ border-color:var(--cyan); background:rgba(94,234,212,.16); color:#fff; }
+.jr-row{ display:flex; gap:8px; flex-wrap:wrap; } .jr-row .input{ flex:1; min-width:180px; width:auto; } .jr-row select.input{ flex:0 0 200px; }
+.jr-list{ display:flex; flex-direction:column; border-top:1px solid var(--edge); }
+.jr-it{ display:grid; grid-template-columns: 128px 150px 1fr; gap:10px; padding:7px 4px; border-bottom:1px solid rgba(56,189,248,.1); font-size:12px; align-items:baseline; }
+.jr-it .t{ color:var(--ink-400); font-family:var(--font-mono); font-size:11px; }
+.jr-it .w{ color:var(--ink-100); } .jr-it .w small{ display:block; color:var(--ink-400); font-size:10px; }
+.jr-it .a{ color:var(--cyan); font-weight:600; margin-right:6px; } .jr-it.threat .a{ color:var(--red); } .jr-it.crystal .a{ color:#C4B5FD; }
+.jr-it .src{ font-size:9px; border:1px solid var(--amber); color:var(--amber); padding:1px 5px; margin-left:6px; letter-spacing:.5px; }
+.jr-it .d{ color:var(--ink-100); word-break:break-word; }
+@media (max-width:860px){ .jr-it{ grid-template-columns: 1fr; gap:2px; } }
+.cr-new{ display:flex; gap:8px; margin-bottom:8px; } .cr-new .input:first-child{ flex:1; } .cr-new input[type=number]{ width:80px; }
+.cr-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap:6px; }
+.cr-c{ border:1px solid var(--edge); padding:6px 8px; font-size:11px; display:flex; gap:8px; align-items:center; }
+.cr-c canvas, .cr-c img{ width:44px; height:44px; image-rendering:pixelated; background:#fff; padding:3px; flex:0 0 auto; }
+.cr-c b{ font-family:var(--font-mono); font-size:14px; letter-spacing:1px; color:#fff; display:block; }
+.cr-c.spent{ opacity:.55; border-style:dashed; } .cr-c.spent b{ text-decoration:line-through; color:var(--ink-400); }
+.cr-c small{ color:var(--ink-400); font-size:9.5px; line-height:1.3; display:block; }
 .mt-now{ margin-top:10px; display:flex; flex-direction:column; gap:4px; font-size:11.5px; }
 .mt-line{ display:flex; align-items:baseline; gap:8px; min-width:0; }
 .mt-line > span{ flex:0 0 108px; font-size:9px; letter-spacing:1.2px; color:var(--ink-400); text-transform:uppercase; }
@@ -792,7 +814,8 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
   <button class="tab-btn" id="tabBtn-characters" data-action="switchTab" data-tab="characters">Персонажи</button>
   <button class="tab-btn" id="tabBtn-modules" data-action="switchTab" data-tab="modules">Модули</button>
   <button class="tab-btn" id="tabBtn-comms" data-action="switchTab" data-tab="comms">Связь</button>
-  <button class="tab-btn" id="tabBtn-nfc" data-action="switchTab" data-tab="nfc">Метки NFC</button>
+  <button class="tab-btn" id="tabBtn-journal" data-action="switchTab" data-tab="journal">Журнал</button>
+  <button class="tab-btn" id="tabBtn-crystals" data-action="switchTab" data-tab="crystals">Кристаллы</button>
   <button class="tab-btn" style="margin-left:auto;opacity:.6" data-action="masterLogout" title="Забыть пароль на этом компьютере">Выйти ⏻</button>
 </div>
 
@@ -897,8 +920,57 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
   </div>
 </div>
 
-<div class="tab-panel" id="tabPanel-nfc">
-  <iframe id="nfcFrame" title="Метки NFC" style="width:100%;height:calc(100vh - 190px);min-height:560px;border:1px solid var(--edge);background:transparent;display:block;"></iframe>
+<div class="tab-panel" id="tabPanel-journal">
+  <section class="panel shape-a" style="max-width:none">
+    <div class="panel-head">
+      <div class="panel-title"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z M8 8h8 M8 12h8 M8 16h5" stroke-linejoin="round"/></svg><span>Журнал действий</span></div>
+      <span class="status-line" id="jrCount"></span>
+    </div>
+    <div class="panel-body">
+      <div class="jr-filters">
+        <div class="jr-f"><b>Персонажи</b><div class="jr-chips" id="jrChars"></div></div>
+        <div class="jr-f"><b>Модули</b><div class="jr-chips" id="jrMods"></div></div>
+        <div class="jr-f"><b>Действия</b><div class="jr-chips" id="jrActs"></div></div>
+        <div class="jr-f"><b>Источник</b><div class="jr-chips" id="jrSrc"></div></div>
+        <div class="jr-row">
+          <input type="text" class="input" id="jrSearch" placeholder="Поиск по коду, тексту, объекту…">
+          <select class="input" id="jrPeriod"><option value="60">последний час</option><option value="180">3 часа</option><option value="720">12 часов</option><option value="1440">сутки</option><option value="0" selected>всё время</option></select>
+          <button class="btn ghost" data-jr="reset">Сбросить фильтры</button>
+        </div>
+      </div>
+      <div class="jr-list" id="jrList"><div class="empty-line">Загрузка...</div></div>
+      <button class="btn ghost" data-jr="more" id="jrMore" style="margin-top:10px;display:none">Показать ещё</button>
+    </div>
+  </section>
+</div>
+
+<div class="tab-panel" id="tabPanel-crystals">
+<div class="admin-grid">
+  <section class="panel shape-a">
+    <div class="panel-head"><div class="panel-title"><svg viewBox="0 0 24 24"><path d="M12 2l7 7-7 13L5 9z M5 9h14 M9 9l3 13 3-13" stroke-linejoin="round"/></svg><span>Группы кристаллов</span></div></div>
+    <div class="panel-body scroll">
+      <div class="status-line" style="margin-bottom:10px">Кристалл — игровая валюта: наклейка с маленьким QR-кодом. Цена объекта задаётся в редакторе контента. Каждый кристалл принимается один раз.</div>
+      <div class="cr-new">
+        <input type="text" class="input" id="crName" placeholder="Название группы, например «Пещера, партия 1»">
+        <input type="number" class="input" id="crCount" min="1" max="500" value="50" title="Сколько кристаллов">
+        <button class="btn amber" data-cr="create">+ Создать</button>
+      </div>
+      <div class="status-line" id="crStatus"></div>
+      <div class="row-list" id="crGroups"><div class="empty-line">Загрузка...</div></div>
+    </div>
+  </section>
+  <section class="panel shape-b">
+    <div class="panel-head"><div class="panel-title"><span id="crTitle">Кристаллы группы</span></div>
+      <div class="btn-row" id="crActs" style="display:none;margin:0">
+        <select class="input" id="crSize" title="Размер QR на печати" style="width:auto"><option value="12">QR 12 мм</option><option value="15">QR 15 мм</option><option value="18" selected>QR 18 мм</option><option value="22">QR 22 мм</option></select>
+        <button class="btn" data-cr="pdf">⤓ PDF для печати</button>
+        <button class="btn ghost" data-cr="add">+ Ещё 10</button>
+        <button class="btn danger" data-cr="del">Удалить группу</button>
+      </div>
+    </div>
+    <div class="panel-body scroll"><div id="crCodes"><div class="empty-line">Выберите группу слева.</div></div></div>
+  </section>
+</div>
 </div>
 
 <div class="tab-panel active" id="tabPanel-events">
@@ -1357,6 +1429,10 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
           <label class="radio-chip checked"><input type="radio" name="ePlayback" value="unlimited" checked> Многократно</label>
           <label class="radio-chip"><input type="radio" name="ePlayback" value="once"> Один раз</label>
         </div>
+      </div>
+      <div class="field" id="ePriceField">
+        <label>Цена в кристаллах (0 — бесплатно). Персонаж платит один раз — дальше объект открывается без оплаты</label>
+        <input type="number" class="input" id="ePrice" min="0" max="99" value="0" style="max-width:140px">
       </div>
       <div class="field">
         <label>Доступно в модулях (ничего не выбрано = во всех)</label>
@@ -1947,14 +2023,15 @@ const Admin = {
     document.getElementById('tabBtn-content').classList.toggle('active', name === 'content');
     document.getElementById('tabBtn-characters').classList.toggle('active', name === 'characters');
     document.getElementById('tabBtn-modules').classList.toggle('active', name === 'modules');
-    document.getElementById('tabPanel-nfc').classList.toggle('active', name === 'nfc');
-    document.getElementById('tabBtn-nfc').classList.toggle('active', name === 'nfc');
+    ['journal', 'crystals'].forEach(n => {
+      document.getElementById('tabPanel-' + n).classList.toggle('active', name === n);
+      document.getElementById('tabBtn-' + n).classList.toggle('active', name === n);
+    });
+    if (name === 'journal' && window.Jr) Jr.open();
+    if (name === 'crystals' && window.Cr) Cr.open();
     document.getElementById('tabPanel-comms').classList.toggle('active', name === 'comms');
     document.getElementById('tabBtn-comms').classList.toggle('active', name === 'comms');
     if (name === 'comms' && window.Co) { Co.fillSelects(); Co.renderFeed(); }
-    // панель меток NFC (страница nfc.html) загружается при первом открытии вкладки
-    const nfc = document.getElementById('nfcFrame');
-    if (name === 'nfc' && !nfc.getAttribute('src')) nfc.src = 'nfc.html?embed=1';
   },
 
   /* ---------- Подключение / модули ---------- */
@@ -2540,7 +2617,7 @@ const Admin = {
       const condType = c.unlock_condition && c.unlock_condition.type ? c.unlock_condition.type : 'always';
       const opened = (this.contentProgress || []).filter(x => x.content_id === c.id);
       const viewed = !!c.viewed || (c.viewed == null && opened.length > 0);
-      const extra = [c.playback === 'once' ? 'один раз' : '', COND[condType] || '', (c.choice_options || []).length ? `${c.choice_options.length} веток` : '', vars ? `свой текст для ${vars} вар.` : '',
+      const extra = [c.price > 0 ? `💎 ${c.price}` : '', c.playback === 'once' ? 'один раз' : '', COND[condType] || '', (c.choice_options || []).length ? `${c.choice_options.length} веток` : '', vars ? `свой текст для ${vars} вар.` : '',
         opened.length ? `открыли: ${opened.map(x => ((this.characters || []).find(ch => ch.id === x.character_id) || {}).name || '?').join(', ')}` : ''].filter(Boolean).join(' · ');
       return `
         <div class="content-row clickable" data-action="openContentEditor" data-id="${c.id}" title="Открыть">
@@ -2905,6 +2982,8 @@ const Admin = {
     document.getElementById('eBody').value = item ? (item.body || '') : '';
     document.getElementById('eMediaUrl').value = item ? (item.media_url || '') : '';
 
+    document.getElementById('ePrice').value = (item && item.price) || 0;
+    document.getElementById('ePriceField').style.display = (!this.contentItems.length || 'price' in this.contentItems[0]) ? '' : 'none';
     const playback = item ? item.playback : 'unlimited';
     const playbackInput = document.querySelector(`input[name="ePlayback"][value="${playback}"]`);
     if (playbackInput) playbackInput.checked = true;
@@ -2967,7 +3046,7 @@ const Admin = {
       editingContentId: this.editingContentId, uploadedMedia: this.uploadedMedia,
       choiceOptions: JSON.parse(JSON.stringify((main ? this.mainChoices : this.choiceOptions) || [])), variants: JSON.parse(JSON.stringify(this.variants || [])),
       blocks: JSON.parse(JSON.stringify((main ? this.mainBlocks : this.blocks) || [])), vEdit: main ? this.vEdit : -1,
-      f: Object.fromEntries(['eTriggerCode', 'eType', 'eSummary', 'eBody', 'eMediaUrl', 'eUnlockType', 'eTimerMinutes', 'eEventId'].map(id => [id, v(id)])),
+      f: Object.fromEntries(['eTriggerCode', 'eType', 'eSummary', 'eBody', 'eMediaUrl', 'eUnlockType', 'eTimerMinutes', 'eEventId', 'ePrice'].map(id => [id, v(id)])),
       playback: (document.querySelector('input[name="ePlayback"]:checked') || {}).value, interrupt: (document.querySelector('input[name="eInterrupt"]:checked') || {}).value,
       mods: sel('eModuleScope'), chars: sel('eCharScope'), prev: sel('eRequiresPrevious'), viewed: document.getElementById('eViewed').checked,
       title: document.getElementById('editorTitle').textContent, delDisplay: document.getElementById('deleteContentBtn').style.display, viewDisplay: document.getElementById('eViewSection').style.display,
@@ -3068,6 +3147,7 @@ const Admin = {
       updated_at: new Date().toISOString()
     };
     if (hasBlocksCol) row.blocks = isEvent ? [] : blocks;
+    if (!this.contentItems.length || 'price' in this.contentItems[0]) row.price = Math.max(0, parseInt(document.getElementById('ePrice').value, 10) || 0);
     if (!this.contentItems.length || 'summary' in this.contentItems[0]) {
       const cs = Array.from(document.querySelectorAll('#eCharScope input:checked')).map(i => i.value);
       row.summary = document.getElementById('eSummary').value.trim() || null;
@@ -5609,6 +5689,292 @@ document.addEventListener('click', e => {
     sendPending: () => Co.pending && Co.send(Co.pending.kind, Co.pending.blob, Co.pending.ext), discard: () => Co.discard()
   }[a] || (() => {}))();
 });
+
+/* ---------- журнал действий: все терминалы и сканеры, фильтры, автообновление ---------- */
+const JR_GROUPS = [
+  { k: 'auth', n: 'Входы/выходы', a: ['auth', 'session_end'] },
+  { k: 'scan', n: 'Сканирования', a: ['scan'] },
+  { k: 'content', n: 'Объекты', a: ['content_open', 'content_choice'] },
+  { k: 'crystal', n: 'Кристаллы', a: ['crystal_spend', 'crystal_reject'] },
+  { k: 'threat', n: 'Угрозы', a: ['threat_shown', 'threat_end', 'threat_code', 'threat_chain', 'silence_threat', 'silence_warning'] },
+  { k: 'journal', n: 'Журнал модуля', a: ['journal_entry', 'journal_voice_start'] },
+  { k: 'comms', n: 'Связь', a: ['comm_create', 'comm_send', 'comm_unlock'] },
+  { k: 'camera', n: 'Камера', a: ['camera_photo'] }
+];
+Object.assign(LOG_LABELS, {
+  crystal_spend: 'Оплата кристаллом', crystal_reject: 'Кристалл не принят', silence_threat: 'Тишина: угроза', silence_warning: 'Тишина: предупреждение',
+  comm_create: 'Связь: новый канал', comm_send: 'Связь: сообщение', comm_unlock: 'Связь: доступ открыт'
+});
+const Jr = {
+  sel: { chars: new Set(), mods: new Set(), acts: new Set(), src: new Set() },
+  limit: 200, sig: '', timer: null, started: false,
+  $: id => document.getElementById(id),
+  esc: s => Admin.escape(s),
+  active() { const p = document.getElementById('tabPanel-journal'); return p && p.classList.contains('active'); },
+  open() {
+    this.renderChips();
+    this.load(true);
+    if (this.started) return;
+    this.started = true;
+    this.timer = setInterval(() => { if (this.active() && !document.hidden) this.load(); }, 5000);
+    sb.channel('admin-journal-channel')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'logs' }, () => { if (!this.active()) return; clearTimeout(this.deb); this.deb = setTimeout(() => this.load(), 400); })
+      .subscribe();
+    this.$('jrSearch').addEventListener('input', () => { clearTimeout(this.sdeb); this.sdeb = setTimeout(() => this.render(), 200); });
+    this.$('jrPeriod').addEventListener('change', () => this.load(true));
+  },
+  chip(group, key, label) { return `<button type="button" class="${this.sel[group].has(key) ? 'on' : ''}" data-jr="chip" data-g="${group}" data-k="${this.esc(key)}">${this.esc(label)}</button>`; },
+  renderChips() {
+    const chars = (Admin.characters || []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    this.$('jrChars').innerHTML = chars.map(c => this.chip('chars', c.id, c.name || c.badge_id || '—')).join('') || '<span class="status-line">нет персонажей</span>';
+    this.$('jrMods').innerHTML = (Admin.modules || []).map(m => this.chip('mods', m.id, m.name || m.access_code)).join('') + this.chip('mods', 'none', 'Сканеры / без модуля');
+    this.$('jrActs').innerHTML = JR_GROUPS.map(g => this.chip('acts', g.k, g.n)).join('');
+    this.$('jrSrc').innerHTML = this.chip('src', 'terminal', 'Терминалы') + this.chip('src', 'scanner', 'Сканеры');
+  },
+  toggle(g, k) { const s = this.sel[g]; s.has(k) ? s.delete(k) : s.add(k); this.renderChips(); this.load(true); },
+  reset() { Object.values(this.sel).forEach(s => s.clear()); this.$('jrSearch').value = ''; this.$('jrPeriod').value = '0'; this.renderChips(); this.load(true); },
+  async load(force) {
+    if (force) { this.limit = force === 'more' ? this.limit + 200 : 200; this.sig = ''; }
+    const s = this.sel;
+    let q = sb.from('logs').select('*, characters(name, badge_id)').order('timestamp', { ascending: false }).limit(this.limit);
+    if (s.chars.size) q = q.in('character_id', [...s.chars]);
+    const mods = [...s.mods].filter(x => x !== 'none');
+    if (s.mods.size) q = s.mods.has('none') ? (mods.length ? q.or(`module_id.is.null,module_id.in.(${mods.join(',')})`) : q.is('module_id', null)) : q.in('module_id', mods);
+    if (s.acts.size) q = q.in('action_type', JR_GROUPS.filter(g => s.acts.has(g.k)).flatMap(g => g.a));
+    if (s.src.size === 1) q = s.src.has('scanner') ? q.eq('details->>source', 'scanner') : q.or('details->>source.is.null,details->>source.neq.scanner');
+    const min = +this.$('jrPeriod').value;
+    if (min) q = q.gte('timestamp', new Date(Date.now() - min * 60000).toISOString());
+    const { data, error } = await q;
+    if (error) { this.$('jrList').innerHTML = `<div class="empty-line" style="color:var(--red)">${this.esc(error.message)}</div>`; return; }
+    const sig = (data || []).length + ':' + ((data || [])[0] || {}).id;
+    if (sig === this.sig) return;
+    this.sig = sig; this.rows = data || [];
+    this.render();
+  },
+  contentName(id) {
+    const c = (Admin.contentItems || []).find(x => x.id === id);
+    return c ? `${c.trigger_code || ''}${c.summary ? ' «' + c.summary + '»' : ''}`.trim() || 'объект' : '';
+  },
+  detail(r) {
+    const d = r.details || {};
+    const cn = d.contentId ? this.contentName(d.contentId) : '';
+    switch (r.action_type) {
+      case 'auth': return (d.result === 'ok' ? 'успешно' : d.result === 'denied' ? 'доступ запрещён' : (d.result || '')) + (d.code ? ' · ' + d.code : '');
+      case 'session_end': return { manual: 'вручную', timeout: 'истекло время сеанса', inactivity: 'бездействие', relogin: 'смена оператора', master: 'мастером' }[d.reason] || d.reason || '';
+      case 'scan': return [d.code, d.result === 'not_found' ? 'не найден' : d.result === 'crystal' ? 'это кристалл' : '', cn].filter(Boolean).join(' · ');
+      case 'content_open': return [cn, d.result === 'blocked' ? 'доступ закрыт' : d.result === 'unpaid' ? 'не оплачен' : '', d.type].filter(Boolean).join(' · ');
+      case 'content_choice': return [cn, d.label ? '→ ' + d.label : '', d.nextContentId ? this.contentName(d.nextContentId) : ''].filter(Boolean).join(' · ');
+      case 'crystal_spend': case 'crystal_reject': return [d.code ? 'кристалл ' + d.code : '', cn, { ok: 'принят', spent: 'уже потрачен', unknown: 'не кристалл', already_paid: 'уже оплачено' }[d.result] || d.result, d.price ? `оплачено ${d.paid || 0}/${d.price}` : ''].filter(Boolean).join(' · ');
+      case 'journal_entry': return d.type === 'audio' ? 'голосовая' + (d.text ? ': ' + d.text : '') : (d.text || '');
+    }
+    if (r.action_type.startsWith('threat_') || r.action_type.startsWith('silence_')) {
+      const parts = [];
+      const a = (Admin.activeAlertsCache || []).find(x => x.id === (d.alertId || d.from)); if (a) parts.push(a.label);
+      if (d.type) parts.push((THREAT_DEFS[d.type] || {}).name || d.type);
+      if (d.code) parts.push('код ' + d.code);
+      if (d.reason) parts.push({ time: 'по времени', qr: 'устранена кодами', journal: 'записью в журнал' }[d.reason] || d.reason);
+      return parts.join(' · ');
+    }
+    return Object.entries(d).filter(([k]) => !/Id$|^path$|^source$/.test(k)).map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`).join(' · ');
+  },
+  render() {
+    const term = this.$('jrSearch').value.trim().toLowerCase();
+    const modName = id => { const m = (Admin.modules || []).find(x => x.id === id); return m ? (m.name || m.access_code) : ''; };
+    const grp = a => (JR_GROUPS.find(g => g.a.includes(a)) || {}).k || '';
+    let list = (this.rows || []).map(r => {
+      const who = r.characters ? r.characters.name + (r.characters.badge_id ? ` [${r.characters.badge_id}]` : '') : '';
+      const scanner = (r.details || {}).source === 'scanner';
+      const where = scanner ? 'сканер' + (modName(r.module_id) ? ' · ' + modName(r.module_id) : '') : modName(r.module_id);
+      return { r, who, where, scanner, label: LOG_LABELS[r.action_type] || r.action_type, det: this.detail(r) };
+    });
+    if (term) list = list.filter(x => [x.who, x.where, x.label, x.det, JSON.stringify(x.r.details || {})].join(' ').toLowerCase().includes(term));
+    this.$('jrCount').textContent = `ЗАПИСЕЙ: ${list.length}${(this.rows || []).length >= this.limit ? ` (последние ${this.limit})` : ''} · обновление каждые 5 с`;
+    this.$('jrMore').style.display = (this.rows || []).length >= this.limit ? '' : 'none';
+    if (!list.length) { this.$('jrList').innerHTML = '<div class="empty-line">Записей нет.</div>'; return; }
+    this.$('jrList').innerHTML = list.map(x => `<div class="jr-it ${grp(x.r.action_type)}">
+      <span class="t">${new Date(x.r.timestamp).toLocaleString()}</span>
+      <span class="w">${this.esc(x.who || '—')}<small>${this.esc(x.where || '')}</small></span>
+      <span class="d"><span class="a">${this.esc(x.label)}</span>${x.scanner ? '<span class="src">СКАНЕР</span> ' : ''}${this.esc(x.det)}</span>
+    </div>`).join('');
+  }
+};
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-jr]'); if (!el) return;
+  const a = el.dataset.jr;
+  if (a === 'chip') Jr.toggle(el.dataset.g, el.dataset.k);
+  if (a === 'reset') Jr.reset();
+  if (a === 'more') Jr.load('more');
+});
+
+/* ---------- кристаллы: группы, коды, печать ---------- */
+const CR_ALPHA = 'ACDEFHJKMNPRTUVWXY3479';   // без похожих символов (0/O, 1/I/L, 2/Z, 5/S, 6/G, 8/B)
+const Cr = {
+  groups: [], all: [], cur: null,
+  $: id => document.getElementById(id),
+  esc: s => Admin.escape(s),
+  status(t, err) { const s = this.$('crStatus'); s.textContent = t || ''; s.style.color = err ? 'var(--red)' : ''; },
+  async open() { await this.load(); },
+  async load() {
+    const [g, c] = await Promise.all([
+      sb.from('crystal_groups').select('*').order('created_at', { ascending: true }),
+      sb.from('crystals').select('*').order('created_at', { ascending: true }).limit(5000)
+    ]);
+    const err = g.error || c.error;
+    if (err) { this.$('crGroups').innerHTML = `<div class="empty-line" style="color:var(--red)">${this.esc(err.message)}${/crystal/.test(err.message) ? ' — выполните sql/crystals.sql в Supabase.' : ''}</div>`; return; }
+    this.groups = g.data || []; this.all = c.data || [];
+    if (this.cur && !this.groups.find(x => x.id === this.cur)) this.cur = null;
+    this.renderGroups(); this.renderCodes();
+  },
+  renderGroups() {
+    if (!this.groups.length) { this.$('crGroups').innerHTML = '<div class="empty-line">Групп пока нет. Создайте первую — коды сгенерируются сами.</div>'; return; }
+    this.$('crGroups').innerHTML = this.groups.map(g => {
+      const list = this.all.filter(c => c.group_id === g.id), spent = list.filter(c => c.spent_at).length;
+      return `<div class="row-item ${g.id === this.cur ? 'active' : ''}" data-cr="pick" data-id="${g.id}" style="cursor:pointer${g.id === this.cur ? ';border-color:var(--cyan)' : ''}">
+        <div class="main"><div class="name">💎 ${this.esc(g.name)}</div>
+        <div class="meta">всего ${list.length} · свободно ${list.length - spent} · потрачено ${spent}</div></div></div>`;
+    }).join('');
+  },
+  matrix(code) {
+    const div = document.createElement('div');
+    const q = new QRCode(div, { text: code, width: 84, height: 84, correctLevel: QRCode.CorrectLevel.H });
+    const m = q._oQRCode, n = m.getModuleCount();
+    const rows = []; for (let r = 0; r < n; r++) { const row = []; for (let c = 0; c < n; c++) row.push(m.isDark(r, c)); rows.push(row); }
+    return rows;
+  },
+  canvas(code) {
+    const mx = this.matrix(code), n = mx.length, s = 3, pad = 2, cv = document.createElement('canvas');
+    cv.width = cv.height = (n + pad * 2) * s;
+    const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); g.fillStyle = '#000';
+    mx.forEach((row, r) => row.forEach((d, c) => { if (d) g.fillRect((c + pad) * s, (r + pad) * s, s, s); }));
+    return cv.toDataURL();
+  },
+  renderCodes() {
+    const g = this.groups.find(x => x.id === this.cur);
+    this.$('crActs').style.display = g ? 'flex' : 'none';
+    if (!g) { this.$('crTitle').textContent = 'Кристаллы группы'; this.$('crCodes').innerHTML = '<div class="empty-line">Выберите группу слева.</div>'; return; }
+    this.$('crTitle').textContent = '💎 ' + g.name;
+    const chName = id => { const c = (Admin.characters || []).find(x => x.id === id); return c ? c.name : ''; };
+    const modName = id => { const m = (Admin.modules || []).find(x => x.id === id); return m ? (m.name || m.access_code) : ''; };
+    const list = this.all.filter(c => c.group_id === g.id);
+    this.$('crCodes').innerHTML = `<div class="cr-grid">${list.map(c => `<div class="cr-c ${c.spent_at ? 'spent' : ''}">
+      <img src="${this.canvas(c.code)}" alt="">
+      <div><b>${this.esc(c.code)}</b>${c.spent_at
+        ? `<small>потрачен ${new Date(c.spent_at).toLocaleString()}<br>${this.esc(chName(c.spent_by) || '—')}${c.spent_for ? ' → ' + this.esc(Jr.contentName(c.spent_for)) : ''}<br>${c.spent_source === 'scanner' ? 'сканер' : this.esc(modName(c.spent_module) || 'терминал')}</small>`
+        : '<small>свободен</small>'}</div></div>`).join('')}</div>`;
+  },
+  usedCodes() {
+    const s = new Set(this.all.map(c => (c.code || '').toUpperCase()));
+    (Admin.contentItems || []).forEach(c => c.trigger_code && s.add(String(c.trigger_code).toUpperCase()));
+    (Admin.characters || []).forEach(c => { if (c.qr_code) s.add(String(c.qr_code).toUpperCase()); if (c.badge_id) s.add(String(c.badge_id).toUpperCase()); if (c.access_code) s.add(String(c.access_code).toUpperCase()); });
+    (Admin.modules || []).forEach(m => m.access_code && s.add(String(m.access_code).toUpperCase()));
+    return s;
+  },
+  genCodes(n) {
+    const used = this.usedCodes(), out = [], rnd = new Uint32Array(4);
+    while (out.length < n) {
+      crypto.getRandomValues(rnd);
+      const code = [...rnd].map(v => CR_ALPHA[v % CR_ALPHA.length]).join('');
+      if (used.has(code)) continue;
+      used.add(code); out.push(code);
+    }
+    return out;
+  },
+  async addCodes(groupId, n) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { error } = await sb.from('crystals').insert(this.genCodes(n).map(code => ({ group_id: groupId, code })));
+      if (!error) return null;
+      if (!/duplicate|unique/i.test(error.message)) return error;
+      await this.load();
+    }
+    return { message: 'не удалось подобрать уникальные коды' };
+  },
+  async create() {
+    const name = this.$('crName').value.trim() || `Кристаллы ${new Date().toLocaleDateString()}`;
+    const n = Math.max(1, Math.min(500, parseInt(this.$('crCount').value, 10) || 50));
+    this.status('Создание…');
+    const { data, error } = await sb.from('crystal_groups').insert({ name }).select('id').single();
+    if (error) { this.status(error.message + (/crystal/.test(error.message) ? ' — выполните sql/crystals.sql' : ''), true); return; }
+    const e2 = await this.addCodes(data.id, n);
+    if (e2) { this.status(e2.message, true); }
+    else this.status(`Группа «${name}»: ${n} кристаллов.`);
+    this.$('crName').value = ''; this.cur = data.id;
+    await this.load();
+  },
+  async addMore() {
+    if (!this.cur) return;
+    const e = await this.addCodes(this.cur, 10);
+    this.status(e ? e.message : 'Добавлено 10 кристаллов.', !!e);
+    await this.load();
+  },
+  del() {
+    const g = this.groups.find(x => x.id === this.cur); if (!g) return;
+    document.getElementById('confirmText').textContent = `Удалить группу «${g.name}» и все её кристаллы? Напечатанные наклейки перестанут приниматься.`;
+    document.getElementById('confirmModal').classList.add('open');
+    document.getElementById('confirmYesBtn').onclick = async () => {
+      Admin.closeConfirm();
+      const { error } = await sb.from('crystal_groups').delete().eq('id', g.id);
+      this.status(error ? error.message : 'Группа удалена.', !!error);
+      this.cur = null; await this.load();
+    };
+  },
+  async pdf() {
+    const g = this.groups.find(x => x.id === this.cur); if (!g) return;
+    const list = this.all.filter(c => c.group_id === g.id && !c.spent_at);
+    if (!list.length) { this.status('В группе нет свободных кристаллов.', true); return; }
+    this.status('Готовлю PDF…');
+    try {
+      if (!window.jspdf) await new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'; sc.onload = res; sc.onerror = () => rej(new Error('не загрузилась библиотека PDF')); document.head.appendChild(sc); });
+      const pdf = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+      const S = +this.$('crSize').value || 18;          // сторона QR без поля
+      const mod = S / 21, quiet = mod * 3;               // белое поле — 3 модуля
+      const txt = Math.max(2.6, S * 0.17);               // высота подписи
+      const cw = S + quiet * 2, ch = S + quiet * 2 + txt;
+      const M = 8, top = 14, W = 210, H = 297;
+      const cols = Math.floor((W - 2 * M) / cw), rows = Math.floor((H - top - M) / ch);
+      const ox = (W - cols * cw) / 2;
+      const per = cols * rows;
+      list.forEach((c, i) => {
+        const k = i % per;
+        if (k === 0) {
+          if (i) pdf.addPage();
+          pdf.setFont('helvetica', 'normal'); pdf.setFontSize(8); pdf.setTextColor(120);
+          pdf.text(`CRYSTALS ${g.name.replace(/[^\x20-\x7E]/g, '').trim()} - QR ${S} mm - ${list.length} pcs - p.${Math.floor(i / per) + 1}`, M, 8);
+          // линии реза
+          pdf.setDrawColor(200); pdf.setLineWidth(0.1); pdf.setLineDashPattern([0.8, 0.8], 0);
+          const nRows = Math.min(rows, Math.ceil((list.length - i) / cols));
+          for (let x = 0; x <= cols; x++) pdf.line(ox + x * cw, top, ox + x * cw, top + nRows * ch);
+          for (let y = 0; y <= nRows; y++) pdf.line(ox, top + y * ch, ox + cols * cw, top + y * ch);
+          pdf.setLineDashPattern([], 0); pdf.setTextColor(0);
+        }
+        const x0 = ox + (k % cols) * cw + quiet, y0 = top + Math.floor(k / cols) * ch + quiet;
+        pdf.setFillColor(0, 0, 0);
+        this.matrix(c.code).forEach((row, r) => {
+          // соседние тёмные модули — одним прямоугольником: без щелей при печати
+          for (let cc = 0; cc < row.length;) {
+            if (!row[cc]) { cc++; continue; }
+            let e = cc; while (e < row.length && row[e]) e++;
+            pdf.rect(x0 + cc * mod, y0 + r * mod, (e - cc) * mod + 0.01, mod + 0.01, 'F');
+            cc = e;
+          }
+        });
+        pdf.setFont('courier', 'bold'); pdf.setFontSize(txt * 2.4);
+        pdf.text(c.code, x0 + S / 2, y0 + S + quiet * 0.55 + txt * 0.7, { align: 'center' });
+      });
+      pdf.save(`crystals_${S}mm.pdf`);
+      this.status(`PDF: ${list.length} свободных кристаллов, QR ${S} мм.`);
+    } catch (e) { this.status('Ошибка PDF: ' + e.message, true); }
+  }
+};
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-cr]'); if (!el) return;
+  const a = el.dataset.cr;
+  if (a === 'create') Cr.create();
+  if (a === 'pick') { Cr.cur = el.dataset.id; Cr.renderGroups(); Cr.renderCodes(); }
+  if (a === 'add') Cr.addMore();
+  if (a === 'del') Cr.del();
+  if (a === 'pdf') Cr.pdf();
+});
+window.Jr = Jr; window.Cr = Cr;
 
 window.Admin = Admin; window.Co = Co;
 MasterGate.ready(() => Admin.init());

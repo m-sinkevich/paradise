@@ -687,6 +687,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       z-index: 60;
     }
     .tui-modal-veil.open { opacity: 1; pointer-events: all; }
+    #scannerModal { z-index: 62; }   /* поверх окна данных: оплата кристаллом открывается из него */
     .tui-modal-box {
       width: 100%; max-width: 440px; max-height: 86vh; overflow-y: auto;
       background: var(--tui-panel-deep);
@@ -742,6 +743,10 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     .tui-modal-btn.ghost:hover { background: transparent; border-color: var(--tui-ink-400); color: var(--tui-ink-100); box-shadow: none; }
     .tui-content-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
     .tui-content-step { font-size: 8.5px; color: var(--tui-ink-600); letter-spacing: 1px; }
+    .tui-pay-row { display: flex; align-items: center; gap: 14px; margin-top: 14px; flex-wrap: wrap; }
+    .tui-gems { display: flex; gap: 6px; font-size: 22px; }
+    .tui-gem { color: rgba(196, 181, 253, .25); text-shadow: none; }
+    .tui-gem.on { color: #C4B5FD; text-shadow: 0 0 10px rgba(196, 181, 253, .8); }
     .tui-gate-box { border: 1px solid var(--tui-amber); background: rgba(255, 180, 84, 0.06); padding: 16px; font-size: 12.5px; line-height: 1.6; color: var(--tui-ink-100); }
     .tui-content-image { width: 100%; border: 1px solid var(--tui-edge); display: block; }
     .tui-error-line { font-size: 11px; color: var(--tui-red); min-height: 14px; }
@@ -2513,6 +2518,14 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       DevLog.print(entry);
     },
 
+    // оплата объекта кристаллами (sql/crystals.sql); нет таблицы — считаем, что платить не нужно
+    async getPayment(characterId, contentId) {
+      const { data, error } = await sb.from('content_payments').select('*')
+        .eq('character_id', characterId).eq('content_id', contentId).maybeSingle();
+      if (error) return { paid: 0, completed_at: /content_payments/.test(error.message) ? 'n/a' : null };
+      return data;
+    },
+
     async getProgress(characterId, contentId) {
       const { data } = await sb.from('character_progress').select('*')
         .eq('character_id', characterId).eq('content_id', contentId).maybeSingle();
@@ -3833,6 +3846,12 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       const item = await DB.findContentByTrigger(code);
       const errEl = document.getElementById('scannerModalError');
       if (!item) {
+        const { data: cr } = await sb.from('crystals').select('id').eq('code', String(code).trim().toUpperCase()).limit(1);
+        if (cr && cr.length) {
+          errEl.textContent = "Это кристалл. Им оплачивают доступ к закрытым данным — отсканируйте его, когда терминал запросит оплату.";
+          await this.log('scan', { code, result: 'crystal' });
+          return;
+        }
         errEl.textContent = "Код не распознан в базе объектов.";
         await this.log('scan', { code, result: 'not_found' });
         return;
@@ -3912,6 +3931,18 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
         await this.log('content_open', { contentId, type: item.type, result: 'blocked', condition: item.unlock_condition });
         this.renderGate("ДОСТУП ОГРАНИЧЕН", item.type, gate.message);
         return;
+      }
+
+      // платный объект: персонаж вносит кристаллы один раз, потом открывает свободно
+      const price = Number(item.price) || 0;
+      if (price > 0) {
+        const pay = await DB.getPayment(this.currentCharacter.id, contentId);
+        if (!pay || !pay.completed_at) {
+          await this.log('content_open', { contentId, type: item.type, result: 'unpaid' });
+          this.payItem = item;
+          this.renderPayGate(item, pay ? pay.paid : 0);
+          return;
+        }
       }
 
       await DB.recordProgress(this.currentCharacter.id, contentId);
@@ -4013,6 +4044,54 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       document.getElementById('contentModal').classList.add('open');
     },
 
+    renderPayGate(item, paid) {
+      const price = Number(item.price) || 0;
+      const gems = Array.from({ length: price }, (_, i) => `<span class="tui-gem ${i < paid ? 'on' : ''}">◆</span>`).join('');
+      this.renderGate('ТРЕБУЕТСЯ ОПЛАТА', item.type,
+        `<div>Доступ к этим данным открывается за кристаллы. Оплата вносится один раз — затем данные доступны вам без ограничений.</div>
+         <div class="tui-pay-row"><span class="tui-gems">${gems}</span><span>внесено <b>${paid}</b> из <b>${price}</b></span></div>
+         <button class="tui-modal-btn" data-action="payCrystal" style="margin-top:12px;width:100%">◈ Сканировать кристалл</button>`);
+    },
+
+    payCrystal() {
+      if (!this.payItem || !this.currentCharacter) return;
+      this.crystalSeen = new Set();
+      this.openScannerModal('crystal');
+    },
+
+    async spendCrystal(raw) {
+      const code = String(raw || '').trim().toUpperCase();
+      const item = this.payItem, errEl = document.getElementById('scannerModalError');
+      if (!item || !code) return;
+      const again = () => setTimeout(() => { if (document.getElementById('scannerModal').classList.contains('open')) this.openScannerModal('crystal', true); }, 1200);
+      if (this.crystalSeen.has(code)) { again(); return; }   // тот же кристалл ещё в кадре
+      this.crystalSeen.add(code);
+      const { data, error } = await sb.rpc('spend_crystal', {
+        p_code: code, p_character: this.currentCharacter.id, p_content: item.id,
+        p_module: DB.moduleRow ? DB.moduleRow.id : null, p_source: 'terminal'
+      });
+      if (error || !data) { this.crystalSeen.delete(code); errEl.textContent = 'Нет связи с хранилищем: ' + (error ? error.message : '—'); again(); return; }
+      const r = data;
+      await this.log(r.result === 'ok' ? 'crystal_spend' : 'crystal_reject', { code, contentId: item.id, result: r.result, paid: r.paid, price: r.price });
+      if (r.result === 'ok' || r.result === 'already_paid') {
+        if (r.completed || r.result === 'already_paid') {
+          document.getElementById('modalReadout').textContent = '✓ Оплата завершена';
+          this.closeScannerModal(true);
+          this.payItem = null;
+          await this.openContent(item.id);
+          return;
+        }
+        errEl.style.color = 'var(--tui-cyan)';
+        errEl.textContent = `◆ Кристалл ${code} принят · внесено ${r.paid} из ${r.price}. Сканируйте следующий.`;
+        this.renderPayGate(item, r.paid);
+        document.getElementById('contentModal').classList.add('open');
+      } else {
+        errEl.style.color = '';
+        errEl.textContent = r.result === 'spent' ? `Кристалл ${code} уже израсходован и не принимается.` : `Код ${code} — не кристалл.`;
+      }
+      again();
+    },
+
     renderGate(title, type, message) {
       document.getElementById('contentTitle').textContent = title;
       document.getElementById('contentTypeTag').textContent = (type || '').toUpperCase();
@@ -4089,11 +4168,12 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     },
 
     /* ---------- Модальное окно сканера (общее для auth и content) ---------- */
-    async openScannerModal(target) {
+    async openScannerModal(target, keepMsg) {
       this.scannerTarget = target;
+      if (this.scanRAF) cancelAnimationFrame(this.scanRAF);
       document.getElementById('scannerModalTitle').textContent =
-        target === 'auth' ? 'СКАНИРОВАНИЕ ПРОПУСКА' : 'СКАНИРОВАНИЕ ОБЪЕКТА';
-      document.getElementById('scannerModalError').textContent = "";
+        target === 'auth' ? 'СКАНИРОВАНИЕ ПРОПУСКА' : target === 'crystal' ? 'СКАНИРОВАНИЕ КРИСТАЛЛА' : 'СКАНИРОВАНИЕ ОБЪЕКТА';
+      if (!keepMsg) { document.getElementById('scannerModalError').textContent = ""; document.getElementById('scannerModalError').style.color = ''; }
 
       const modal = document.getElementById('scannerModal');
       modal.classList.remove('success');
@@ -4107,7 +4187,8 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       if (!this.stream) {
         try {
           try {
-            this.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            // высокое разрешение: маленькие QR (кристаллы, 1.5–2 см) на веб-камере ноутбука
+            this.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } });
           } catch (e1) {
             // запасной вариант для устройств, где facingMode не поддерживается
             this.stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -4125,12 +4206,19 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       const overlay = document.getElementById('modalOverlay');
       const octx = overlay.getContext('2d');
 
+      let frame = 0;
       const tick = () => {
         if (!document.getElementById('scannerModal').classList.contains('open')) return;
         if (video.readyState === video.HAVE_ENOUGH_DATA) {
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          // чередуем: весь кадр (уменьшенный до ~1000 px — быстро) и центр кадра в полном разрешении —
+          // в центре маленький код получает вдвое больше пикселей на модуль
+          const vw = video.videoWidth, vh = video.videoHeight;
+          const crop = (frame++ % 2 === 1) && vw >= 960;
+          let sx = 0, sy = 0, sw = vw, sh = vh, k = Math.min(1, 1000 / vw);
+          if (crop) { sw = Math.round(vw * 0.5); sh = Math.round(vh * 0.5); sx = Math.round((vw - sw) / 2); sy = Math.round((vh - sh) / 2); k = 1; }
+          canvas.width = Math.round(sw * k);
+          canvas.height = Math.round(sh * k);
+          ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
           const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
           const code = window.jsQR
             ? jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "attemptBoth" })
@@ -4141,16 +4229,18 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
           octx.clearRect(0, 0, overlay.width, overlay.height);
 
           if (code && code.data) {
-            const scaleX = overlay.width / canvas.width;
-            const scaleY = overlay.height / canvas.height;
-            const loc = code.location;
+            const scaleX = overlay.width / vw;
+            const scaleY = overlay.height / vh;
+            const P = pt => ({ x: (sx + pt.x / k) * scaleX, y: (sy + pt.y / k) * scaleY });
+            const L = code.location;
+            const loc = { topLeftCorner: P(L.topLeftCorner), topRightCorner: P(L.topRightCorner), bottomRightCorner: P(L.bottomRightCorner), bottomLeftCorner: P(L.bottomLeftCorner) };
             octx.strokeStyle = "#5EEAD4";
             octx.lineWidth = 3;
             octx.beginPath();
-            octx.moveTo(loc.topLeftCorner.x * scaleX, loc.topLeftCorner.y * scaleY);
-            octx.lineTo(loc.topRightCorner.x * scaleX, loc.topRightCorner.y * scaleY);
-            octx.lineTo(loc.bottomRightCorner.x * scaleX, loc.bottomRightCorner.y * scaleY);
-            octx.lineTo(loc.bottomLeftCorner.x * scaleX, loc.bottomLeftCorner.y * scaleY);
+            octx.moveTo(loc.topLeftCorner.x, loc.topLeftCorner.y);
+            octx.lineTo(loc.topRightCorner.x, loc.topRightCorner.y);
+            octx.lineTo(loc.bottomRightCorner.x, loc.bottomRightCorner.y);
+            octx.lineTo(loc.bottomLeftCorner.x, loc.bottomLeftCorner.y);
             octx.closePath();
             octx.stroke();
 
@@ -4182,6 +4272,8 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
         await this.submitAuth(data);
       } else if (this.scannerTarget === 'content') {
         await this.resolveContentByCode(data);
+      } else if (this.scannerTarget === 'crystal') {
+        await this.spendCrystal(data);
       }
     },
 
@@ -4830,6 +4922,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       case 'endSession': App.endSession('manual'); break;
       case 'closeScannerModal': App.closeScannerModal(false); break;
       case 'submitModalManual': App.submitModalManual(); break;
+      case 'payCrystal': App.payCrystal(); break;
       case 'closeJournalModal': App.closeJournalModal(); break;
       case 'saveJournalEntry': App.saveJournalEntry(); break;
       case 'openMap': ThreatMap.open(); break;
