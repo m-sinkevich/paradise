@@ -1659,6 +1659,8 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 <div id="tui-devlog"><div id="tui-devlog-inner"></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<!-- ZXing (WebAssembly): QR и Data Matrix — маленькие коды кристаллов; если не загрузится, работает jsQR -->
+<script src="https://cdn.jsdelivr.net/npm/zxing-wasm@3.1.5/dist/iife/reader/index.js" async></script>
 <script src="map/polygon-map.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
 <script>
@@ -4207,8 +4209,21 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       const octx = overlay.getContext('2d');
 
       let frame = 0;
-      const tick = () => {
-        if (!document.getElementById('scannerModal').classList.contains('open')) return;
+      const tok = this.scanTok = (this.scanTok || 0) + 1;   // повторный запуск сканера останавливает прежний цикл
+      // ZXing-модуль грузится один раз; пока не готов — распознаёт jsQR
+      if (window.ZXingWASM && !this.zxReady && !this.zxLoading) {
+        this.zxLoading = true;
+        ZXingWASM.prepareZXingModule({ fireImmediately: true }).then(() => { this.zxReady = true; }).catch(e => console.warn('[ZXing]', e)).finally(() => { this.zxLoading = false; });
+      }
+      const zxRead = async (img) => {
+        const res = await ZXingWASM.readBarcodes(img, { formats: ['QRCode', 'DataMatrix'], tryHarder: true, tryInvert: true, maxNumberOfSymbols: 1 });
+        const r = res.find(x => x.isValid && x.text);
+        if (!r) return null;
+        const p = r.position;
+        return { data: r.text, location: { topLeftCorner: p.topLeft, topRightCorner: p.topRight, bottomRightCorner: p.bottomRight, bottomLeftCorner: p.bottomLeft } };
+      };
+      const tick = async () => {
+        if (!document.getElementById('scannerModal').classList.contains('open') || this.scanTok !== tok) return;
         if (video.readyState === video.HAVE_ENOUGH_DATA) {
           // чередуем: весь кадр (уменьшенный до ~1000 px — быстро) и центр кадра в полном разрешении —
           // в центре маленький код получает вдвое больше пикселей на модуль
@@ -4220,9 +4235,10 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
           canvas.height = Math.round(sh * k);
           ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
           const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const code = window.jsQR
-            ? jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "attemptBoth" })
-            : null;
+          let code = null;
+          if (this.zxReady) { try { code = await zxRead(imageData); } catch (e) { code = null; } }
+          else if (window.jsQR) code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "attemptBoth" });
+          if (!document.getElementById('scannerModal').classList.contains('open') || this.scanTok !== tok) return;
 
           overlay.width = video.clientWidth;
           overlay.height = video.clientHeight;
@@ -4250,7 +4266,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
             setTimeout(() => this.confirmScan(code.data), 400);
             return;
           } else {
-            readout.textContent = "● поиск QR-кода...";
+            readout.textContent = target === 'crystal' ? "● поиск кода кристалла..." : "● поиск QR-кода...";
             readout.classList.add('visible');
           }
         }
