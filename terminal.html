@@ -4066,7 +4066,10 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       const item = this.payItem, errEl = document.getElementById('scannerModalError');
       if (!item || !code) return;
       const again = () => setTimeout(() => { if (document.getElementById('scannerModal').classList.contains('open')) this.openScannerModal('crystal', true); }, 1200);
-      if (this.crystalSeen.has(code)) { again(); return; }   // тот же кристалл ещё в кадре
+      if (this.crystalSeen.has(code)) {   // тот же кристалл ещё в кадре
+        document.getElementById('modalReadout').textContent = `кристалл ${code} уже внесён — покажите следующий`;
+        again(); return;
+      }
       this.crystalSeen.add(code);
       const { data, error } = await sb.rpc('spend_crystal', {
         p_code: code, p_character: this.currentCharacter.id, p_content: item.id,
@@ -4216,8 +4219,12 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
         ZXingWASM.prepareZXingModule({ fireImmediately: true }).then(() => { this.zxReady = true; }).catch(e => console.warn('[ZXing]', e)).finally(() => { this.zxLoading = false; });
       }
       const zxRead = async (img) => {
-        const res = await ZXingWASM.readBarcodes(img, { formats: ['QRCode', 'DataMatrix'], tryHarder: true, tryInvert: true, maxNumberOfSymbols: 1 });
-        const r = res.find(x => x.isValid && x.text);
+        // несколько кодов в кадре (лист с кристаллами): берём первый, который ещё не внесён
+        const res = await ZXingWASM.readBarcodes(img, { formats: ['QRCode', 'DataMatrix'], tryHarder: true, tryInvert: true, maxNumberOfSymbols: 6 });
+        const valid = res.filter(x => x.isValid && x.text);
+        const fresh = target === 'crystal' && this.crystalSeen ? valid.filter(x => !this.crystalSeen.has(x.text.trim().toUpperCase())) : valid;
+        if (!fresh.length && valid.length) { this.seenHint = Date.now(); readout.textContent = `кристалл ${valid[0].text.trim()} уже внесён — покажите следующий`; readout.classList.add('visible'); }
+        const r = fresh[0];
         if (!r) return null;
         const p = r.position;
         return { data: r.text, location: { topLeftCorner: p.topLeft, topRightCorner: p.topRight, bottomRightCorner: p.bottomRight, bottomLeftCorner: p.bottomLeft } };
@@ -4266,7 +4273,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
             setTimeout(() => this.confirmScan(code.data), 400);
             return;
           } else {
-            readout.textContent = target === 'crystal' ? "● поиск кода кристалла..." : "● поиск QR-кода...";
+            if (Date.now() - (this.seenHint || 0) > 1500) readout.textContent = target === 'crystal' ? "● поиск кода кристалла..." : "● поиск QR-кода...";
             readout.classList.add('visible');
           }
         }
