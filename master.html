@@ -1552,6 +1552,18 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
       <div class="status-line">Канал создаётся на терминале любого модуля, куда у персонажа есть доступ: «Связь» → «+ Создать канал». В скрытом канале хакер — невидимый участник, может писать анонимно. Хакер умеет и обычные каналы.</div>
     </div>
 
+    <!-- ---- Сканер NFC ---- -->
+    <div class="editor-section" id="cScannerSection">
+      <div class="sec-title">Сканер NFC (приложение на телефоне)</div>
+      <select class="input" id="cScannerMode">
+        <option value="">Нет доступа к сканеру</option>
+        <option value="medic">Медицинский сканер (белый)</option>
+        <option value="tech">Технический сканер (синий)</option>
+        <option value="sci">Научный сканер (зелёный)</option>
+      </select>
+      <div class="status-line">Персонаж входит в сканер кодом со своего бейджа. Без типа сканера — «Доступ запрещён». Сканер показывает контент так же, как терминал модуля приписки персонажа.</div>
+    </div>
+
     <!-- ---- Статус ---- -->
     <div class="editor-section">
       <div class="sec-title">Статус</div>
@@ -3336,6 +3348,7 @@ const Admin = {
           ${kv('Пароль', c.password ? 'есть' : '')}
           ${kv('Таймеры', [c.session_timeout_minutes ? 'сессия ' + c.session_timeout_minutes + ' мин' : '', c.inactivity_timeout_minutes ? 'бездействие ' + c.inactivity_timeout_minutes + ' мин' : ''].filter(Boolean).join(' · '))}
           ${kv('Способности', [c.can_create_channels ? '⌁ создаёт каналы' : '', c.is_hacker ? '🕶 хакер' : ''].filter(Boolean).join(' · '))}
+          ${kv('Сканер', { medic: 'медицинский', tech: 'технический', sci: 'научный' }[c.scanner_mode] || '')}
           ${kv('В каталоге', c.catalog_visible === false ? 'скрыт' : '')}
         </div>
         ${c.legend ? `<div class="cp-legend">${this.escape(c.legend)}</div>` : ''}
@@ -3484,6 +3497,8 @@ const Admin = {
     document.getElementById('cSessionTimeout').value = (item && item.session_timeout_minutes != null) ? item.session_timeout_minutes : '';
     document.getElementById('cInactivityTimeout').value = (item && item.inactivity_timeout_minutes != null) ? item.inactivity_timeout_minutes : '';
     document.getElementById('cCatalogHint').style.display = this.hasCatalogCols() ? 'none' : '';
+    document.getElementById('cScannerMode').value = (item && item.scanner_mode) || '';
+    document.getElementById('cScannerSection').style.display = (!this.characters.length || 'scanner_mode' in this.characters[0]) ? '' : 'none';
     [['cCanCreate', item && item.can_create_channels], ['cHacker', item && item.is_hacker]].forEach(([id, v]) => {
       document.getElementById(id).checked = !!v; document.getElementById(id).closest('.checkbox-chip').classList.toggle('checked', !!v);
     });
@@ -3666,6 +3681,7 @@ const Admin = {
       home_module_id: document.getElementById('cHomeModule').value || null,
       catalog_visible: document.getElementById('cCatalogVisible').checked
     });
+    if (!this.characters.length || 'scanner_mode' in this.characters[0]) row.scanner_mode = document.getElementById('cScannerMode').value || null;
     if (!this.characters.length || 'can_create_channels' in this.characters[0]) Object.assign(row, {
       can_create_channels: document.getElementById('cCanCreate').checked || document.getElementById('cHacker').checked,
       is_hacker: document.getElementById('cHacker').checked
