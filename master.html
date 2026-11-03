@@ -2036,10 +2036,11 @@ const Admin = {
       document.getElementById('tabPanel-' + n).classList.toggle('active', name === n);
       document.getElementById('tabBtn-' + n).classList.toggle('active', name === n);
     });
-    if (name === 'journal' && window.Jr) Jr.open();
-    if (name === 'crystals' && window.Cr) Cr.open();
     document.getElementById('tabPanel-comms').classList.toggle('active', name === 'comms');
     document.getElementById('tabBtn-comms').classList.toggle('active', name === 'comms');
+    // вкладка переключается в любом случае, даже если её загрузка упадёт
+    try { if (name === 'journal' && window.Jr) Jr.open(); if (name === 'crystals' && window.Cr) Cr.open(); }
+    catch (e) { console.error(e); tuiShowErrorToast('Вкладка «' + name + '»: ' + (e.message || e)); }
     if (name === 'comms' && window.Co) { Co.fillSelects(); Co.renderFeed(); }
   },
 
@@ -5772,7 +5773,7 @@ const Jr = {
     if (this.started) return;
     this.started = true;
     this.timer = setInterval(() => { if (this.active() && !document.hidden) this.load(); }, 5000);
-    sb.channel('admin-journal-channel')
+    sb.channel('admin-actionlog-channel')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'logs' }, () => { if (!this.active()) return; clearTimeout(this.deb); this.deb = setTimeout(() => this.load(), 400); })
       .subscribe();
     this.$('jrSearch').addEventListener('input', () => { clearTimeout(this.sdeb); this.sdeb = setTimeout(() => this.render(), 200); });
