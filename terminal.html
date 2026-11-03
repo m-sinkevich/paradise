@@ -1654,6 +1654,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
         <label><input type="checkbox" id="cmNewPhoto" checked> фото</label>
       </div>
       <label class="cm-hidden-opt" id="cmNewHiddenWrap" style="display:none"><input type="checkbox" id="cmNewHidden" checked> 🕶 Скрытый канал: я невидимый участник — остальные не узнают, что я здесь</label>
+      <div class="tui-status-line" id="cmNewPrice" style="color:#C4B5FD"></div>
       <div class="tui-error-line" id="cmNewErr"></div>
       <div class="tui-voice-row"><button class="tui-modal-btn" data-cm="create">Создать канал</button><button class="tui-modal-btn ghost" data-cm="back">Отмена</button></div>
     </div>
@@ -4193,7 +4194,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       this.scannerTarget = target;
       if (this.scanRAF) cancelAnimationFrame(this.scanRAF);
       document.getElementById('scannerModalTitle').textContent =
-        target === 'auth' ? 'СКАНИРОВАНИЕ ПРОПУСКА' : target === 'crystal' ? 'СКАНИРОВАНИЕ КРИСТАЛЛА' : 'СКАНИРОВАНИЕ ОБЪЕКТА';
+        target === 'auth' ? 'СКАНИРОВАНИЕ ПРОПУСКА' : target === 'crystal' ? 'СКАНИРОВАНИЕ КРИСТАЛЛА' : target === 'chcrystal' ? 'ЭНЕРГИЯ ДЛЯ КАНАЛА СВЯЗИ' : 'СКАНИРОВАНИЕ ОБЪЕКТА';
       if (!keepMsg) { document.getElementById('scannerModalError').textContent = ""; document.getElementById('scannerModalError').style.color = ''; }
 
       const modal = document.getElementById('scannerModal');
@@ -4238,7 +4239,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
         // несколько кодов в кадре (лист с кристаллами): берём первый, который ещё не внесён
         const res = await ZXingWASM.readBarcodes(img, { formats: ['QRCode', 'DataMatrix'], tryHarder: true, tryInvert: true, maxNumberOfSymbols: 6 });
         const valid = res.filter(x => x.isValid && x.text);
-        const fresh = target === 'crystal' && this.crystalSeen ? valid.filter(x => !this.crystalSeen.has(x.text.trim().toUpperCase())) : valid;
+        const fresh = (target === 'crystal' || target === 'chcrystal') && this.crystalSeen ? valid.filter(x => !this.crystalSeen.has(x.text.trim().toUpperCase())) : valid;
         if (!fresh.length && valid.length) { this.seenHint = Date.now(); readout.textContent = `кристалл ${valid[0].text.trim()} уже внесён — покажите следующий`; readout.classList.add('visible'); }
         const r = fresh[0];
         if (!r) return null;
@@ -4289,7 +4290,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
             setTimeout(() => this.confirmScan(code.data), 400);
             return;
           } else {
-            if (Date.now() - (this.seenHint || 0) > 1500) readout.textContent = target === 'crystal' ? "● поиск кода кристалла..." : "● поиск QR-кода...";
+            if (Date.now() - (this.seenHint || 0) > 1500) readout.textContent = (target === 'crystal' || target === 'chcrystal') ? "● поиск кода кристалла..." : "● поиск QR-кода...";
             readout.classList.add('visible');
           }
         }
@@ -4313,6 +4314,8 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
         await this.resolveContentByCode(data);
       } else if (this.scannerTarget === 'crystal') {
         await this.spendCrystal(data);
+      } else if (this.scannerTarget === 'chcrystal') {
+        await Comms.addChannelCrystal(data);
       }
     },
 
@@ -4697,6 +4700,8 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       this.$('cmNewHiddenWrap').style.display = hk ? '' : 'none'; this.$('cmNewHidden').checked = hk;
       ['cmNewText', 'cmNewVoice', 'cmNewPhoto'].forEach(id => this.$(id).checked = true);
       this.$('cmTitle').textContent = 'НОВЫЙ КАНАЛ';
+      this.$('cmNewPrice').textContent = '';
+      this.channelPrice().then(p => { this.$('cmNewPrice').textContent = p > 0 ? `◆ Создание канала требует энергии кристаллов: ${p}. После «Создать канал» отсканируйте кристаллы.` : ''; });
       this.show('new'); this.renderPicker();
     },
     renderPicker() {
@@ -4713,6 +4718,64 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       this.$('cmNewCount').textContent = `Выбрано: ${this.newSel.mods.size + this.newSel.chars.size}`;
     },
     pick(kind, id) { const s = kind === 'mod' ? this.newSel.mods : this.newSel.chars; s.has(id) ? s.delete(id) : s.add(id); this.renderPicker(); },
+    // цена канала читается из базы в момент создания (мастер мог поменять её после входа)
+    async channelPrice() {
+      const cur = this.who(); if (!cur) return 0;
+      const { data, error } = await sb.from('characters').select('channel_price').eq('id', cur.id).maybeSingle();
+      return error || !data ? 0 : Math.max(0, Number(data.channel_price) || 0);
+    },
+    // платный канал: сканируем кристаллы, затем одна операция в базе списывает их и создаёт канал
+    async addChannelCrystal(raw) {
+      const p = this.chPending, code = String(raw || '').trim().toUpperCase();
+      const errEl = document.getElementById('scannerModalError');
+      if (!p || !code) return;
+      const again = () => setTimeout(() => { if (document.getElementById('scannerModal').classList.contains('open')) App.openScannerModal('chcrystal', true); }, 1100);
+      if (App.crystalSeen.has(code)) { again(); return; }
+      App.crystalSeen.add(code);
+      const { data } = await sb.from('crystals').select('code, spent_at').eq('code', code).limit(1);
+      const k = data && data[0];
+      if (!k || k.spent_at) {
+        errEl.style.color = ''; errEl.textContent = !k ? `Код ${code} — не кристалл.` : `Кристалл ${code} истощён — энергии в нём нет.`;
+        App.log('crystal_reject', { code, result: !k ? 'unknown' : 'spent', purpose: 'канал «' + p.name + '»' });
+        again(); return;
+      }
+      p.codes.push(code);
+      if (p.codes.length < p.price) {
+        errEl.style.color = 'var(--tui-cyan)';
+        errEl.textContent = `◆ Кристалл ${code} принят · ${p.codes.length} из ${p.price}. Сканируйте следующий.`;
+        again(); return;
+      }
+      errEl.style.color = 'var(--tui-cyan)'; errEl.textContent = 'Энергии достаточно — создаю канал…';
+      await this.finishChannel();
+    },
+    async finishChannel() {
+      const p = this.chPending, cur = this.who(), e = this.$('cmNewErr'), errEl = document.getElementById('scannerModalError');
+      const { data: r, error } = await sb.rpc('create_channel_paid', {
+        p_character: cur.id, p_module: this.me(), p_source: 'terminal', p_name: p.name,
+        p_allow_text: p.allow.allow_text, p_allow_voice: p.allow.allow_voice, p_allow_photo: p.allow.allow_photo, p_hidden: p.hidden,
+        p_member_modules: [...p.mods], p_member_chars: [...p.chars], p_codes: p.codes
+      });
+      const scanning = document.getElementById('scannerModal').classList.contains('open');
+      if (error || !r) {
+        const msg = error && /create_channel_paid|function/i.test(error.message) ? 'Энергосеть не настроена: мастеру нужно выполнить sql/channels_price.sql.' : 'Нет связи: ' + (error ? error.message : '—');
+        if (scanning) { errEl.style.color = ''; errEl.textContent = msg; } else e.textContent = msg;
+        return;
+      }
+      if (r.result === 'rejected') {
+        p.codes = p.codes.filter(c => !(r.bad || []).includes(c));
+        errEl.style.color = ''; errEl.textContent = `Кристаллы ${(r.bad || []).join(', ')} уже истощены. Нужно ещё ${p.price - p.codes.length}.`;
+        setTimeout(() => App.openScannerModal('chcrystal', true), 1100); return;
+      }
+      if (r.result === 'need') { p.price = r.price; errEl.textContent = `Нужно кристаллов: ${r.price}.`; setTimeout(() => App.openScannerModal('chcrystal', true), 1100); return; }
+      if (r.result !== 'ok') { App.closeScannerModal(false); e.textContent = r.result === 'forbidden' ? 'У вас нет права создавать каналы.' : 'Канал не создан: ' + r.result; return; }
+      App.closeScannerModal(true);
+      if (p.codes.length) App.log('crystal_spend', { codes: p.codes, result: 'ok', purpose: 'канал «' + p.name + '»' });
+      App.log('comm_create', { channelId: r.channel_id, hidden: p.hidden, members: p.mods.size + p.chars.size, crystals: r.spent || 0 });
+      this.chPending = null; e.textContent = '';
+      await this.refresh(false);
+      this.openThread(r.channel_id);
+      this.toast(p.hidden ? 'Скрытый канал создан' : 'Канал создан');
+    },
     async createChannel() {
       const cur = this.who(), e = this.$('cmNewErr');
       const name = this.$('cmNewName').value.trim();
@@ -4722,6 +4785,14 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       if (!allow.allow_text && !allow.allow_voice && !allow.allow_photo) return (e.textContent = 'Разрешите хотя бы текст, голос или фото.');
       e.textContent = 'Создание…';
       const hidden = !!(cur.is_hacker && this.$('cmNewHidden').checked);
+      const price = await this.channelPrice();
+      if (price > 0) {
+        this.chPending = { name, allow, hidden, mods: new Set(this.newSel.mods), chars: new Set(this.newSel.chars), price, codes: [] };
+        e.textContent = `Нужна энергия кристаллов: ${price}. Отсканируйте кристаллы.`;
+        App.crystalSeen = new Set();
+        App.openScannerModal('chcrystal');
+        return;
+      }
       const { data, error } = await sb.from('comm_channels').insert(Object.assign({ name, active: true, created_by_character_id: cur.id, created_from_module_id: this.me() }, allow)).select('id').single();
       if (error) return (e.textContent = 'Ошибка: ' + error.message);
       const rows = [...this.newSel.mods].map(id => ({ channel_id: data.id, module_id: id, source: 'player' }))
