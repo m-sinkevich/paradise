@@ -774,7 +774,15 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     .cb-hr{ border:0; border-top: 1px dashed rgba(56,189,248,.35); margin: 4px 0; }
     .cb-zoom{ position:fixed; inset:0; z-index: 9999; background: rgba(0,0,0,.9); display:flex; align-items:center; justify-content:center; cursor: zoom-out; }
     .cb-zoom img{ max-width: 96vw; max-height: 94vh; border: 1px solid rgba(94,234,212,.5); }
-    #contentModal .tui-modal-box { max-width: min(880px, 94vw); max-height: 92vh; }
+    /* окно данных — крупное, текст легко читать с расстояния */
+    #contentModal .tui-modal-box { max-width: min(1280px, 96vw); width: min(1280px, 96vw); max-height: 95vh; padding: 26px 30px; }
+    #contentModal .tui-modal-title { font-size: 16px; }
+    #contentModal .tui-content-body { font-size: 19px; line-height: 1.7; padding: 22px 26px; }
+    #contentModal .tui-content-body.md h3 { font-size: 26px; } #contentModal .tui-content-body.md h4 { font-size: 22px; } #contentModal .tui-content-body.md h5 { font-size: 19px; }
+    #contentModal .cb-cap { font-size: 15px; }
+    #contentModal .tui-gate-box { font-size: 18px; line-height: 1.65; padding: 20px 22px; }
+    #contentModal #choiceArea .tui-modal-btn { font-size: 15px; padding: 14px 18px; }
+    @media (max-width: 700px) { #contentModal .tui-content-body { font-size: 16px; padding: 14px; } #contentModal .tui-modal-box { padding: 16px; } }
     #contentModal .tui-modal-box > * { flex-shrink: 0; }
     .tui-content-body.md { white-space: normal; }
     .tui-content-body.md p { margin: 0 0 10px; }

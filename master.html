@@ -1422,7 +1422,7 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
     <div class="editor-section" id="eViewSection">
       <div class="sec-title">Статус</div>
       <label class="checkbox-chip" style="align-self:flex-start"><input type="checkbox" id="eViewed"> 👁 Просмотрено</label>
-      <div class="status-line">Снять отметку — объект снова «не просмотрен», внесённая энергия кристаллов сбрасывается (платить придётся заново).</div>
+      <div class="status-line">Снять отметку — объект снова «не просмотрен»: очищается история открытий, внесённая энергия сбрасывается, потраченные кристаллы снова активны.</div>
       <div class="status-line" id="eViewInfo"></div>
       <div class="status-line" id="eEnergyInfo" style="margin-top:6px"></div>
     </div>
@@ -2704,7 +2704,12 @@ const Admin = {
       tuiShowErrorToast('Энергия кристаллов не сброшена: ' + error.message + (/reset_content_energy|function/.test(error.message) ? ' — выполните sql/crystals_v2.sql в Supabase.' : ''));
       return;
     }
-    if (data && (data.payments || data.crystals)) this.info(`Энергия объекта сброшена: оплат ${data.payments}, кристаллов снова активно ${data.crystals}.`);
+    // «кто открывал» тоже обнуляется: объект снова как новый (в том числе «один раз» и таймеры)
+    const { error: e2 } = await sb.from('character_progress').delete().eq('content_id', contentId);
+    if (e2) tuiShowErrorToast('Не сброшена история открытий: ' + e2.message);
+    else this.contentProgress = (this.contentProgress || []).filter(x => x.content_id !== contentId);
+    const ei = document.getElementById('eViewInfo'); if (!e2 && ei && this.editingContentId === contentId) ei.textContent = 'Никто из персонажей ещё не открывал.';
+    this.info(`Объект сброшен: история открытий очищена${data && (data.payments || data.crystals) ? `, оплат энергии ${data.payments}, кристаллов снова активно ${data.crystals}` : ''}.`);
     if (window.Cr && Cr.all.length) Cr.load();
   },
   info(msg) {
