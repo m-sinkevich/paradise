@@ -1424,6 +1424,7 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
       <label class="checkbox-chip" style="align-self:flex-start"><input type="checkbox" id="eViewed"> 👁 Просмотрено</label>
       <div class="status-line">Снять отметку — объект снова «не просмотрен», внесённая энергия кристаллов сбрасывается (платить придётся заново).</div>
       <div class="status-line" id="eViewInfo"></div>
+      <div class="status-line" id="eEnergyInfo" style="margin-top:6px"></div>
     </div>
 <!-- ---- Доступ ---- -->
     <div class="editor-section">
@@ -2683,6 +2684,19 @@ const Admin = {
     if (!v) await this.resetPayments(id);
     this.renderContentList();
   },
+  // энергия кристаллов по объекту: цены страниц и кто сколько внёс — видно прямо в редакторе
+  async loadEnergyInfo(item) {
+    const el = document.getElementById('eEnergyInfo'); if (!el) return;
+    const vars = item.variants || [];
+    const vName = id => { if (!id) return 'основная'; const i = vars.findIndex(v => v.id === id); return i >= 0 ? `вариант ${i + 1}` : 'удалённый вариант'; };
+    const prices = [`основная — ${+item.price || 0}`].concat(vars.map((v, i) => `вариант ${i + 1} — ${+v.price || 0}${v.id ? '' : ' (не сохранён: сохраните объект)'}`));
+    const { data, error } = await sb.from('content_payments').select('*').eq('content_id', item.id);
+    if (this.editingContentId !== item.id) return;
+    const who = id => ((this.characters || []).find(c => c.id === id) || {}).name || '?';
+    const pays = error ? 'не удалось прочитать: ' + error.message
+      : (data || []).length ? data.map(p => `${who(p.character_id)} (${vName(p.variant)}): ${p.paid}${p.completed_at ? ' ✓ внесена' : ''}`).join('; ') : 'никто не вносил';
+    el.innerHTML = `💎 Энергия: ${this.escape(prices.join(', '))}<br>Внесли: ${this.escape(pays)}`;
+  },
   // «не просмотрено» — объект снова закрыт: внесённая энергия кристаллов сбрасывается (сами кристаллы остаются истощёнными)
   async resetPayments(contentId) {
     const { data, error } = await sb.rpc('reset_content_energy', { p_content: contentId });
@@ -3050,7 +3064,8 @@ const Admin = {
       document.getElementById('eViewInfo').textContent = opened.length
         ? 'Открывали: ' + opened.map(x => `${((this.characters || []).find(ch => ch.id === x.character_id) || {}).name || '?'} (${x.play_count || 1}×, ${x.last_opened_at ? new Date(x.last_opened_at).toLocaleString().slice(0, 17) : ''})`).join('; ')
         : 'Никто из персонажей ещё не открывал.';
-    }
+      this.loadEnergyInfo(item);
+    } else document.getElementById('eEnergyInfo').textContent = '';
     document.getElementById('eBodyPreview').style.display = 'none';
     document.getElementById('eVariantsField').style.display = (!this.contentItems.length || 'variants' in this.contentItems[0]) ? '' : 'none';
     this.renderVariants();
@@ -5783,7 +5798,7 @@ const Jr = {
       case 'auth': return (d.result === 'ok' ? 'успешно' : d.result === 'denied' ? 'доступ запрещён' : (d.result || '')) + (d.code ? ' · ' + d.code : '');
       case 'session_end': return { manual: 'вручную', timeout: 'истекло время сеанса', inactivity: 'бездействие', relogin: 'смена оператора', master: 'мастером' }[d.reason] || d.reason || '';
       case 'scan': return [d.code, d.result === 'not_found' ? 'не найден' : d.result === 'crystal' ? 'это кристалл' : '', cn].filter(Boolean).join(' · ');
-      case 'content_open': return [cn, d.result === 'blocked' ? 'доступ закрыт' : d.result === 'unpaid' ? 'нужна энергия кристаллов' : '', d.type].filter(Boolean).join(' · ');
+      case 'content_open': return [cn + (d.variant && window.Cr ? Cr.variantLabel(d.contentId, d.variant) : ''), d.result === 'blocked' ? 'доступ закрыт' : d.result === 'unpaid' ? 'нужна энергия кристаллов' : '', d.energy ? `энергия ${d.energy} внесена` : '', d.type].filter(Boolean).join(' · ');
       case 'content_choice': return [cn, d.label ? '→ ' + d.label : '', d.nextContentId ? this.contentName(d.nextContentId) : ''].filter(Boolean).join(' · ');
       case 'crystal_spend': case 'crystal_reject': case 'crystal_revive': return [d.code ? 'кристалл ' + d.code : '', cn + (d.variant && window.Cr ? Cr.variantLabel(d.contentId, d.variant) : ''), { ok: 'принят', spent: 'истощён', unknown: 'не кристалл', already_paid: 'энергии уже достаточно' }[d.result] || d.result, d.price ? `энергия ${d.paid || 0}/${d.price}` : ''].filter(Boolean).join(' · ');
       case 'journal_entry': return d.type === 'audio' ? 'голосовая' + (d.text ? ': ' + d.text : '') : (d.text || '');

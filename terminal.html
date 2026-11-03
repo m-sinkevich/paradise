@@ -3957,7 +3957,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       }
 
       await DB.recordProgress(this.currentCharacter.id, contentId);
-      await this.log('content_open', { contentId, type: item.type });
+      await this.log('content_open', { contentId, type: item.type, variant: variant || undefined, energy: price || undefined });
       if ('viewed' in item && !item.viewed) sb.from('content_items').update({ viewed: true, viewed_at: new Date().toISOString() }).eq('id', item.id).then(() => {});
 
       this.contentHistory.push(contentId);
