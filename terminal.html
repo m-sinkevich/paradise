@@ -3551,8 +3551,11 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
         document.getElementById('tui-session-timer').textContent = "∞";
       }
 
-      if (character.inactivity_timeout_minutes) {
-        this.inactivityMinutes = character.inactivity_timeout_minutes;
+      // таймаут бездействия задаётся в секундах (старое поле в минутах — запасной вариант)
+      const idleSec = character.inactivity_timeout_seconds != null ? Number(character.inactivity_timeout_seconds)
+        : (character.inactivity_timeout_minutes ? character.inactivity_timeout_minutes * 60 : 0);
+      if (idleSec > 0) {
+        this.inactivityMinutes = idleSec / 60;
         this.inactivityHandlerBound = () => this.resetInactivityTimer();
         ['click', 'keydown', 'touchstart'].forEach(evt =>
           document.addEventListener(evt, this.inactivityHandlerBound));

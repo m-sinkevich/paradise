@@ -1563,7 +1563,7 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
           <input type="number" class="input" id="cSessionTimeout" min="1" placeholder="Без ограничения">
         </div>
         <div class="field">
-          <label>Таймаут бездействия, минут (необязательно)</label>
+          <label id="cInactivityLabel">Таймаут бездействия, секунд (необязательно)</label>
           <input type="number" class="input" id="cInactivityTimeout" min="1" placeholder="Без ограничения">
         </div>
       </div>
@@ -3432,6 +3432,7 @@ const Admin = {
     if (/искуп|redemp/i.test(t)) return '<svg viewBox="0 0 30 30" fill="none" stroke="#1A1400" stroke-width="2.8"><rect x="3" y="4" width="24" height="22"/><path d="M9 4v22M15 4v22M21 4v22"/></svg>';
     return '<svg viewBox="0 0 24 24" fill="none" stroke="#041018" stroke-width="2"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20c1.4-4 4.2-6 7.5-6s6.1 2 7.5 6"/></svg>';
   },
+  hasIdleSeconds() { return !this.characters.length || 'inactivity_timeout_seconds' in this.characters[0]; },
   charHome(c) { return c.home_module_id || ((c.module_access || []).length === 1 ? c.module_access[0] : null); },
   renderCharacterList() {
     const searchEl = document.getElementById('characterSearch');
@@ -3487,7 +3488,7 @@ const Admin = {
           ${kv('Доступ', this.escape(this.moduleNamesFor(c.module_access)))}
           ${kv('Статус', c.active === false ? '<span style="color:var(--red)">неактивен — вход заблокирован</span>' : 'активен')}
           ${kv('Пароль', c.password ? 'есть' : '')}
-          ${kv('Таймеры', [c.session_timeout_minutes ? 'сессия ' + c.session_timeout_minutes + ' мин' : '', c.inactivity_timeout_minutes ? 'бездействие ' + c.inactivity_timeout_minutes + ' мин' : ''].filter(Boolean).join(' · '))}
+          ${kv('Таймеры', [c.session_timeout_minutes ? 'сессия ' + c.session_timeout_minutes + ' мин' : '', c.inactivity_timeout_seconds ? 'бездействие ' + c.inactivity_timeout_seconds + ' с' : c.inactivity_timeout_minutes ? 'бездействие ' + c.inactivity_timeout_minutes + ' мин' : ''].filter(Boolean).join(' · '))}
           ${kv('Способности', [c.can_create_channels ? '⌁ создаёт каналы' + (c.channel_price > 0 ? ` (💎 ${c.channel_price} за канал)` : '') : '', c.is_hacker ? '🕶 хакер' : ''].filter(Boolean).join(' · '))}
           ${kv('Сканер', { medic: 'медицинский', tech: 'технический', sci: 'научный' }[c.scanner_mode] || '')}
           ${kv('В каталоге', c.catalog_visible === false ? 'скрыт' : '')}
@@ -3635,7 +3636,12 @@ const Admin = {
     document.getElementById('cCode').value = item ? (item.qr_code || '') : this.generateTriggerCode();
     document.getElementById('cPassword').value = item ? (item.password || '') : '';
     document.getElementById('cSessionTimeout').value = (item && item.session_timeout_minutes != null) ? item.session_timeout_minutes : '';
-    document.getElementById('cInactivityTimeout').value = (item && item.inactivity_timeout_minutes != null) ? item.inactivity_timeout_minutes : '';
+    // бездействие — в секундах (после sql/inactivity_seconds.sql), иначе по-старому в минутах
+    const secCol = this.hasIdleSeconds();
+    document.getElementById('cInactivityLabel').textContent = secCol ? 'Таймаут бездействия, секунд (необязательно)' : 'Таймаут бездействия, минут (выполните sql/inactivity_seconds.sql — будет в секундах)';
+    document.getElementById('cInactivityTimeout').value = !item ? '' : secCol
+      ? (item.inactivity_timeout_seconds != null ? item.inactivity_timeout_seconds : (item.inactivity_timeout_minutes != null ? item.inactivity_timeout_minutes * 60 : ''))
+      : (item.inactivity_timeout_minutes != null ? item.inactivity_timeout_minutes : '');
     document.getElementById('cCatalogHint').style.display = this.hasCatalogCols() ? 'none' : '';
     document.getElementById('cScannerMode').value = (item && item.scanner_mode) || '';
     document.getElementById('cScannerSection').style.display = (!this.characters.length || 'scanner_mode' in this.characters[0]) ? '' : 'none';
@@ -3803,7 +3809,7 @@ const Admin = {
     const sessionTimeout = sessionTimeoutRaw ? parseInt(sessionTimeoutRaw, 10) : null;
     const inactivityTimeout = inactivityTimeoutRaw ? parseInt(inactivityTimeoutRaw, 10) : null;
     if (sessionTimeoutRaw && (isNaN(sessionTimeout) || sessionTimeout < 1)) { errEl.textContent = 'Таймер сессии должен быть положительным числом минут.'; return; }
-    if (inactivityTimeoutRaw && (isNaN(inactivityTimeout) || inactivityTimeout < 1)) { errEl.textContent = 'Таймаут бездействия должен быть положительным числом минут.'; return; }
+    if (inactivityTimeoutRaw && (isNaN(inactivityTimeout) || inactivityTimeout < 1)) { errEl.textContent = 'Таймаут бездействия должен быть положительным числом ' + (this.hasIdleSeconds() ? 'секунд.' : 'минут.'); return; }
 
     const row = {
       name,
@@ -3813,8 +3819,9 @@ const Admin = {
       active,
       password,
       session_timeout_minutes: sessionTimeout,
-      inactivity_timeout_minutes: inactivityTimeout
+      inactivity_timeout_minutes: this.hasIdleSeconds() ? null : inactivityTimeout
     };
+    if (this.hasIdleSeconds()) row.inactivity_timeout_seconds = inactivityTimeout;
     if (this.hasCatalogCols()) Object.assign(row, {
       photo_url: document.getElementById('cPhotoUrl').value.trim() || null,
       tagline: document.getElementById('cTagline').value.trim() || null,
