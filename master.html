@@ -1574,7 +1574,7 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
     <div class="editor-section">
       <div class="sec-title">Принадлежность модулю</div>
       <div class="field">
-        <label>Доступные модули (ничего не выбрано = доступ не ограничен)</label>
+        <label>Доступные модули — входить можно только на терминалах этих модулей (ничего не выбрано = доступ не ограничен)</label>
         <div class="checkbox-grid" id="cModuleAccess"></div>
       </div>
     </div>
@@ -5807,7 +5807,7 @@ const Jr = {
     const d = r.details || {};
     const cn = d.contentId ? this.contentName(d.contentId) : '';
     switch (r.action_type) {
-      case 'auth': return (d.result === 'ok' ? 'успешно' : d.result === 'denied' ? 'доступ запрещён' : (d.result || '')) + (d.code ? ' · ' + d.code : '');
+      case 'auth': return (d.result === 'ok' ? 'успешно' : d.result === 'denied' ? 'доступ запрещён' : d.result === 'module_denied' ? 'отказ: чужой модуль' : d.result === 'inactive' ? 'отказ: пропуск аннулирован' : d.result === 'not_found' ? 'код не распознан' : d.result === 'bad_password' ? 'неверный пароль' : (d.result || '')) + (d.code ? ' · ' + d.code : '');
       case 'session_end': return { manual: 'вручную', timeout: 'истекло время сеанса', inactivity: 'бездействие', relogin: 'смена оператора', master: 'мастером' }[d.reason] || d.reason || '';
       case 'scan': return [d.code, d.result === 'not_found' ? 'не найден' : d.result === 'crystal' ? 'это кристалл' : '', cn].filter(Boolean).join(' · ');
       case 'content_open': return [cn + (d.variant && window.Cr ? Cr.variantLabel(d.contentId, d.variant) : ''), d.result === 'blocked' ? 'доступ закрыт' : d.result === 'unpaid' ? 'нужна энергия кристаллов' : '', d.energy ? `энергия ${d.energy} внесена` : '', d.type].filter(Boolean).join(' · ');

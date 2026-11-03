@@ -3504,6 +3504,18 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
         await this.log('auth', { code, result: 'bad_password' });
         return;
       }
+      // принадлежность модулю (module_access): пусто — доступ везде, иначе только на терминалах своих модулей
+      const acc = character.module_access || [];
+      if (acc.length && DB.moduleRow && !acc.includes(DB.moduleRow.id)) {
+        errEl.textContent = `ДОСТУП ЗАПРЕЩЁН. ${character.name} не допущен к терминалу модуля «${DB.moduleRow.name || DB.moduleRow.access_code}».`;
+        await DB.addLog({ characterId: character.id, actionType: 'auth', details: { code, result: 'module_denied' } });
+        return;
+      }
+      if (character.active === false) {
+        errEl.textContent = "ДОСТУП ЗАПРЕЩЁН. Пропуск аннулирован.";
+        await DB.addLog({ characterId: character.id, actionType: 'auth', details: { code, result: 'inactive' } });
+        return;
+      }
       this.currentCharacter = character;
       await this.log('auth', { code, result: 'ok' });
       await this.applyLogin(character);
