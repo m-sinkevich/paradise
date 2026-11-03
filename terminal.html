@@ -2523,9 +2523,15 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     // оплата объекта кристаллами (sql/crystals.sql); нет таблицы — считаем, что платить не нужно
     // variant: '' — основная страница, иначе id варианта (у каждого своя цена и своя оплата)
     async getPayment(characterId, contentId, variant) {
-      const { data, error } = await sb.from('content_payments').select('*')
+      let { data, error } = await sb.from('content_payments').select('*')
         .eq('character_id', characterId).eq('content_id', contentId).eq('variant', variant || '').maybeSingle();
-      if (error) return { paid: 0, completed_at: /content_payments/.test(error.message) ? 'n/a' : null };
+      // база без sql/crystals_v2.sql (нет колонки variant): оплата только за объект целиком
+      if (error && /variant/.test(error.message)) {
+        ({ data, error } = await sb.from('content_payments').select('*').eq('character_id', characterId).eq('content_id', contentId).limit(1));
+        data = data && data[0];
+      }
+      // ошибка проверки — НЕ считаем оплаченным: данные остаются закрытыми
+      if (error) { console.warn('[energy]', error.message); return { paid: 0, completed_at: null }; }
       return data;
     },
 
@@ -4077,7 +4083,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
         p_code: code, p_character: this.currentCharacter.id, p_content: item.id,
         p_module: DB.moduleRow ? DB.moduleRow.id : null, p_source: 'terminal', p_variant: this.payVariant || ''
       });
-      if (error || !data) { this.crystalSeen.delete(code); errEl.textContent = 'Нет связи с энергосетью колонии: ' + (error ? error.message : '—'); again(); return; }
+      if (error || !data) { this.crystalSeen.delete(code); errEl.textContent = (error && /spend_crystal|function/i.test(error.message)) ? 'Энергосеть не настроена: мастеру нужно выполнить sql/crystals_v2.sql в Supabase.' : 'Нет связи с энергосетью колонии: ' + (error ? error.message : '—'); again(); return; }
       const r = data;
       await this.log(r.result === 'ok' ? 'crystal_spend' : 'crystal_reject', { code, contentId: item.id, variant: this.payVariant || undefined, result: r.result, paid: r.paid, price: r.price });
       if (r.result === 'ok' || r.result === 'already_paid') {
