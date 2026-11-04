@@ -243,13 +243,35 @@ const DATA = /*DATA*/null;
   // детерминированный генератор: у каждой буквы свой «осколок» из граней
   function rng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
   const GL = {};
+  // Знаки алфавита: у каждого — свой набор граней (4 боковые грани × поперечина), чтобы их можно было
+  // различить и расшифровать по таблице. Частые звуки — простые знаки. Подписи интерфейса — случайные осколки.
+  const ABC = ["'", 'o', 'a', 'I', 'e', 'u', 'm', 'H', 'gh', 'D', 'j', '.', 'q', 'v', 'S', 'y', 'n', 'l', 'ch', 't', 'w', 'p', 'b', 'Q', 'ng', 'tlh', ',', 'r', ':', '«', '»', '—', 'h', '[', ']', 'g', 'z', 'k', 'L', 'i', 's', 'M',
+    'digit0', 'digit1', 'digit2', 'digit3', 'digit4', 'digit5', 'digit6', 'digit7', 'digit8', 'digit9', '!', '?', '-', '(', ')', ';'];
+  const FEAT = (() => {   // (маска граней, поперечина) от простых к сложным
+    const out = [];
+    for (let m = 0; m < 16; m++) for (let b = 0; b < 4; b++) out.push([m, b]);
+    const pc = m => (m & 1) + (m >> 1 & 1) + (m >> 2 & 1) + (m >> 3 & 1);
+    return out.sort((x, y) => (pc(x[0]) + (x[1] ? 1 : 0)) - (pc(y[0]) + (y[1] ? 1 : 0)) || x[0] - y[0] || x[1] - y[1]);
+  })();
   function glyph(key) {
     if (GL[key]) return GL[key];
     let h = 0; for (const c of key) h = (h * 131 + c.charCodeAt(0)) >>> 0;
     const r = rng(h + 7), W = 20, H = 30, parts = [];
+    const idx = ABC.indexOf(key);
     // главный осколок: вытянутый ромб во всю высоту знака, слегка наклонён
-    const cx = 7 + r() * 6, w = 2.2 + r() * 2.5, tilt = (r() - .5) * 5, my = 9 + r() * 12;
-    parts.push(`M${(cx + tilt).toFixed(1)} 1 L${(cx + w).toFixed(1)} ${my.toFixed(1)} L${(cx - tilt * .4).toFixed(1)} 29 L${(cx - w).toFixed(1)} ${(my + (r() - .5) * 5).toFixed(1)} Z`);
+    const cx = idx >= 0 ? 10 : 7 + r() * 6, w = idx >= 0 ? 2.8 + r() * 1.2 : 2.2 + r() * 2.5, tilt = (r() - .5) * (idx >= 0 ? 2.5 : 5), my = idx >= 0 ? 14 + r() * 3 : 9 + r() * 12;
+    parts.push(`M${(cx + tilt).toFixed(1)} 1 L${(cx + w).toFixed(1)} ${my.toFixed(1)} L${(cx - tilt * .4).toFixed(1)} 29 L${(cx - w).toFixed(1)} ${(my + (r() - .5) * (idx >= 0 ? 2 : 5)).toFixed(1)} Z`);
+    if (idx >= 0) {
+      const [mask, bar] = FEAT[idx];
+      // грани: 1 — слева сверху, 2 — справа сверху, 4 — слева снизу, 8 — справа снизу
+      [[1, -1, 5], [2, 1, 5], [4, -1, 17], [8, 1, 17]].forEach(([bit, side, y0]) => {
+        if (!(mask & bit)) return;
+        const bx = cx + side * w * .55, y1 = y0 + 6.5, tip = bx + side * (6 + r() * 1.5);
+        parts.push(`M${bx.toFixed(1)} ${y0.toFixed(1)} L${tip.toFixed(1)} ${(y0 + 3.2 + (r() - .5)).toFixed(1)} L${bx.toFixed(1)} ${y1.toFixed(1)} Z`);
+      });
+      if (bar) { const y = [0, 6, 15, 24][bar]; parts.push(`M${(cx - 7).toFixed(1)} ${y.toFixed(1)} L${(cx + 7).toFixed(1)} ${(y + (r() - .5) * 1.5).toFixed(1)}`); }
+      return (GL[key] = `<svg viewBox="0 0 ${W} ${H}"><path d="${parts.join(' ')}"/></svg>`);
+    }
     // 0–2 прилегающих грани слева/справа
     const k = Math.floor(r() * 3);
     for (let i = 0; i < k; i++) {
