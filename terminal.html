@@ -1117,6 +1117,51 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     #tui-map-chip.show { display: block; }
     #tui-map.open ~ #tui-map-chip { display: none; }
     @keyframes tui-chip { 50% { box-shadow: 0 0 30px color-mix(in srgb, var(--tui-alert-color) 75%, transparent); } }
+
+    /* ==========================================================
+       НОУТБУЧНЫЕ ЭКРАНЫ: компактная шапка без наездов, колонки по ширине экрана,
+       спокойные цвета без тревоги (яркие — только при угрозе)
+       ========================================================== */
+    #tui-shell {
+      --colw: clamp(320px, 30vw, 460px);
+      inset: clamp(10px, 1.4vw, 22px);
+      grid-template-rows: clamp(58px, 8.5vh, 92px) 1fr auto 22px;
+      grid-template-columns: var(--colw) 1fr var(--colw);
+      gap: clamp(10px, 1.2vw, 16px);
+    }
+    /* широкие плашки «наплывают» на купол на треть / четверть ширины колонки */
+    #tui-col-left > .tui-panel:first-child  { width: calc(var(--colw) * 1.33); margin-right: calc(var(--colw) * -0.33); }
+    #tui-col-left > .tui-panel:last-child   { width: calc(var(--colw) * 1.25); margin-right: calc(var(--colw) * -0.25); }
+    #tui-col-right > .tui-panel:first-child { width: calc(var(--colw) * 1.33); margin-left: calc(var(--colw) * -0.33); }
+    #tui-col-right > .tui-panel:last-child  { width: calc(var(--colw) * 1.25); margin-left: calc(var(--colw) * -0.25); }
+    /* шапка: три колонки — название | часы | вход; ничего не накладывается */
+    #tui-header { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: clamp(10px, 1.5vw, 24px); padding: 0 clamp(16px, 2.6vw, 46px); }
+    .tui-header-clock { position: relative; left: auto; top: auto; transform: none; grid-column: 2; grid-row: 1; }
+    .tui-header-left { grid-column: 1; grid-row: 1; min-width: 0; }
+    .tui-header-left > div { min-width: 0; }
+    .tui-module-title { font-size: clamp(16px, 1.6vw, 24px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tui-module-sub { display: none; }
+    .tui-header-right { grid-column: 3; grid-row: 1; justify-self: end; min-width: 0; gap: clamp(10px, 1.4vw, 26px); }
+    .tui-clock-time { font-size: clamp(18px, 1.9vw, 26px); }
+    .tui-clock-date { font-size: clamp(10px, 0.9vw, 13px); margin-top: clamp(4px, 0.7vh, 12px); }
+    .tui-header-bar-bg { display: none; }
+    .tui-auth-prompt { gap: clamp(10px, 1vw, 18px); }
+    .tui-auth-text .tui-label { font-size: clamp(12px, 1.1vw, 17px); white-space: nowrap; }
+    #terminal-ui .tui-auth-text .tui-auth-msg { font-size: clamp(9.5px, 0.8vw, 12px); max-width: clamp(150px, 16vw, 260px); }
+    .tui-auth-btn { font-size: clamp(11px, 1vw, 14px); padding: clamp(7px, 1vh, 12px) clamp(10px, 1.3vw, 20px); }
+    .tui-char-block { gap: clamp(8px, 1vw, 18px); }
+    .tui-timer-badge { padding: 4px clamp(8px, 1vw, 16px); }
+    @media (max-width: 1500px) { .tui-auth-text { display: none; } }
+    /* декоративная всплывашка «SECTOR #…» над куполом закрывала название модуля — убрана */
+    #hud-popup { display: none !important; }
+
+    /* спокойная палитра, пока нет угрозы: вместо жёлтого/красного — приглушённые холодные тона */
+    body:not(.tui-alerting) #terminal-ui { --tui-amber: #9DB9C6; --tui-red: #C9A3A3; }
+    body:not(.tui-alerting) .tui-timer-badge { background: rgba(157, 185, 198, 0.08); }
+    body:not(.tui-alerting) .tui-auth-btn { background: rgba(94, 234, 212, 0.10); border-color: var(--tui-cyan); color: var(--tui-cyan); }
+    body:not(.tui-alerting) .tui-auth-btn:hover { background: var(--tui-cyan); color: #041018; box-shadow: 0 0 16px rgba(94, 234, 212, 0.45); }
+    body:not(.tui-alerting) .tui-auth-text .tui-label { text-shadow: none; }
+    body:not(.tui-alerting) .tui-dock-btn.tui-danger:hover { box-shadow: 0 0 14px rgba(157, 185, 198, 0.4); color: #041018; }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
