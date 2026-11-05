@@ -1240,8 +1240,8 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
             <div class="cf-view"><button type="button" class="on" data-cv="list">☰ Список</button><button type="button" data-cv="tree">⑂ Цепочки</button></div>
           </div>
           <div class="btn-row" style="margin:0">
-            <label class="qr-copies" title="Сколько копий каждого QR-кода печатать">копий <input type="number" class="input" id="qrCopiesAll" min="1" max="50" value="1"></label>
-            <button class="btn ghost" data-vr="qrPdf" id="qrPdfBtn" title="Все QR-коды контента с кодом и кратким описанием — для печати (QR ≈ 3 см)">⤓ Все QR в PDF</button>
+            <label class="qr-copies" title="Пусто — у каждого объекта своё число копий (задаётся в окне объекта). Число — столько копий каждого">копий <input type="number" class="input" id="qrCopiesAll" min="1" max="50" placeholder="своё"></label>
+            <button class="btn ghost" data-vr="qrPdf" id="qrPdfBtn" title="QR всех объектов из списка (с учётом поиска и фильтров): код и краткое описание, QR ≈ 3 см">⤓ QR списка в PDF</button>
             <button class="btn amber" data-action="openContentEditor">+ Новый объект контента</button>
           </div>
         </div>
@@ -1419,6 +1419,7 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
           <button class="btn ghost" data-action="showQrFullscreen">Показать крупно для сканирования</button>
           <div class="qr-copies-row"><label class="qr-copies">копий <input type="number" class="input" id="qrCopiesOne" min="1" max="200" value="1"></label>
             <button class="btn ghost" data-vr="qrPdfOne" id="qrPdfOneBtn" title="Лист A4 с копиями QR этого объекта (QR ≈ 3 см)">⤓ QR в PDF</button></div>
+          <div class="status-line">Число копий сохраняется с объектом и используется в «QR списка в PDF».</div>
         </div>
       </div>
       <div class="error-line" id="triggerCodeError"></div>
@@ -2618,6 +2619,7 @@ const Admin = {
       && (!fm || !(c.module_scope || []).length || c.module_scope.includes(fm))
       && (!fc || !(c.character_scope || []).length || c.character_scope.includes(fc) || (c.variants || []).some(v => (v.character_ids || []).includes(fc)));
     let list = this.contentItems.filter(match);
+    this.contentFiltered = list;   // «Все QR в PDF» печатает то, что сейчас в списке
     if (this.contentView === 'tree') return this.renderContentTree(match);
     if (!list.length) {
       el.innerHTML = '<div class="empty-line">Объектов контента не найдено.</div>';
@@ -3039,6 +3041,7 @@ const Admin = {
     document.getElementById('eMediaUrl').value = item ? (item.media_url || '') : '';
 
     document.getElementById('ePrice').value = (item && item.price) || 0;
+    document.getElementById('qrCopiesOne').value = (item && item.qr_copies) || 1;
     document.getElementById('ePriceField').style.display = (!this.contentItems.length || 'price' in this.contentItems[0]) ? '' : 'none';
     const playback = item ? item.playback : 'unlimited';
     const playbackInput = document.querySelector(`input[name="ePlayback"][value="${playback}"]`);
@@ -3103,7 +3106,7 @@ const Admin = {
       editingContentId: this.editingContentId, uploadedMedia: this.uploadedMedia,
       choiceOptions: JSON.parse(JSON.stringify((main ? this.mainChoices : this.choiceOptions) || [])), variants: JSON.parse(JSON.stringify(this.variants || [])),
       blocks: JSON.parse(JSON.stringify((main ? this.mainBlocks : this.blocks) || [])), vEdit: main ? this.vEdit : -1,
-      f: Object.fromEntries(['eTriggerCode', 'eType', 'eSummary', 'eBody', 'eMediaUrl', 'eUnlockType', 'eTimerMinutes', 'eEventId', 'ePrice'].map(id => [id, v(id)])),
+      f: Object.fromEntries(['eTriggerCode', 'eType', 'eSummary', 'eBody', 'eMediaUrl', 'eUnlockType', 'eTimerMinutes', 'eEventId', 'ePrice', 'qrCopiesOne'].map(id => [id, v(id)])),
       playback: (document.querySelector('input[name="ePlayback"]:checked') || {}).value, interrupt: (document.querySelector('input[name="eInterrupt"]:checked') || {}).value,
       mods: sel('eModuleScope'), chars: sel('eCharScope'), prev: sel('eRequiresPrevious'), viewed: document.getElementById('eViewed').checked,
       title: document.getElementById('editorTitle').textContent, delDisplay: document.getElementById('deleteContentBtn').style.display, viewDisplay: document.getElementById('eViewSection').style.display,
@@ -3205,6 +3208,7 @@ const Admin = {
     };
     if (hasBlocksCol) row.blocks = isEvent ? [] : blocks;
     let resetPay = null;
+    if (!this.contentItems.length || 'qr_copies' in this.contentItems[0]) row.qr_copies = Math.max(1, Math.min(200, parseInt(document.getElementById('qrCopiesOne').value, 10) || 1));
     if (!this.contentItems.length || 'price' in this.contentItems[0]) row.price = Math.max(0, parseInt(document.getElementById('ePrice').value, 10) || 0);
     if (!this.contentItems.length || 'summary' in this.contentItems[0]) {
       const cs = Array.from(document.querySelectorAll('#eCharScope input:checked')).map(i => i.value);
@@ -3392,8 +3396,9 @@ const Admin = {
   },
   // QR-листы A4: QR ≈ 3 см, под ним код и мелко — краткое описание; копий каждого — сколько указано
   async exportContentQrPdf() {
-    const items = (this.contentItems || []).filter(c => c.trigger_code).slice().sort((a, b) => a.trigger_code.localeCompare(b.trigger_code));
-    const n = Math.max(1, Math.min(50, parseInt(document.getElementById('qrCopiesAll').value, 10) || 1));
+    const items = (this.contentFiltered || this.contentItems || []).filter(c => c.trigger_code).slice().sort((a, b) => (a.summary || a.trigger_code).localeCompare(b.summary || b.trigger_code, 'ru', { numeric: true }));
+    const v = parseInt(document.getElementById('qrCopiesAll').value, 10);
+    const n = v > 0 ? Math.min(50, v) : null;   // пусто — у каждого объекта своё число копий (qr_copies)
     await this.qrPdf(items, n, document.getElementById('qrPdfBtn'), 'content_qr.pdf');
   },
   async exportOneQrPdf() {
@@ -3420,7 +3425,7 @@ const Admin = {
         if (lines.length === maxLines && words.join(' ').length > lines.join(' ').length) lines[maxLines - 1] = lines[maxLines - 1].replace(/.{0,2}$/, '…');
         return lines; };
       const matrix = code => { const d = document.createElement('div'); const q = new QRCode(d, { text: code, width: 64, height: 64, correctLevel: QRCode.CorrectLevel.H }); return q._oQRCode; };
-      const cells = []; items.forEach(it => { for (let k = 0; k < copies; k++) cells.push(it); });
+      const cells = []; items.forEach(it => { const n = copies || Math.max(1, parseInt(it.qr_copies, 10) || 1); for (let k = 0; k < n; k++) cells.push(it); });
       const pdf = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
       const pages = Math.ceil(cells.length / PER);
       for (let p = 0; p < pages; p++) {
