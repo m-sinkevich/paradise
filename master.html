@@ -794,6 +794,55 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
 .mt-person .tg{ font-size:10.5px; color:var(--ink-400); margin-top:2px; }
 .mt-person .acts{ margin-left:auto; display:flex; gap:4px; }
 .mt-person .acts .btn{ padding:4px 7px; font-size:10px; }
+
+/* ======================= СМАРТФОН ======================= */
+@media (max-width: 700px){
+  html, body{ overflow-x:hidden; }
+  body{ padding: 10px 8px 20px !important; }
+  .admin-header{ flex-wrap:wrap; gap:8px; }
+  .admin-meta{ flex-wrap:wrap; gap:6px 12px; text-align:left; }
+  /* вкладки — лента с прокруткой пальцем */
+  .tab-nav{ overflow-x:auto; flex-wrap:nowrap; gap:6px; padding-bottom:4px; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+  .tab-nav::-webkit-scrollbar{ display:none; }
+  .tab-btn{ flex:0 0 auto; padding:9px 12px; font-size:10.5px; }
+  .panel-body{ padding: 10px 10px 14px; }
+  .panel-head{ padding: 10px 10px 8px; flex-wrap:wrap; gap:6px; }
+  /* список контента: код + описание крупно, остальное мелко */
+  .content-toolbar{ flex-direction:column; align-items:stretch !important; gap:8px; }
+  .cf-bar{ flex-wrap:wrap; gap:6px; }
+  .cf-bar .input, .content-search{ width:100% !important; flex:1 1 100%; font-size:16px; }
+  .content-toolbar .btn-row{ flex-wrap:wrap; gap:6px; }
+  .content-row{ grid-template-columns: 1fr auto; grid-template-areas: "code act" "info info"; gap:6px 10px; padding:10px; }
+  .content-row .code{ grid-area:code; font-size:16px; letter-spacing:2px; }
+  .content-row .type-pill{ display:none; }
+  .content-row .actions{ grid-area:act; }
+  .content-row .actions .view-btn{ font-size:10px; padding:4px 8px; }
+  .content-row .info{ grid-area:info; }
+  .content-row .info .sum{ white-space:normal; font-size:14px; line-height:1.35; }
+  .content-row .info .preview{ white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; font-size:12px; }
+  .content-row .info .scope, .content-row .info .meta{ font-size:9.5px; }
+  /* окно объекта — на весь экран, одна колонка, крупный текст для чтения и правки */
+  #contentEditorModal{ padding:0 !important; align-items:stretch; }
+  #contentEditorModal .modal-box.ce-box{ max-width:100vw !important; width:100vw; max-height:100vh !important; height:100vh; clip-path:none; padding:10px 10px 8px !important; overflow:hidden !important; transform:none !important; }
+  .ce-body{ display:block !important; overflow-y:auto !important; -webkit-overflow-scrolling:touch; }
+  .ce-col{ overflow:visible !important; padding-right:0; min-height:auto !important; margin-bottom:16px; }
+  #contentSearch{ width:100% !important; }
+  .ce-box .modal-title{ font-size:12px; }
+  .ce-box .input, .ce-box select, .ce-box textarea{ font-size:16px !important; }
+  .ce-box .bl-item textarea, .ce-box #eBody{ min-height: 42vh; line-height:1.5; font-family: var(--font-body, sans-serif); }
+  .ce-box .bl-head{ flex-wrap:wrap; row-gap:6px; }
+  .ce-box .bl-head b{ flex:1 0 100%; }
+  .ce-box .bl-head select{ font-size:13px !important; padding:5px 6px; flex:1 1 auto; }
+  .ce-box .bl-head button{ width:34px; height:32px; font-size:14px; }
+  .ce-box .qr-box{ flex-wrap:wrap; }
+  .ce-box .checkbox-grid{ grid-template-columns: 1fr 1fr; }
+  .ce-foot{ position:sticky; bottom:0; background: var(--panel-deep); padding-bottom:4px; }
+  .ce-foot .btn-row{ flex-wrap:nowrap; gap:6px; }
+  .ce-foot .btn{ flex:1 1 0; padding:12px 6px; font-size:11px; }
+  .vr-tab{ font-size:12px; }
+  .ce-box #eVariants .meta{ font-size:11px; line-height:1.4; }
+  .ce-box .bl-head select{ flex:1 1 40%; }
+}
 </style>
 </head>
 <body>
