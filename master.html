@@ -1257,6 +1257,8 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
 
       <div class="btn-row">
         <button class="btn amber" data-th="launch">▸ Запустить угрозу</button>
+        <button class="btn" data-th="saveTemplate" id="thSaveTplBtn" style="display:none" title="Изменённые настройки станут настройками этого шаблона по умолчанию">💾 Сохранить шаблон</button>
+        <button class="btn ghost" data-th="resetTemplate" id="thResetTplBtn" style="display:none" title="Вернуть исходные настройки шаблона">↺ Шаблон по умолчанию</button>
         <button class="btn" data-th="savePreset" id="thSavePresetBtn">Сохранить как свою угрозу</button>
         <button class="btn ghost" data-th="reset">Очистить форму</button>
         <button class="btn danger" data-th="test">🧪 Проверка — 1 мин на всех модулях</button>
@@ -4610,13 +4612,41 @@ Object.assign(Admin, {
   presets: [],
   threatProgress: [],
 
+  /* ---------- шаблоны (паттерны) можно настроить и сохранить: хранятся в threat_presets с config.builtin_of ---------- */
+  tplOverride(key) { return (this.presets || []).find(p => p.config && p.config.builtin_of === key); },
+  patternCfg(key) { const o = this.tplOverride(key); return Object.assign(this.defaultConfig(key), o ? o.config : {}); },
+  setTplMode(key) {
+    this.th.editingPattern = key || null;
+    document.getElementById('thSaveTplBtn').style.display = key ? '' : 'none';
+    document.getElementById('thResetTplBtn').style.display = key && this.tplOverride(key) ? '' : 'none';
+  },
+  async saveTemplate() {
+    const key = this.th.editingPattern; if (!key) return;
+    const cfg = this.readConfig();
+    if (cfg.pattern !== key) return this.showError('Паттерн в форме изменён — сохраните как свою угрозу или верните паттерн шаблона.');
+    const row = { name: THREAT_DEFS[key].name, pattern: key, config: Object.assign({}, cfg, { builtin_of: key }), updated_at: new Date().toISOString() };
+    const o = this.tplOverride(key);
+    const { error } = o ? await sb.from('threat_presets').update(row).eq('id', o.id) : await sb.from('threat_presets').insert(row);
+    if (error) return this.showError('Не удалось сохранить шаблон: ' + error.message + (/threat_presets/.test(error.message) ? ' — выполните sql/threats.sql.' : ''));
+    await this.loadPresets(); this.setTplMode(key);
+    this.showOk(`Шаблон «${THREAT_DEFS[key].name}» сохранён — эти настройки будут подставляться при каждом запуске.`);
+  },
+  async resetTemplate() {
+    const key = this.th.editingPattern, o = key && this.tplOverride(key); if (!o) return;
+    if (!confirm(`Вернуть шаблон «${THREAT_DEFS[key].name}» к исходным настройкам?`)) return;
+    const { error } = await sb.from('threat_presets').delete().eq('id', o.id);
+    if (error) return this.showError('Не удалось: ' + error.message);
+    await this.loadPresets(); this.fillForm(this.defaultConfig(key)); this.setTplMode(key);
+    this.showOk('Шаблон возвращён к исходным настройкам.');
+  },
+
   /* ---------- каталог ---------- */
   renderTemplates() {
     const cat = document.getElementById('threatCatalog');
     cat.innerHTML = Object.entries(THREAT_DEFS).map(([k, d]) => `
       <div class="threat-card clickable" style="--tc:${d.color}" data-th="usePattern" data-key="${k}" title="Настроить и запустить">
         <div class="tc-top"><span class="tc-ico">${d.icon}</span><span class="tc-name">${this.escape(d.name)}</span></div>
-        <div class="tc-panel">ПЛАШКА: ${this.escape(d.panel)}</div>
+        <div class="tc-panel">ПЛАШКА: ${this.escape(d.panel)}${this.tplOverride(k) ? ' · <b style="color:var(--cyan)">✎ НАСТРОЕН</b>' : ''}</div>
         <div class="tc-desc">${this.escape(d.desc)}</div>
       </div>`).join('');
     this.renderPresets();
@@ -4624,12 +4654,12 @@ Object.assign(Admin, {
   renderPresets() {
     const el = document.getElementById('threatPresets');
     const meta = document.getElementById('metaTemplateCount');
-    if (meta) meta.textContent = this.presets.length;
+    if (meta) meta.textContent = this.presets.filter(p => !(p.config && p.config.builtin_of)).length;
     if (this.presetsError) {
       el.innerHTML = `<div class="empty-line" style="color:var(--red)">${this.escape(this.presetsError)}</div>`;
       return;
     }
-    el.innerHTML = this.presets.map(p => {
+    el.innerHTML = this.presets.filter(p => !(p.config && p.config.builtin_of)).map(p => {
       const d = THREAT_DEFS[p.pattern] || THREAT_DEFS.alert;
       const c = p.config || {};
       const codes = (c.resolve && c.resolve.codes || []).length;
@@ -4655,7 +4685,7 @@ Object.assign(Admin, {
         : 'Ошибка загрузки своих угроз: ' + error.message;
       this.presets = [];
     } else { this.presetsError = null; this.presets = data || []; }
-    this.renderPresets();
+    this.renderTemplates();
     this.renderNextSelect();
   },
   nextRefName(ref) {
@@ -4812,9 +4842,9 @@ Object.assign(Admin, {
     const sel = document.getElementById('thNext'); if (!sel) return;
     const cur = sel.value;
     sel.innerHTML = '<option value="">— ничего, вернуть обычный режим —</option>' +
-      '<optgroup label="Готовые угрозы (настройки по умолчанию)">' +
-      Object.entries(THREAT_DEFS).map(([k, d]) => `<option value="pattern:${k}">${d.icon} ${this.escape(d.name)}</option>`).join('') + '</optgroup>' +
-      (this.presets.length ? '<optgroup label="Свои угрозы">' + this.presets.filter(p => p.id !== this.th.editingPresetId)
+      '<optgroup label="Шаблоны (с сохранёнными настройками)">' +
+      Object.entries(THREAT_DEFS).map(([k, d]) => `<option value="pattern:${k}">${d.icon} ${this.escape(d.name)}${this.tplOverride(k) ? ' ✎' : ''}</option>`).join('') + '</optgroup>' +
+      (this.presets.some(p => !(p.config && p.config.builtin_of)) ? '<optgroup label="Свои угрозы">' + this.presets.filter(p => p.id !== this.th.editingPresetId && !(p.config && p.config.builtin_of))
         .map(p => `<option value="preset:${p.id}">${this.escape(p.name)}</option>`).join('') + '</optgroup>' : '');
     sel.value = cur;
   },
@@ -4888,7 +4918,7 @@ Object.assign(Admin, {
     if (!ref || depth > 5) return null;
     const [kind, id] = ref.split(':');
     let cfg = null;
-    if (kind === 'pattern' && THREAT_DEFS[id]) cfg = this.defaultConfig(id);
+    if (kind === 'pattern' && THREAT_DEFS[id]) cfg = this.patternCfg(id);
     if (kind === 'preset') { const p = this.presets.find(x => x.id === id); if (p) cfg = Object.assign(this.defaultConfig(p.pattern), p.config); }
     if (!cfg) return null;
     const next = this.resolveNext(cfg.next_ref, cfg.next_delay_sec, depth + 1);
@@ -4896,7 +4926,7 @@ Object.assign(Admin, {
   },
   paramsFromConfig(cfg, next) {
     const p = Object.assign({}, cfg);
-    delete p.next_ref; delete p.next_delay_sec; delete p.sound_mode;
+    delete p.next_ref; delete p.next_delay_sec; delete p.sound_mode; delete p.builtin_of;
     p.next = next || null;
     return p;
   },
@@ -4968,6 +4998,7 @@ Object.assign(Admin, {
   },
   resetForm() {
     this.th.editingPresetId = null;
+    this.setTplMode(null);
     document.getElementById('formTitle').textContent = 'Запуск угрозы';
     document.getElementById('formModeTag').textContent = 'NEW';
     document.getElementById('thSavePresetBtn').textContent = 'Сохранить как свою угрозу';
@@ -5130,8 +5161,10 @@ document.addEventListener('click', e => {
     case 'usePattern':
       A.th.editingPresetId = null;
       A.resetForm();
-      A.fillForm(A.defaultConfig(el.dataset.key));
-      document.getElementById('formTitle').textContent = 'Запуск угрозы — ' + THREAT_DEFS[el.dataset.key].name;
+      A.fillForm(A.patternCfg(el.dataset.key));
+      A.setTplMode(el.dataset.key);
+      document.getElementById('formTitle').textContent = 'Шаблон «' + THREAT_DEFS[el.dataset.key].name + '» — настройте и запустите или сохраните шаблон';
+      document.getElementById('formModeTag').textContent = A.tplOverride(el.dataset.key) ? 'TEMPLATE ✎' : 'TEMPLATE';
       A.scrollToForm(); break;
     case 'newCustom':
       A.resetForm();
@@ -5158,6 +5191,8 @@ document.addEventListener('click', e => {
     case 'downloadAllCodes': A.th.codes.forEach((c, k) => setTimeout(() => A.downloadCodeQr(k), k * 400)); break;
     case 'launch': A.launchThreat(); break;
     case 'savePreset': A.savePreset(); break;
+    case 'saveTemplate': A.saveTemplate(); break;
+    case 'resetTemplate': A.resetTemplate(); break;
     case 'reset': A.resetForm(); break;
     case 'test': A.launchTest(); break;
     case 'excludeHere': A.excludeHere(el.dataset.id, el.dataset.mod); break;

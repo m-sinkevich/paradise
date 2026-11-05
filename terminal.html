@@ -1200,6 +1200,10 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     /* нижние плашки (энергосистема, метеорология) почти не наплывают на купол */
     #tui-col-left > .tui-panel:last-child   { width: calc(var(--colw) * 1.06); margin-right: calc(var(--colw) * -0.06); }
     #tui-col-right > .tui-panel:last-child  { width: calc(var(--colw) * 1.06); margin-left: calc(var(--colw) * -0.06); }
+
+    /* штормовое предупреждение видно только во время тревоги; кнопка лога убрана */
+    body:not(.tui-alerting) #tui-storm-row { display: none; }
+    #tui-devlog-toggle, #tui-devlog { display: none !important; }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -1596,7 +1600,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
               <span id="tui-wind-val">14.2 m/s</span>
             </span>
           </div>
-          <div class="tui-row"><span>Штормовое предупреждение:</span><span class="val" id="tui-storm-val">ШТИЛЬ</span></div>
+          <div class="tui-row" id="tui-storm-row"><span>Штормовое предупреждение:</span><span class="val" id="tui-storm-val">ШТИЛЬ</span></div>
         </div>
       </section>
 
@@ -1765,7 +1769,6 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 </div>
 
 <!-- ======= ЛОГ РАЗРАБОТЧИКА ======= -->
-<button id="tui-devlog-toggle" data-action="toggleDevLog" title="Лог">log</button>
 <div id="tui-devlog"><div id="tui-devlog-inner"></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -2332,7 +2335,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       const jump = Math.random() < 0.35;
       v = Math.max(0.94, Math.min(1.04, v + (jump ? (Math.random() - 0.5) * 0.06 : (Math.random() - 0.5) * 0.01)));
       el.textContent = v.toFixed(2) + ' ATM';
-      if (jump) tuiFlashOnce('tui-pressure', 'hit', 450);
+      if (jump && document.body.classList.contains('tui-alerting')) tuiFlashOnce('tui-pressure', 'hit', 450);
     }, 3200);
   })();
   // «Микро-пробои» — точечная подсветка повреждений: изредка коротко «засвечивает» одну точку
@@ -2359,7 +2362,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   // «Патогенный индекс» — сдвиг цвета при тревоге (демонстрационно, крайне редко)
   (function () {
     setInterval(() => {
-      if (!tuiLocked('tui-pathogen') && Math.random() < 0.12) tuiFlashOnce('tui-pathogen', 'alert', 1600);
+      if (!tuiLocked('tui-pathogen') && document.body.classList.contains('tui-alerting') && Math.random() < 0.12) tuiFlashOnce('tui-pathogen', 'alert', 1600);
     }, 6000);
   })();
   tuiDrift('tui-toxicity', 0, 0, 0.03, 0.01, v => v.toFixed(2) + ' PPM [SAFE]', 3000);
@@ -2396,7 +2399,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     const panel = document.getElementById('tui-panel-meteo');
     setInterval(() => {
       if (tuiLocked('tui-storm-val')) return;
-      const risky = Math.random() < 0.18;
+      const risky = document.body.classList.contains('tui-alerting') && Math.random() < 0.18;   // «риск бури» — только при тревоге
       el.textContent = risky ? 'РИСК БУРИ' : 'ШТИЛЬ';
       el.classList.toggle('red', risky);
       el.classList.toggle('cyan', !risky);
@@ -2422,7 +2425,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     const panel = document.getElementById('tui-panel-seismo');
     setInterval(() => {
       if (tuiLocked('tui-platform-status')) return;
-      const unstable = Math.random() < 0.1;
+      const unstable = document.body.classList.contains('tui-alerting') && Math.random() < 0.1;
       statusEl.textContent = unstable ? 'ВИБРАЦИЯ' : 'СТАБИЛЬНО';
       statusEl.classList.toggle('amber', unstable);
       statusEl.classList.toggle('cyan', !unstable);
