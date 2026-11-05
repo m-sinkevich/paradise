@@ -2848,13 +2848,13 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       scene: { bgPulse: 3 }
     },
     bio: {
-      panel: 'tui-panel-bio', color: '#A3E635', sound: 'geiger', fx: 'spores', title: 'БИОЛОГИЧЕСКАЯ УГРОЗА',
+      panel: 'tui-panel-bio', color: '#A3E635', sound: 'geiger', fx: 'spores', title: 'БИООПАСНОСТЬ · ПАРАЗИТ Ф-02',
       metrics: [
         { id: 'tui-bio-contam', to: [8.5, 36, 120], jitter: 0.5, fmt: v => (v < 10 ? v.toFixed(2) : v.toFixed(1)) + ' PPM', peak: true },
         { id: 'tui-rad-val', to: [0.6, 1.8, 4.2], jitter: 0.06, fmt: v => v.toFixed(2) + ' µSv/h' },
         { id: 'tui-toxicity', to: [0.8, 2.4, 6.5], jitter: 0.08, fmt: v => v.toFixed(2) + ' PPM [ОПАСНО]', bar: 'tui-toxicity-bar', barMax: 7 }
       ],
-      texts: [{ id: 'tui-pathogen', text: ['2.4% [ЗАРАЖЕНИЕ]', '11.8% [ЗАРАЖЕНИЕ]', '38.5% [ЭПИДЕМИЯ]'], status: true }],
+      texts: [{ id: 'tui-pathogen', text: ['2.4% [ПАРАЗИТ Ф-02]', '11.8% [РАЗМНОЖЕНИЕ]', '38.5% [КЛАДКА ЯИЦ]'], status: true }],
       spark: { 'tui-rad-spark': { base: 0.21, jitter: 0.05, pull: 0.3 } },
       scene: { particleColor: '#A3E635', particles: 170, particleSize: 0.065, bgPulse: 1.2 }
     },
