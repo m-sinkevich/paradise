@@ -5867,14 +5867,14 @@ const JR_GROUPS = [
   { k: 'auth', n: 'Входы/выходы', a: ['auth', 'session_end'] },
   { k: 'scan', n: 'Сканирования', a: ['scan'] },
   { k: 'content', n: 'Объекты', a: ['content_open', 'content_choice'] },
-  { k: 'crystal', n: 'Кристаллы', a: ['crystal_spend', 'crystal_reject', 'crystal_revive'] },
+  { k: 'crystal', n: 'Кристаллы', a: ['crystal_spend', 'crystal_reject', 'crystal_revive', 'crystal_conflict'] },
   { k: 'threat', n: 'Угрозы', a: ['threat_shown', 'threat_end', 'threat_code', 'threat_chain', 'silence_threat', 'silence_warning'] },
   { k: 'journal', n: 'Журнал модуля', a: ['journal_entry', 'journal_voice_start'] },
   { k: 'comms', n: 'Связь', a: ['comm_create', 'comm_send', 'comm_unlock'] },
   { k: 'camera', n: 'Камера', a: ['camera_photo'] }
 ];
 Object.assign(LOG_LABELS, {
-  crystal_spend: 'Энергия кристалла', crystal_reject: 'Кристалл не принят', crystal_revive: 'Кристалл включён мастером', silence_threat: 'Тишина: угроза', silence_warning: 'Тишина: предупреждение',
+  crystal_spend: 'Энергия кристалла', crystal_reject: 'Кристалл не принят', crystal_revive: 'Кристалл включён мастером', crystal_conflict: '⚠ Кристалл использован повторно (оффлайн)', silence_threat: 'Тишина: угроза', silence_warning: 'Тишина: предупреждение',
   comm_create: 'Связь: новый канал', comm_send: 'Связь: сообщение', comm_unlock: 'Связь: доступ открыт'
 });
 const Jr = {
@@ -5942,6 +5942,7 @@ const Jr = {
       case 'scan': return [d.code, d.result === 'not_found' ? 'не найден' : d.result === 'crystal' ? 'это кристалл' : '', cn].filter(Boolean).join(' · ');
       case 'content_open': return [cn + (d.variant && window.Cr ? Cr.variantLabel(d.contentId, d.variant) : ''), d.result === 'blocked' ? 'доступ закрыт' : d.result === 'unpaid' ? 'нужна энергия кристаллов' : '', d.energy ? `энергия ${d.energy} внесена` : '', d.type].filter(Boolean).join(' · ');
       case 'content_choice': return [cn, d.label ? '→ ' + d.label : '', d.nextContentId ? this.contentName(d.nextContentId) : ''].filter(Boolean).join(' · ');
+      case 'crystal_conflict': return [d.code ? 'кристалл ' + d.code : '', cn + (d.variant && window.Cr ? Cr.variantLabel(d.contentId, d.variant) : ''), d.source ? 'через ' + d.source : '', d.firstSpentBy ? 'первым потратил: ' + d.firstSpentBy : '', d.firstSource ? '(' + d.firstSource + ')' : '', 'оплата засчитана'].filter(Boolean).join(' · ');
       case 'crystal_spend': case 'crystal_reject': case 'crystal_revive': return [d.code ? 'кристалл ' + d.code : '', d.codes ? 'кристаллы ' + d.codes.join(', ') : '', d.purpose || '', cn + (d.variant && window.Cr ? Cr.variantLabel(d.contentId, d.variant) : ''), { ok: 'принят', spent: 'истощён', unknown: 'не кристалл', already_paid: 'энергии уже достаточно' }[d.result] || d.result, d.price ? `энергия ${d.paid || 0}/${d.price}` : ''].filter(Boolean).join(' · ');
       case 'journal_entry': return d.type === 'audio' ? 'голосовая' + (d.text ? ': ' + d.text : '') : (d.text || '');
     }

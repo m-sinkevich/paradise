@@ -938,6 +938,23 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     .cm-chips { display: flex; flex-wrap: wrap; gap: 6px; }
     .cm-chip { background: transparent; border: 1px solid var(--tui-edge); color: var(--tui-ink-100); font-family: var(--tui-font-body); font-size: 12px; padding: 5px 9px; cursor: pointer; }
     .cm-chip.on { border-color: var(--tui-cyan); color: #041018; background: var(--tui-cyan); }
+    #tk-off-pill { position: fixed; left: 6px; bottom: 4px; z-index: 9000; background: transparent; border: 0; color: rgba(148,163,184,.35); font: 600 10px/1 'IBM Plex Mono', monospace; letter-spacing: 1px; padding: 4px 6px; cursor: pointer; }
+    #tk-off-pill:hover { color: var(--tui-cyan); }
+    #tk-off-pill.local { color: #FBBF24; border: 1px solid rgba(251,191,36,.45); background: rgba(10,14,20,.8); }
+    #tk-off-pill.down { color: #F87171; }
+    #tk-off-modal { position: fixed; inset: 0; z-index: 9500; display: none; align-items: center; justify-content: center; background: rgba(2,6,12,.72); }
+    #tk-off-modal.open { display: flex; }
+    .tk-off-box { width: min(560px, 94vw); max-height: 90vh; overflow: auto; background: #07111a; border: 1px solid var(--tui-cyan); padding: 16px 18px; color: var(--tui-ink-100); font: 13px/1.5 'IBM Plex Mono', monospace; }
+    .tk-off-h { display: flex; justify-content: space-between; align-items: center; color: var(--tui-cyan); font-weight: 600; letter-spacing: 3px; margin-bottom: 12px; }
+    .tk-off-h button { background: none; border: 1px solid var(--tui-edge); color: var(--tui-ink-100); width: 28px; height: 28px; cursor: pointer; }
+    #tk-off-form { display: flex; gap: 8px; margin: 10px 0; } #tk-off-form input { flex: 1; }
+    .tk-off-err { color: #F87171; min-height: 18px; }
+    .tk-off-state { border: 1px solid var(--tui-edge); padding: 10px; margin-bottom: 10px; }
+    .tk-off-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: stretch; }
+    .tk-off-row .tui-modal-btn { flex: 1 1 200px; margin: 0; }
+    .tk-off-prog { min-height: 20px; margin: 8px 0; color: var(--tui-cyan); }
+    .tk-off-modes label { display: block; margin: 6px 0; cursor: pointer; }
+    .tk-off-note { color: var(--tui-ink-400); font-size: 11.5px; margin-top: 10px; }
     .cm-step { font-size: 11px; letter-spacing: 2px; color: var(--tui-cyan); margin: 0 0 8px; }
     .cm-pick { max-height: 46vh; }
     .cm-mod { border: 1px solid var(--tui-edge); padding: 8px; margin-bottom: 8px; }
@@ -1793,6 +1810,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 <script src="https://cdn.jsdelivr.net/npm/zxing-wasm@3.1.5/dist/iife/reader/index.js" async></script>
 <script src="map/polygon-map.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
+<script src="terminal-offline.js"></script>
 <script>
   // ==================== 1. СЦЕНА И КАМЕРА ====================
   const container = document.getElementById('canvas-container');
@@ -2504,7 +2522,12 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
      ========================================================================= */
   const SUPABASE_URL = "https://yfogwbxxomuzbezgpqjm.supabase.co";
   const SUPABASE_KEY = "sb_publishable_TflOx6ZH1UM3wQPg_rEe4A_b6oxzSmd";
-  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  // все запросы к базе идут через оффлайн-слой: без сети — из выгруженной копии (terminal-offline.js)
+  const OFFLINE_ON = !!window.Offline && new URLSearchParams(location.search).get('watch') !== '1';
+  if (OFFLINE_ON) Offline.init(SUPABASE_URL, SUPABASE_KEY);
+  const sb = OFFLINE_ON ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { global: { fetch: (a, b) => Offline.fetch(a, b) } })
+                        : supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  window.TK_SB = sb;
 
   /* ---------- Режим наблюдения мастера: terminal.html?module=КОД&watch=1 ----------
      Мастер видит, как выглядит терминал у колонистов, но этот экземпляр ничего не
@@ -2537,6 +2560,113 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     } catch (e) { /* localStorage недоступен */ }
     return fromUrl || null;
   })();
+
+  /* ---------- Оффлайн: индикатор и панель мастера (выгрузка базы, режим, досылка) ---------- */
+  const OfflineUI = {
+    SALT: '89b3cb69c81a7cdec58e8c1c61864b65', HASH: '7ce4571cf381395dba0c6d78391edf8357e21b882e9219f488cf8d0baf3762b3', ITER: 210000,
+    init() {
+      if (!OFFLINE_ON) return;
+      const pill = document.createElement('button');
+      pill.id = 'tk-off-pill'; pill.type = 'button'; pill.title = 'Оффлайн-режим (для мастера)';
+      document.body.appendChild(pill);
+      pill.addEventListener('click', () => this.open());
+      const box = document.createElement('div');
+      box.id = 'tk-off-modal';
+      box.innerHTML = `<div class="tk-off-box">
+        <div class="tk-off-h">АВТОНОМНЫЙ РЕЖИМ <button type="button" data-off="close">×</button></div>
+        <div id="tk-off-lock">
+          <div class="tk-off-note">Только для мастера. Введите пароль терминала мастера.</div>
+          <form id="tk-off-form" autocomplete="off"><input type="password" class="tui-input" id="tk-off-pw" placeholder="ПАРОЛЬ"><button class="tui-modal-btn" type="submit">Открыть</button></form>
+          <div class="tk-off-err" id="tk-off-err"></div>
+        </div>
+        <div id="tk-off-main" style="display:none">
+          <div class="tk-off-state" id="tk-off-state"></div>
+          <div class="tk-off-row"><button class="tui-modal-btn" type="button" data-off="dl">⇩ Выгрузить базу</button><button class="tui-modal-btn ghost" type="button" data-off="push">⇧ Отправить накопленное</button></div>
+          <div class="tk-off-prog" id="tk-off-prog"></div>
+          <div class="tk-off-modes">
+            <label><input type="radio" name="tkoffmode" value="auto"> <b>Авто</b> — работать через сеть, при обрыве — из выгруженной базы; накопленное досылается само</label>
+            <label><input type="radio" name="tkoffmode" value="offline"> <b>Только оффлайн</b> — сеть не трогать вообще, всё из выгруженной базы; досылать кнопкой</label>
+          </div>
+          <div class="tk-off-note">Без сети работают: вход по бейджу, контент по QR, кристаллы, журнал модуля, таймеры и угрозы, заранее запланированные мастером. Не работают: каналы связи, камера, новые угрозы и сообщения от мастера.<br>Выгружайте базу перед игрой, пока есть интернет, и после изменений контента. Страницу после выгрузки можно открывать без сети по тому же адресу.</div>
+        </div>
+      </div>`;
+      document.body.appendChild(box);
+      box.addEventListener('click', e => {
+        const a = e.target.closest('[data-off]'); if (e.target === box) return this.close();
+        if (!a) return;
+        if (a.dataset.off === 'close') this.close();
+        if (a.dataset.off === 'dl') this.download();
+        if (a.dataset.off === 'push') this.push();
+      });
+      box.querySelectorAll('input[name=tkoffmode]').forEach(r => r.addEventListener('change', () => { Offline.setMode(r.value); this.render(); }));
+      box.querySelector('#tk-off-form').addEventListener('submit', e => { e.preventDefault(); this.unlock(); });
+      Offline.on(() => this.render());
+      this.render();
+    },
+    fmt(ts) { if (!ts) return '—'; const d = new Date(ts); const p = n => String(n).padStart(2, '0'); return `${p(d.getDate())}.${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}`; },
+    render() {
+      const s = Offline.summary();
+      const pill = document.getElementById('tk-off-pill');
+      if (pill) {
+        pill.className = s.local ? 'local' : (s.net === false ? 'down' : '');
+        pill.textContent = s.local ? `◌ АВТОНОМНО${s.queue ? ' · ' + s.queue : ''}` : (s.net === false ? '◌ НЕТ СЕТИ' : (s.queue ? '⇧ ' + s.queue : '●'));
+      }
+      const st = document.getElementById('tk-off-state');
+      if (!st) return;
+      const c = s.counts || {};
+      st.innerHTML = [
+        `Сеть: <b>${s.net === false ? 'нет' : s.net ? 'есть' : '—'}</b> · режим: <b>${s.mode === 'offline' ? 'только оффлайн' : 'авто'}</b>${s.local ? ' · <b style="color:#FBBF24">работает из выгруженной базы</b>' : ''}`,
+        s.hasSnap ? `База: <b>${this.fmt(s.at)}</b> · модуль ${this.esc(s.module || '')} · персонажей ${c.characters || 0}, контента ${c.content_items || 0}, кристаллов ${c.crystals || 0}, угроз ${c.alerts || 0}` : '<b style="color:#F87171">База не выгружена</b> — без сети терминал работать не будет.',
+        s.files ? `Файлы: ${s.files.ok} из ${s.files.total}${s.files.bad && s.files.bad.length ? ` · <span title="${this.esc(s.files.bad.join('\n'))}" style="color:#F87171">не скачались: ${s.files.bad.length}</span>` : ''}` : '',
+        `Не отправлено: <b>${s.queue}</b>${s.failed ? ` · сервер отклонил: ${s.failed}` : ''}${Offline.pushing ? ' · отправка…' : ''}`
+      ].filter(Boolean).join('<br>');
+      document.querySelectorAll('#tk-off-modal input[name=tkoffmode]').forEach(r => { r.checked = r.value === s.mode; });
+    },
+    esc(t) { return String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); },
+    open() {
+      document.getElementById('tk-off-modal').classList.add('open');
+      let ok = false; try { ok = sessionStorage.getItem('tk_off_ok') === '1'; } catch (e) {}
+      document.getElementById('tk-off-lock').style.display = ok ? 'none' : '';
+      document.getElementById('tk-off-main').style.display = ok ? '' : 'none';
+      if (!ok) setTimeout(() => document.getElementById('tk-off-pw').focus(), 50);
+      this.render();
+    },
+    close() { document.getElementById('tk-off-modal').classList.remove('open'); },
+    async unlock() {
+      const pw = document.getElementById('tk-off-pw').value, err = document.getElementById('tk-off-err');
+      err.textContent = 'ПРОВЕРКА…';
+      try {
+        const bytes = h => { const a = new Uint8Array(h.length / 2); for (let i = 0; i < a.length; i++) a[i] = parseInt(h.substr(i * 2, 2), 16); return a; };
+        const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits']);
+        const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: bytes(this.SALT), iterations: this.ITER }, key, 256);
+        const hex = Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2, '0')).join('');
+        if (hex !== this.HASH) { err.textContent = 'НЕВЕРНЫЙ ПАРОЛЬ'; return; }
+      } catch (e) { err.textContent = 'Проверка недоступна: ' + e.message; return; }
+      err.textContent = ''; document.getElementById('tk-off-pw').value = '';
+      try { sessionStorage.setItem('tk_off_ok', '1'); } catch (e) {}
+      this.open();
+    },
+    async download() {
+      const pr = document.getElementById('tk-off-prog');
+      if (!MODULE_ACCESS_CODE) { pr.textContent = 'Модуль не выбран: откройте terminal.html?module=КОД'; return; }
+      pr.textContent = 'Выгрузка…';
+      try {
+        const r = await Offline.download(MODULE_ACCESS_CODE, t => { pr.textContent = t; });
+        pr.innerHTML = `✓ База выгружена. Файлов: ${r.files.ok} из ${r.files.total}` + (r.files.bad.length ? ` · <span style="color:#F87171">не скачались ${r.files.bad.length}: ${this.esc(r.files.bad.slice(0, 3).join(', '))}</span>` : '');
+      } catch (e) { pr.innerHTML = `<span style="color:#F87171">Не удалось: ${this.esc(e.message || e)}. Нужен интернет.</span>`; }
+      this.render();
+    },
+    async push() {
+      const pr = document.getElementById('tk-off-prog');
+      if (!Offline.queue.length) { pr.textContent = 'Отправлять нечего.'; return; }
+      pr.textContent = 'Отправка…';
+      try { const r = await Offline.push(); pr.textContent = `✓ Отправлено: ${r.sent}${r.failed ? ', отклонено сервером: ' + r.failed : ''}.`; }
+      catch (e) { pr.innerHTML = `<span style="color:#F87171">Нет связи с сервером — накопленное сохранено, отправим позже.</span>`; }
+      this.render();
+    }
+  };
+  window.MEDIA_BUCKET_NAME = MEDIA_BUCKET;
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => OfflineUI.init()); else OfflineUI.init();
 
   const DevLog = {
     print(entry) {
