@@ -731,6 +731,9 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
 .mt-faces{ display:flex; gap:6px; margin-top:12px; flex-wrap:wrap; }
 .mt-faces img, .mt-faces .none{ width:34px; height:42px; object-fit:cover; object-position:50% 25%; border:1px solid color-mix(in srgb, var(--mc) 50%, transparent); background:#0B1626; }
 .mt-faces .none{ display:grid; place-items:center; font-size:12px; color:var(--ink-400); }
+.qr-copies{ display:inline-flex; align-items:center; gap:6px; font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--ink-400); }
+.qr-copies .input{ width:64px; padding:6px 8px; }
+.qr-copies-row{ display:flex; gap:8px; align-items:center; margin-top:8px; flex-wrap:wrap; }
 .jr-filters{ display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
 .jr-f{ display:flex; gap:10px; align-items:flex-start; }
 .jr-f > b{ flex:0 0 92px; font-size:9.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--ink-400); font-weight:600; padding-top:5px; }
@@ -1237,7 +1240,8 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
             <div class="cf-view"><button type="button" class="on" data-cv="list">☰ Список</button><button type="button" data-cv="tree">⑂ Цепочки</button></div>
           </div>
           <div class="btn-row" style="margin:0">
-            <button class="btn ghost" data-vr="qrPdf" id="qrPdfBtn" title="Все QR-коды контента с кодом и кратким описанием — для печати">⤓ Все QR в PDF</button>
+            <label class="qr-copies" title="Сколько копий каждого QR-кода печатать">копий <input type="number" class="input" id="qrCopiesAll" min="1" max="50" value="1"></label>
+            <button class="btn ghost" data-vr="qrPdf" id="qrPdfBtn" title="Все QR-коды контента с кодом и кратким описанием — для печати (QR ≈ 3 см)">⤓ Все QR в PDF</button>
             <button class="btn amber" data-action="openContentEditor">+ Новый объект контента</button>
           </div>
         </div>
@@ -1413,6 +1417,8 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
           <div class="status-line">QR обновляется автоматически по коду.</div>
           <button class="btn ghost" data-action="downloadQr">Скачать QR (PNG)</button>
           <button class="btn ghost" data-action="showQrFullscreen">Показать крупно для сканирования</button>
+          <div class="qr-copies-row"><label class="qr-copies">копий <input type="number" class="input" id="qrCopiesOne" min="1" max="200" value="1"></label>
+            <button class="btn ghost" data-vr="qrPdfOne" id="qrPdfOneBtn" title="Лист A4 с копиями QR этого объекта (QR ≈ 3 см)">⤓ QR в PDF</button></div>
         </div>
       </div>
       <div class="error-line" id="triggerCodeError"></div>
@@ -3384,46 +3390,61 @@ const Admin = {
       </div>`;
     const f = document.getElementById('eBlocksField'); if (f) f.classList.toggle('vr-editing', !!v);
   },
+  // QR-листы A4: QR ≈ 3 см, под ним код и мелко — краткое описание; копий каждого — сколько указано
   async exportContentQrPdf() {
-    const btn = document.getElementById('qrPdfBtn'); const old = btn.textContent; btn.textContent = 'Готовлю PDF…'; btn.disabled = true;
+    const items = (this.contentItems || []).filter(c => c.trigger_code).slice().sort((a, b) => a.trigger_code.localeCompare(b.trigger_code));
+    const n = Math.max(1, Math.min(50, parseInt(document.getElementById('qrCopiesAll').value, 10) || 1));
+    await this.qrPdf(items, n, document.getElementById('qrPdfBtn'), 'content_qr.pdf');
+  },
+  async exportOneQrPdf() {
+    const code = document.getElementById('eTriggerCode').value.trim().toUpperCase();
+    if (!code) { tuiShowErrorToast('Сначала задайте код объекта'); return; }
+    const ex = (this.contentItems || []).find(c => c.id === this.editingContentId) || {};
+    const it = Object.assign({}, ex, { trigger_code: code, summary: document.getElementById('eSummary').value.trim() || ex.summary });
+    const n = Math.max(1, Math.min(200, parseInt(document.getElementById('qrCopiesOne').value, 10) || 1));
+    await this.qrPdf([it], n, document.getElementById('qrPdfOneBtn'), `qr_${code}.pdf`);
+  },
+  async qrPdf(items, copies, btn, file) {
+    const old = btn ? btn.textContent : ''; if (btn) { btn.textContent = 'Готовлю PDF…'; btn.disabled = true; }
     try {
+      if (!items.length) throw new Error('нет объектов с кодом');
       if (!window.jspdf) await new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'; sc.onload = res; sc.onerror = () => rej(new Error('не загрузилась библиотека PDF')); document.head.appendChild(sc); });
-      const items = this.contentItems.filter(c => c.trigger_code).slice().sort((a, b) => a.trigger_code.localeCompare(b.trigger_code));
-      if (!items.length) throw new Error('нет объектов контента');
-      const W = 1240, H = 1754, COLS = 3, ROWS = 4, M = 70, TOP = 130, cw = (W - 2 * M) / COLS, chh = (H - TOP - M) / ROWS;
-      const TYPES = { text: 'ТЕКСТ', image: 'КАРТИНКА', audio: 'АУДИО', video: 'ВИДЕО', event: 'СОБЫТИЕ' };
+      const DPM = 300 / 25.4, mm = v => Math.round(v * DPM);          // 300 dpi
+      const W = mm(210), H = mm(297), QR = mm(30);                       // QR ≈ 3 см
+      const CW = mm(46), CH = mm(54), COLS = Math.floor((210 - 16) / 46), ROWS = Math.floor((297 - 16) / 54), PER = COLS * ROWS;
+      const ox = Math.round((W - COLS * CW) / 2), oy = Math.round((H - ROWS * CH) / 2);
       const plain = t => String(t || '').replace(/[#*_`>~]+/g, ' ').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/\s+/g, ' ').trim();
       const wrap = (ctx, text, maxW, maxLines) => { const words = text.split(' '), lines = []; let ln = '';
         for (const w of words) { const t = ln ? ln + ' ' + w : w; if (ctx.measureText(t).width > maxW && ln) { lines.push(ln); ln = w; if (lines.length === maxLines) break; } else ln = t; }
         if (lines.length < maxLines && ln) lines.push(ln);
         if (lines.length === maxLines && words.join(' ').length > lines.join(' ').length) lines[maxLines - 1] = lines[maxLines - 1].replace(/.{0,2}$/, '…');
         return lines; };
-      const qrCanvas = code => { const h = document.createElement('div'); new QRCode(h, { text: code, width: 300, height: 300, colorDark: '#000', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.H }); return h.querySelector('canvas'); };
+      const matrix = code => { const d = document.createElement('div'); const q = new QRCode(d, { text: code, width: 64, height: 64, correctLevel: QRCode.CorrectLevel.H }); return q._oQRCode; };
+      const cells = []; items.forEach(it => { for (let k = 0; k < copies; k++) cells.push(it); });
       const pdf = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
-      const pages = Math.ceil(items.length / (COLS * ROWS));
+      const pages = Math.ceil(cells.length / PER);
       for (let p = 0; p < pages; p++) {
         const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const ctx = cv.getContext('2d');
-        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = '#000';
-        ctx.font = 'bold 34px sans-serif'; ctx.fillText('QR-коды контента', M, 80);
-        ctx.font = '22px sans-serif'; ctx.fillStyle = '#555'; ctx.textAlign = 'right'; ctx.fillText(`лист ${p + 1} из ${pages} · ${items.length} шт.`, W - M, 80); ctx.textAlign = 'left';
-        items.slice(p * COLS * ROWS, (p + 1) * COLS * ROWS).forEach((it, k) => {
-          const x = M + (k % COLS) * cw, y = TOP + Math.floor(k / COLS) * chh;
-          ctx.strokeStyle = '#bbb'; ctx.setLineDash([8, 6]); ctx.strokeRect(x + 6, y + 6, cw - 12, chh - 12); ctx.setLineDash([]);
-          const q = qrCanvas(it.trigger_code); if (q) ctx.drawImage(q, x + (cw - 260) / 2, y + 22, 260, 260);
-          ctx.fillStyle = '#000'; ctx.textAlign = 'center'; ctx.font = 'bold 34px monospace'; ctx.fillText(it.trigger_code, x + cw / 2, y + 320);
-          ctx.font = 'bold 17px sans-serif'; ctx.fillStyle = '#444';
-          const mods = (it.module_scope || []).map(id => (this.modules.find(m => m.id === id) || {}).name).filter(Boolean).join(', ');
-          ctx.fillText((TYPES[it.type] || it.type || '').toUpperCase() + (mods ? ' · ' + mods : ''), x + cw / 2, y + 346);
-          ctx.font = '17px sans-serif'; ctx.fillStyle = '#222';
-          wrap(ctx, (it.summary || '').trim() || plain(it.body) || '(без текста)', cw - 40, 2).forEach((ln, i) => ctx.fillText(ln, x + cw / 2, y + 370 + i * 21));
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+        cells.slice(p * PER, (p + 1) * PER).forEach((it, k) => {
+          const x = ox + (k % COLS) * CW, y = oy + Math.floor(k / COLS) * CH;
+          ctx.strokeStyle = '#c8c8c8'; ctx.lineWidth = 2; ctx.setLineDash([14, 10]); ctx.strokeRect(x, y, CW, CH); ctx.setLineDash([]);
+          // QR модулями — чёткие края при любой печати
+          const m = matrix(it.trigger_code), n = m.getModuleCount(), s = QR / n, qx = x + (CW - QR) / 2, qy = y + mm(5);
+          ctx.fillStyle = '#000';
+          for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (m.isDark(r, c)) ctx.fillRect(Math.floor(qx + c * s), Math.floor(qy + r * s), Math.ceil(s) + 1, Math.ceil(s) + 1);
+          ctx.textAlign = 'center'; ctx.fillStyle = '#000';
+          ctx.font = `bold ${mm(4.6)}px monospace`; ctx.fillText(it.trigger_code, x + CW / 2, qy + QR + mm(6.2));
+          ctx.font = `${mm(2.4)}px sans-serif`; ctx.fillStyle = '#333';
+          wrap(ctx, (it.summary || '').trim() || plain(it.body), CW - mm(4), 3).forEach((ln, i) => ctx.fillText(ln, x + CW / 2, qy + QR + mm(10) + i * mm(2.9)));
           ctx.textAlign = 'left';
         });
         if (p) pdf.addPage();
-        pdf.addImage(cv.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 210, 297);
+        pdf.addImage(cv.toDataURL('image/jpeg', 0.93), 'JPEG', 0, 0, 210, 297);
       }
-      pdf.save('content_qr.pdf');
+      pdf.save(file);
     } catch (e) { tuiShowErrorToast('PDF не создан: ' + (e.message || e)); }
-    btn.textContent = old; btn.disabled = false;
+    if (btn) { btn.textContent = old; btn.disabled = false; }
   },
   modIcon(m) {
     const t = ((m && m.name) || '') + ' ' + ((m && m.access_code) || '');
@@ -4420,6 +4441,7 @@ document.addEventListener('click', (e) => {
   if (a === 'toggle') { const ids = Admin.variants[i].character_ids = Admin.variants[i].character_ids || []; const k = ids.indexOf(v.dataset.id); k < 0 ? ids.push(v.dataset.id) : ids.splice(k, 1); Admin.renderVariants(); }
   if (a === 'preview') { const p = document.getElementById('eBodyPreview'); const on = p.style.display === 'none'; p.style.display = on ? '' : 'none'; if (on) Admin.renderPagePreview(); }
   if (a === 'qrPdf') Admin.exportContentQrPdf();
+  if (a === 'qrPdfOne') Admin.exportOneQrPdf();
 });
 document.addEventListener('input', (e) => {
   if (e.target.dataset && e.target.dataset.vrPrice !== undefined) Admin.variants[parseInt(e.target.dataset.vrPrice, 10)].price = Math.max(0, parseInt(e.target.value, 10) || 0);
