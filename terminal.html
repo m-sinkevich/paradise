@@ -938,6 +938,15 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     .cm-chips { display: flex; flex-wrap: wrap; gap: 6px; }
     .cm-chip { background: transparent; border: 1px solid var(--tui-edge); color: var(--tui-ink-100); font-family: var(--tui-font-body); font-size: 12px; padding: 5px 9px; cursor: pointer; }
     .cm-chip.on { border-color: var(--tui-cyan); color: #041018; background: var(--tui-cyan); }
+    .cm-step { font-size: 11px; letter-spacing: 2px; color: var(--tui-cyan); margin: 0 0 8px; }
+    .cm-pick { max-height: 46vh; }
+    .cm-mod { border: 1px solid var(--tui-edge); padding: 8px; margin-bottom: 8px; }
+    .cm-mod-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+    .cm-mod-h b { font-size: 13px; letter-spacing: 1px; color: var(--tui-ink-100); }
+    .cm-chip.all { font-size: 11px; letter-spacing: 1px; }
+    .cm-chip.center { width: 100%; text-align: left; font-size: 13px; padding: 8px 10px; }
+    .cm-newmem { display: flex; flex-wrap: wrap; gap: 6px; }
+    .cm-newmem span { border: 1px solid var(--tui-cyan); color: var(--tui-cyan); font-size: 12px; padding: 4px 8px; }
     .cm-opts { display: flex; gap: 14px; font-size: 12px; color: var(--tui-ink-100); margin: 4px 0 8px; }
     .cm-hidden-opt { display: block; font-size: 12px; color: #C4B5FD; border: 1px dashed rgba(196,181,253,.5); padding: 8px 10px; margin-bottom: 8px; }
     .cm-toast { position: sticky; bottom: 0; text-align: center; color: var(--tui-cyan); font-size: 12px; opacity: 0; transition: opacity .3s; }
@@ -1748,20 +1757,28 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     </div>
 
     <div id="cmViewNew" style="display:none">
-      <div class="tui-field"><label>Название канала</label><input class="tui-input" id="cmNewName" maxlength="60" placeholder="Например: Тихая частота"></div>
-      <div class="tui-field"><label>Участники <span id="cmNewCount" style="float:right;color:var(--tui-cyan)"></span></label>
-        <input class="tui-input" id="cmNewSearch" placeholder="Найти по имени">
-        <div class="cm-pick" id="cmNewPick"></div>
+      <div class="cm-step" id="cmNewStep"></div>
+      <div id="cmNewS1">
+        <div class="tui-field"><label>Кого позвать в канал <span id="cmNewCount" style="float:right;color:var(--tui-cyan)"></span></label>
+          <input class="tui-input" id="cmNewSearch" placeholder="Найти по имени или модулю">
+          <div class="cm-pick" id="cmNewPick"></div>
+        </div>
+        <div class="tui-error-line" id="cmNewErr1"></div>
+        <div class="tui-voice-row"><button class="tui-modal-btn" data-cm="newNext">Далее ›</button><button class="tui-modal-btn ghost" data-cm="back">Отмена</button></div>
       </div>
-      <div class="cm-opts">
-        <label><input type="checkbox" id="cmNewText" checked> текст</label>
-        <label><input type="checkbox" id="cmNewVoice" checked> голос</label>
-        <label><input type="checkbox" id="cmNewPhoto" checked> фото</label>
+      <div id="cmNewS2" style="display:none">
+        <div class="tui-field"><label>Участники</label><div class="cm-newmem" id="cmNewMembers"></div></div>
+        <div class="tui-field"><label>Название канала <span style="text-transform:none;letter-spacing:0;color:var(--tui-ink-400)">— можно не вводить</span></label><input class="tui-input" id="cmNewName" maxlength="60"></div>
+        <div class="cm-opts">
+          <label><input type="checkbox" id="cmNewText" checked> текст</label>
+          <label><input type="checkbox" id="cmNewVoice" checked> голос</label>
+          <label><input type="checkbox" id="cmNewPhoto" checked> фото</label>
+        </div>
+        <label class="cm-hidden-opt" id="cmNewHiddenWrap" style="display:none"><input type="checkbox" id="cmNewHidden" checked> 🕶 Скрытый канал: я невидимый участник — остальные не узнают, что я здесь</label>
+        <div class="tui-status-line" id="cmNewPrice" style="color:#C4B5FD"></div>
+        <div class="tui-error-line" id="cmNewErr"></div>
+        <div class="tui-voice-row"><button class="tui-modal-btn" data-cm="create" id="cmNewGo">Создать канал</button><button class="tui-modal-btn ghost" data-cm="newPrev">‹ Участники</button></div>
       </div>
-      <label class="cm-hidden-opt" id="cmNewHiddenWrap" style="display:none"><input type="checkbox" id="cmNewHidden" checked> 🕶 Скрытый канал: я невидимый участник — остальные не узнают, что я здесь</label>
-      <div class="tui-status-line" id="cmNewPrice" style="color:#C4B5FD"></div>
-      <div class="tui-error-line" id="cmNewErr"></div>
-      <div class="tui-voice-row"><button class="tui-modal-btn" data-cm="create">Создать канал</button><button class="tui-modal-btn ghost" data-cm="back">Отмена</button></div>
     </div>
 
     <div class="cm-toast" id="cmToast"></div>
@@ -4541,7 +4558,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
      (хакер), переписка с центром управления, создание канала с терминала.
      ========================================================================= */
   const Comms = {
-    channels: [], members: [], msgs: [], direct: [], modules: {}, chars: {}, charList: [],
+    channels: [], members: [], msgs: [], direct: [], modules: {}, masterMods: new Set(), chars: {}, charList: [],
     view: 'list', cur: null, rec: null, pending: null, camStream: null, lastUnread: 0, newSel: { mods: new Set(), chars: new Set() },
     DEFAULT_SEEN: '2026-10-26T00:00:00Z',   // всё, что было до перехода на каналы v2, считается прочитанным
     sel: 'id,channel_id,from_master,from_label,anon,from_module_id,from_character_id,to_master,to_module_id,to_character_id,kind,text,media_path,reply_to,allow_reply,read_at,created_at',
@@ -4555,8 +4572,10 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 
     async start() {
       if (!DB.moduleRow) return;
-      const [{ data: mods }] = await Promise.all([sb.from('modules').select('id,name')]);
-      (mods || []).forEach(m => this.modules[m.id] = m.name);
+      let mr = await sb.from('modules').select('id,name,is_master_terminal');
+      if (mr.error) mr = await sb.from('modules').select('id,name');
+      this.masterMods = new Set();
+      (mr.data || []).forEach(m => { this.modules[m.id] = m.name; if (m.is_master_terminal) this.masterMods.add(m.id); });
       let r = await sb.from('characters').select('id,name,module_access,home_module_id');
       if (r.error) r = await sb.from('characters').select('id,name,module_access');
       this.charList = (r.data || []).sort((a, b) => a.name.localeCompare(b.name, 'ru'));
@@ -4819,29 +4838,57 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     openNew() {
       if (!this.canCreate()) return;
       this.newSel = { mods: new Set(), chars: new Set() };
-      this.$('cmNewName').value = ''; this.$('cmNewSearch').value = ''; this.$('cmNewErr').textContent = '';
+      this.$('cmNewName').value = ''; this.$('cmNewSearch').value = ''; this.$('cmNewErr').textContent = ''; this.$('cmNewErr1').textContent = '';
       const hk = !!this.who().is_hacker;
       this.$('cmNewHiddenWrap').style.display = hk ? '' : 'none'; this.$('cmNewHidden').checked = hk;
       ['cmNewText', 'cmNewVoice', 'cmNewPhoto'].forEach(id => this.$(id).checked = true);
       this.$('cmTitle').textContent = 'НОВЫЙ КАНАЛ';
-      this.$('cmNewPrice').textContent = '';
-      this.channelPrice().then(p => { this.$('cmNewPrice').textContent = p > 0 ? `◆ Создание канала требует энергии кристаллов: ${p}. После «Создать канал» отсканируйте кристаллы.` : ''; });
-      this.show('new'); this.renderPicker();
+      this.$('cmNewPrice').textContent = ''; this.newPrice = 0;
+      this.channelPrice().then(p => { this.newPrice = p; this.newStep(this.step || 1); });
+      this.show('new'); this.newStep(1);
     },
+    // создание по шагам: 1 — кого позвать, 2 — название, режимы, энергия
+    newStep(n) {
+      this.step = n;
+      const p = this.newPrice || 0;
+      this.$('cmNewS1').style.display = n === 1 ? '' : 'none';
+      this.$('cmNewS2').style.display = n === 2 ? '' : 'none';
+      this.$('cmNewStep').textContent = n === 1 ? 'ШАГ 1 ИЗ 2 · КОГО ПОЗВАТЬ' : (p > 0 ? 'ШАГ 2 ИЗ 2 · НАЗВАНИЕ И ЭНЕРГИЯ' : 'ШАГ 2 ИЗ 2 · НАЗВАНИЕ');
+      if (n === 1) return this.renderPicker();
+      const d = new Date(), hm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+      this.defaultName = 'Связь · ' + String(this.who().name || '').trim().split(/\s+/)[0] + ' · ' + hm;
+      this.$('cmNewName').placeholder = this.defaultName;
+      this.$('cmNewMembers').innerHTML = [...this.newSel.mods].map(id => `<span>${this.masterMods.has(id) ? '✉ ' : '▣ '}${this.esc(this.modName(id))}</span>`)
+        .concat([...this.newSel.chars].map(id => `<span>◉ ${this.esc(this.charName(id))}</span>`)).join('');
+      this.$('cmNewPrice').textContent = p > 0 ? `◆ Нужна энергия кристаллов: ${p}. После «Создать канал» отсканируйте кристаллы.` : '';
+      this.$('cmNewGo').textContent = p > 0 ? '◆ Создать канал' : 'Создать канал';
+      this.$('cmNewErr').textContent = '';
+    },
+    newNext() {
+      if (!this.newSel.mods.size && !this.newSel.chars.size) return (this.$('cmNewErr1').textContent = 'Отметьте хотя бы одного участника.');
+      this.$('cmNewErr1').textContent = '';
+      this.newStep(2);
+    },
+    // центр управления (мастерский терминал) — первым; дальше модули: «весь модуль» + люди модуля. Персонажи без модуля не показываются.
     renderPicker() {
-      const q = (this.$('cmNewSearch').value || '').toLowerCase().replace(/ё/g, 'е'), cur = this.who();
-      const mods = Object.entries(this.modules).filter(([id, n]) => !q || n.toLowerCase().includes(q));
-      const groups = {};
-      this.charList.filter(c => c.id !== cur.id && (!q || c.name.toLowerCase().replace(/ё/g, 'е').includes(q))).forEach(c => {
-        const h = this.homeOf(c) || '—'; (groups[h] = groups[h] || []).push(c);
+      const norm = x => String(x || '').toLowerCase().replace(/ё/g, 'е');
+      const q = norm(this.$('cmNewSearch').value), cur = this.who();
+      const chip = (kind, id, label, on, cls) => `<button type="button" class="cm-chip ${cls || ''} ${on ? 'on' : ''}" data-cm="pick" data-kind="${kind}" data-id="${id}">${on ? '✓ ' : ''}${this.esc(label)}</button>`;
+      const mods = Object.entries(this.modules).sort((a, b) => a[1].localeCompare(b[1], 'ru'));
+      const center = mods.filter(([id, n]) => this.masterMods.has(id) && (!q || norm(n).includes(q) || 'центр управления'.includes(q)));
+      let html = center.length ? `<div class="cm-pick-h">Центр управления</div><div class="cm-chips" style="margin-bottom:8px">${center.map(([id, n]) => chip('mod', id, '✉ ' + n, this.newSel.mods.has(id), 'center')).join('')}</div>` : '';
+      mods.filter(([id]) => !this.masterMods.has(id)).forEach(([id, n]) => {
+        const all = this.charList.filter(c => c.id !== cur.id && this.homeOf(c) === id);
+        const people = q && !norm(n).includes(q) ? all.filter(c => norm(c.name).includes(q)) : all;
+        if (q && !norm(n).includes(q) && !people.length) return;
+        html += `<div class="cm-mod"><div class="cm-mod-h"><b>▣ ${this.esc(n)}</b>${chip('mod', id, 'весь модуль', this.newSel.mods.has(id), 'all')}</div>
+          <div class="cm-chips">${people.map(c => chip('char', c.id, c.name, this.newSel.chars.has(c.id))).join('') || '<span class="tui-status-line">людей нет</span>'}</div></div>`;
       });
-      const chip = (kind, id, label, on) => `<button type="button" class="cm-chip ${on ? 'on' : ''}" data-cm="pick" data-kind="${kind}" data-id="${id}">${this.esc(label)}</button>`;
-      this.$('cmNewPick').innerHTML =
-        `<div class="cm-pick-h">Модули целиком</div><div class="cm-chips">${mods.map(([id, n]) => chip('mod', id, '▣ ' + n, this.newSel.mods.has(id))).join('') || '<span class="tui-status-line">—</span>'}</div>` +
-        Object.entries(groups).map(([h, list]) => `<div class="cm-pick-h">${this.esc(h === '—' ? 'Без модуля' : this.modName(h))}</div><div class="cm-chips">${list.map(c => chip('char', c.id, c.name, this.newSel.chars.has(c.id))).join('')}</div>`).join('');
-      this.$('cmNewCount').textContent = `Выбрано: ${this.newSel.mods.size + this.newSel.chars.size}`;
+      this.$('cmNewPick').innerHTML = html || '<span class="tui-status-line">Никого не найдено.</span>';
+      const n = this.newSel.mods.size + this.newSel.chars.size;
+      this.$('cmNewCount').textContent = n ? `Выбрано: ${n}` : '';
     },
-    pick(kind, id) { const s = kind === 'mod' ? this.newSel.mods : this.newSel.chars; s.has(id) ? s.delete(id) : s.add(id); this.renderPicker(); },
+    pick(kind, id) { const s = kind === 'mod' ? this.newSel.mods : this.newSel.chars; s.has(id) ? s.delete(id) : s.add(id); this.$('cmNewErr1').textContent = ''; this.renderPicker(); },
     // цена канала читается из базы в момент создания (мастер мог поменять её после входа)
     async channelPrice() {
       const cur = this.who(); if (!cur) return 0;
@@ -4902,9 +4949,8 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     },
     async createChannel() {
       const cur = this.who(), e = this.$('cmNewErr');
-      const name = this.$('cmNewName').value.trim();
-      if (!name) return (e.textContent = 'Назовите канал.');
-      if (!this.newSel.mods.size && !this.newSel.chars.size) return (e.textContent = 'Выберите хотя бы одного участника.');
+      const name = this.$('cmNewName').value.trim() || this.defaultName;
+      if (!this.newSel.mods.size && !this.newSel.chars.size) return this.newStep(1);
       const allow = { allow_text: this.$('cmNewText').checked, allow_voice: this.$('cmNewVoice').checked, allow_photo: this.$('cmNewPhoto').checked };
       if (!allow.allow_text && !allow.allow_voice && !allow.allow_photo) return (e.textContent = 'Разрешите хотя бы текст, голос или фото.');
       e.textContent = 'Создание…';
@@ -5131,6 +5177,8 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     if (a === 'new') Comms.openNew();
     if (a === 'pick') Comms.pick(b.dataset.kind, b.dataset.id);
     if (a === 'create') Comms.createChannel();
+    if (a === 'newNext') Comms.newNext();
+    if (a === 'newPrev') Comms.newStep(1);
     if (a === 'sendText') Comms.send('text');
     if (a === 'rec') Comms.toggleRec();
     if (a === 'cam') Comms.openCam();
