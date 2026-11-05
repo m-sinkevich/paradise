@@ -1162,6 +1162,44 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     body:not(.tui-alerting) .tui-auth-btn:hover { background: var(--tui-cyan); color: #041018; box-shadow: 0 0 16px rgba(94, 234, 212, 0.45); }
     body:not(.tui-alerting) .tui-auth-text .tui-label { text-shadow: none; }
     body:not(.tui-alerting) .tui-dock-btn.tui-danger:hover { box-shadow: 0 0 14px rgba(157, 185, 198, 0.4); color: #041018; }
+
+    /* ---- шапка: декоративные «крылья» у часов, звёздная пыль, линия-горизонт ---- */
+    #tui-header { overflow: hidden; background:
+      radial-gradient(ellipse 38% 140% at 50% 0%, rgba(94, 234, 212, 0.10), transparent 70%),
+      linear-gradient(180deg, rgba(10, 30, 52, 0.55), rgba(4, 11, 22, 0.75)); }
+    .hd-stars { position: absolute; inset: 0; pointer-events: none; z-index: 0; opacity: .55;
+      background-image:
+        radial-gradient(1px 1px at 8% 30%, #cfefff 50%, transparent 51%), radial-gradient(1px 1px at 17% 72%, #9fd8ff 50%, transparent 51%),
+        radial-gradient(1.5px 1.5px at 27% 22%, #e8fbff 50%, transparent 51%), radial-gradient(1px 1px at 35% 64%, #8fd 50%, transparent 51%),
+        radial-gradient(1px 1px at 64% 28%, #cfefff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 72% 70%, #e8fbff 50%, transparent 51%),
+        radial-gradient(1px 1px at 83% 36%, #9fd8ff 50%, transparent 51%), radial-gradient(1px 1px at 92% 66%, #cfefff 50%, transparent 51%),
+        radial-gradient(1px 1px at 45% 85%, #8fd 50%, transparent 51%), radial-gradient(1px 1px at 57% 12%, #cfefff 50%, transparent 51%);
+      animation: hd-twinkle 6s ease-in-out infinite alternate; }
+    @keyframes hd-twinkle { from { opacity: .35; } to { opacity: .7; } }
+    .hd-base { position: absolute; left: 18%; right: 18%; bottom: 5px; height: 1px; z-index: 0; pointer-events: none;
+      background: linear-gradient(90deg, transparent, rgba(94, 234, 212, .55) 30%, rgba(56, 189, 248, .8) 50%, rgba(94, 234, 212, .55) 70%, transparent); box-shadow: 0 0 8px rgba(94, 234, 212, .5); }
+    .tui-header-clock { padding: 0 8px; }
+    .hd-wing { position: absolute; top: 50%; width: clamp(80px, 10vw, 240px); height: auto; aspect-ratio: 260 / 44; transform: translateY(-58%); pointer-events: none; overflow: visible;
+      color: var(--tui-cyan); filter: drop-shadow(0 0 3px rgba(94, 234, 212, .6)); }
+    .hd-wing.l { right: 100%; margin-right: 6px; }
+    .hd-wing.r { left: 100%; margin-left: 6px; transform: translateY(-58%) scaleX(-1); }
+    .hd-wing path, .hd-wing circle { fill: none; stroke: currentColor; vector-effect: non-scaling-stroke; }
+    .hd-wing .w-main { stroke-width: 1.4; opacity: .75; }
+    .hd-wing .w-sub { stroke-width: 1; opacity: .35; stroke: var(--tui-sky); }
+    .hd-wing .w-tick { stroke-width: 1; opacity: .45; }
+    .hd-wing .w-node { fill: rgba(94, 234, 212, .25); stroke-width: 1.2; animation: hd-node 3.2s ease-in-out infinite; transform-origin: 49px 9px; }
+    .hd-wing .w-dot { fill: currentColor; stroke: none; opacity: .7; } .hd-wing .d2 { opacity: .45; } .hd-wing .d3 { opacity: .25; }
+    .hd-wing .w-run { stroke: #E8FFFB; stroke-width: 2; stroke-dasharray: 14 400; stroke-dashoffset: 0; opacity: .9; animation: hd-run 4.5s linear infinite; }
+    @keyframes hd-run { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -414; } }
+    @keyframes hd-node { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+    #terminal-ui.alerting .hd-wing { color: var(--tui-alert-color, #FF6B6B); filter: drop-shadow(0 0 4px var(--tui-alert-color, #FF6B6B)); }
+    @media (prefers-reduced-motion: reduce) { .hd-wing .w-run, .hd-stars, .hd-wing .w-node { animation: none; } }
+    @media (max-width: 1100px) { .hd-wing { width: clamp(50px, 8vw, 120px); } .hd-wing .w-sub, .hd-wing .w-tick { display: none; } }
+    .tui-header-left, .tui-header-right, .tui-header-clock { z-index: 2; }
+
+    /* нижние плашки (энергосистема, метеорология) почти не наплывают на купол */
+    #tui-col-left > .tui-panel:last-child   { width: calc(var(--colw) * 1.06); margin-right: calc(var(--colw) * -0.06); }
+    #tui-col-right > .tui-panel:last-child  { width: calc(var(--colw) * 1.06); margin-left: calc(var(--colw) * -0.06); }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -1218,7 +1256,25 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
           <path d="M790,87 h10 M810,87 h10 M830,87 h10 M850,87 h10"/>
         </g>
       </svg>
+      <span class="hd-stars" aria-hidden="true"></span>
+      <span class="hd-base" aria-hidden="true"></span>
       <div class="tui-header-clock" id="tui-header-clock">
+        <svg class="hd-wing l" viewBox="0 0 260 44" preserveAspectRatio="xMaxYMid meet" aria-hidden="true">
+          <path class="w-main" d="M258 22 H168 L154 9 H52"/>
+          <path class="w-run" d="M258 22 H168 L154 9 H52"/>
+          <path class="w-sub" d="M250 30 H176 L166 38 H96"/>
+          <path class="w-tick" d="M70 9 v-4 M82 9 v-3 M94 9 v-4 M106 9 v-3 M118 9 v-4 M130 9 v-3 M142 9 v-4"/>
+          <path class="w-node" d="M44 9 l5 -5 l5 5 l-5 5 z"/>
+          <circle class="w-dot" cx="30" cy="9" r="1.6"/><circle class="w-dot d2" cx="18" cy="9" r="1.2"/><circle class="w-dot d3" cx="8" cy="9" r="0.9"/>
+        </svg>
+        <svg class="hd-wing r" viewBox="0 0 260 44" preserveAspectRatio="xMaxYMid meet" aria-hidden="true">
+          <path class="w-main" d="M258 22 H168 L154 9 H52"/>
+          <path class="w-run" d="M258 22 H168 L154 9 H52"/>
+          <path class="w-sub" d="M250 30 H176 L166 38 H96"/>
+          <path class="w-tick" d="M70 9 v-4 M82 9 v-3 M94 9 v-4 M106 9 v-3 M118 9 v-4 M130 9 v-3 M142 9 v-4"/>
+          <path class="w-node" d="M44 9 l5 -5 l5 5 l-5 5 z"/>
+          <circle class="w-dot" cx="30" cy="9" r="1.6"/><circle class="w-dot d2" cx="18" cy="9" r="1.2"/><circle class="w-dot d3" cx="8" cy="9" r="0.9"/>
+        </svg>
         <span class="tui-clock-time" id="tui-clock-time">--:--:--</span>
         <span class="tui-clock-date" id="tui-clock-date">— ——— ————</span>
       </div>
