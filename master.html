@@ -5522,7 +5522,12 @@ const Co = {
       .subscribe();
     this.fillSelects();
     await Promise.all([this.loadChannels(), this.loadMsgs()]);
-    setInterval(() => this.loadMsgs(), 30000);
+    // сообщения приходят сигналом; раз в 30 с — лёгкая проверка последнего сообщения, раз в 5 минут — полная
+    setInterval(async () => {
+      const { data } = await sb.from('comm_messages').select('id').order('created_at', { ascending: false }).limit(1);
+      const top = data && data[0] && data[0].id;
+      if ((top && top !== ((this.msgs || [])[0] || {}).id) || Date.now() - (this.fullAt || 0) > 300000) this.loadMsgs();
+    }, 30000);
     document.addEventListener('change', e => {
       if (e.target.id === 'coFilter') { this.renderFeed(); this.syncTargetFromFilter(); }
       if (e.target.id === 'coTarget') this.applyTarget();
@@ -5705,7 +5710,7 @@ const Co = {
   async loadMsgs() {
     const { data, error } = await sb.from('comm_messages').select(this.sel).order('created_at', { ascending: false }).limit(400);
     if (error) { this.$('coFeed').innerHTML = `<div class="empty-line" style="color:var(--red)">${this.esc(error.message)}${/comm_|from_label|anon/.test(error.message) ? ' — выполните sql/channels_v2.sql' : ''}</div>`; return; }
-    this.msgs = data || [];
+    this.msgs = data || []; this.fullAt = Date.now();
     this.renderFeed(); this.renderChannels(); this.renderBadge();
     if (Admin.modules && Admin.modules.length) { Admin.renderModuleList(); Admin.renderModuleTable(); }
   },
@@ -5848,7 +5853,8 @@ const Jr = {
     this.load(true);
     if (this.started) return;
     this.started = true;
-    this.timer = setInterval(() => { if (this.active() && !document.hidden) this.load(); }, 5000);
+    // новые записи приходят сигналом; раз в 10 с — лёгкая проверка «последняя запись та же?» (1 строка вместо 200)
+    this.timer = setInterval(() => { if (this.active() && !document.hidden) this.probe(); }, 10000);
     sb.channel('admin-actionlog-channel')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'logs' }, () => { if (!this.active()) return; clearTimeout(this.deb); this.deb = setTimeout(() => this.load(), 400); })
       .subscribe();
@@ -5865,6 +5871,11 @@ const Jr = {
   },
   toggle(g, k) { const s = this.sel[g]; s.has(k) ? s.delete(k) : s.add(k); this.renderChips(); this.load(true); },
   reset() { Object.values(this.sel).forEach(s => s.clear()); this.$('jrSearch').value = ''; this.$('jrPeriod').value = '0'; this.renderChips(); this.load(true); },
+  async probe() {
+    const { data } = await sb.from('logs').select('id').order('timestamp', { ascending: false }).limit(1);
+    const top = data && data[0] && data[0].id;
+    if (top && top !== this.topId) { this.topId = top; this.load(); }
+  },
   async load(force) {
     if (force) { this.limit = force === 'more' ? this.limit + 200 : 200; this.sig = ''; }
     const s = this.sel;

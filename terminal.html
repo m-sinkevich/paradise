@@ -4463,7 +4463,12 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
         .on('postgres_changes', { event: '*', schema: 'public', table: 'comm_channels' }, () => this.refresh(false))
         .subscribe();
       await this.refresh(false);
-      setInterval(() => this.refresh(true), 20000);
+      // сообщения приходят сигналом; раз в 20 с — лёгкая проверка последнего сообщения, раз в 5 минут — полная
+      setInterval(async () => {
+        const { data } = await sb.from('comm_messages').select('id').order('created_at', { ascending: false }).limit(1);
+        const top = data && data[0] && data[0].id;
+        if ((top && top !== this.topMsg) || Date.now() - (this.fullAt || 0) > 300000) { this.topMsg = top; this.refresh(true); }
+      }, 20000);
     },
 
     /* ---------- данные ---------- */
@@ -4475,7 +4480,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
         sb.from('comm_messages').select(this.sel).is('channel_id', null).or(`to_module_id.eq.${me},from_module_id.eq.${me}`).order('created_at', { ascending: false }).limit(120)
       ]);
       if (c.error || m.error) { if (!/comm_/.test(((c.error || m.error) || {}).message || '')) console.error(c.error || m.error); return; }
-      this.channels = c.data || []; this.members = m.data || []; this.direct = d.data || [];
+      this.channels = c.data || []; this.members = m.data || []; this.direct = d.data || []; this.fullAt = Date.now();
       const ids = this.relevantChannels().map(x => x.id);
       if (ids.length) {
         const { data } = await sb.from('comm_messages').select(this.sel).in('channel_id', ids).order('created_at', { ascending: false }).limit(400);
