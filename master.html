@@ -1218,6 +1218,7 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
       <div class="field-row">
         <div class="field">
           <label class="checkbox-chip" style="align-self:flex-start;"><input type="checkbox" id="thJournal"> Запись в бортовой журнал снимает угрозу</label>
+          <label class="checkbox-chip" style="align-self:flex-start;"><input type="checkbox" id="thCenter"> Сообщение игрока в «Центр управления» снимает угрозу</label>
         </div>
         <div class="field">
           <label>Сообщение при устранении</label>
@@ -4603,10 +4604,15 @@ const THREAT_DEFS = {
     peakLabel: 'Скорость ветра, m/s', peak: [38, 64, 96], status: ['ШТОРМ · УРОВЕНЬ 1', 'ШТОРМ · УРОВЕНЬ 2', 'УРАГАН · УРОВЕНЬ 3'],
     desc: 'Ветер и мороз усиливаются, частицы вокруг купола несутся быстрее, по экрану летит пыль, вой ветра.' },
   comms: { name: 'Потеря связи', panel: 'Связь', color: '#F472B6', icon: '⌁',
-    title: 'ПОТЕРЯ СВЯЗИ', timerLabel: 'До восстановления канала',
-    instruction: 'Связь с другими модулями недоступна. Прекратите выходы наружу и ждите восстановления канала.',
-    peakLabel: 'Потеря пакетов, %', peak: [42, 78, 100], status: ['ПОМЕХИ', 'КАНАЛ НЕСТАБИЛЕН', 'КАНАЛ ПОТЕРЯН'],
-    desc: 'Задержка и потери пакетов растут, плашки глитчат, помехи на экране, белый шум.' },
+    title: 'ПОТЕРЯ СВЯЗИ · АНТЕННА ОБЕСТОЧЕНА', timerLabel: 'До полной потери синхронизации с колонией',
+    instruction: 'Местная фауна повредила линию питания круговой антенны: кабель выдернут из блока питания и запутан. ' +
+      'Выйдите к антенне. Блок питания и антенну НЕ ПЕРЕМЕЩАТЬ — они закреплены и откалиброваны. Кабель НЕ ЗАНОСИТЬ в модуль — на нём споры и выделения животных. ' +
+      'Распутайте кабель на месте (иначе не хватит длины), подключите антенну к блоку питания и дождитесь, пока она засветится. ' +
+      'Вернитесь в модуль и доложите в «✉ Центр управления» (раздел «Связь»), каким цветом горит антенна.',
+    peakLabel: 'Потеря пакетов, %', peak: [42, 78, 100], status: ['АНТЕННА ОБЕСТОЧЕНА', 'СИНХРОНИЗАЦИЯ ТЕРЯЕТСЯ', 'КАНАЛ ПОТЕРЯН'],
+    duration: 20, center: true,
+    done: 'Центр управления принял доклад. Круговая антенна под напряжением, синхронизация с колонией восстановлена.',
+    desc: 'Помехи, глитч плашек, белый шум. Реквизит: павербанк (блок питания) + запутанный USB-кабель + кольцевая лампа (антенна) на удалении; без распутывания длины не хватает. Снимается сообщением игрока в «Центр управления» — проверьте цвет лампы в докладе.' },
   journal: { name: 'Запрос центра управления', panel: 'Бортовой журнал', color: '#F59E0B', icon: '✉',
     title: 'ЗАПРОС ЦЕНТРА УПРАВЛЕНИЯ', timerLabel: 'До потери доверия центра',
     instruction: 'Немедленно сделайте запись в бортовой журнал с докладом об обстановке в модуле.',
@@ -4719,7 +4725,7 @@ Object.assign(Admin, {
       const d = this.defaultConfig(sel.value);
       // у шаблона свои коды устранения (разгерметизация — 3 датчика обшивки): подставляем, если своих кодов не вводили
       const def = THREAT_DEFS[sel.value];
-      const res = Object.assign({}, keep.resolve, { journal: !!def.journal || keep.resolve.journal });
+      const res = Object.assign({}, keep.resolve, { journal: !!def.journal || keep.resolve.journal, center: !!def.center || keep.resolve.center });
       if (!res.codes.length && d.resolve.codes.length) res.codes = d.resolve.codes;
       if (!res.done_message && d.resolve.done_message) res.done_message = d.resolve.done_message;
       this.fillForm(Object.assign(d, { duration_min: def.duration || keep.duration_min, resolve: res, next_ref: keep.next_ref, next_delay_sec: keep.next_delay_sec }), true);
@@ -4775,7 +4781,7 @@ Object.assign(Admin, {
     return {
       pattern, title: d.title, instruction: d.instruction, severity: 2, color: d.color, peak: null, status: '',
       duration_min: d.duration || 10, timer: { show: pattern !== 'alert', label: d.timerLabel },
-      resolve: { codes: (d.codes || []).map(c => Object.assign({}, c)), journal: !!d.journal, done_message: d.done || '' },
+      resolve: { codes: (d.codes || []).map(c => Object.assign({}, c)), journal: !!d.journal, center: !!d.center, done_message: d.done || '' },
       sound_mode: pattern === 'alert' ? 'none' : 'builtin', sound_url: null, sound_loop: true,
       next_ref: '', next_delay_sec: 5
     };
@@ -4803,6 +4809,8 @@ Object.assign(Admin, {
     this.renderCodes();
     const j = document.getElementById('thJournal');
     j.checked = !!(c.resolve && c.resolve.journal); j.closest('.checkbox-chip').classList.toggle('checked', j.checked);
+    const cc = document.getElementById('thCenter');
+    cc.checked = !!(c.resolve && c.resolve.center); cc.closest('.checkbox-chip').classList.toggle('checked', cc.checked);
     document.getElementById('thDoneMsg').value = (c.resolve && c.resolve.done_message) || '';
     const mode = c.sound_mode || (c.sound_url ? 'file' : (c.mute ? 'none' : 'builtin'));
     document.querySelectorAll('input[name="thSound"]').forEach(r => { r.checked = r.value === mode; r.closest('.radio-chip').classList.toggle('checked', r.checked); });
@@ -4921,6 +4929,7 @@ Object.assign(Admin, {
       resolve: {
         codes: this.th.codes.filter(c => normThreatCode(c.code)).map(c => ({ code: normThreatCode(c.code), message: (c.message || '').trim() })),
         journal: document.getElementById('thJournal').checked,
+        center: document.getElementById('thCenter').checked,
         done_message: document.getElementById('thDoneMsg').value.trim()
       },
       sound_mode: mode,
@@ -5413,7 +5422,7 @@ Object.assign(Admin, {
         const nm = alertName(d.alertId || d.from); if (nm) parts.push(nm);
         if (d.type) parts.push((THREAT_DEFS[d.type] || {}).name || d.type);
         if (d.code) parts.push('код ' + d.code);
-        if (d.reason) parts.push({ time: 'по времени', qr: 'устранена кодами', journal: 'записью в журнал' }[d.reason] || d.reason);
+        if (d.reason) parts.push({ time: 'по времени', qr: 'устранена кодами', journal: 'записью в журнал', center: 'докладом в центр управления' }[d.reason] || d.reason);
         return parts.join(' · ');
       }
       if (r.action_type === 'auth') return d.result === 'ok' ? 'успешно' : (d.result || '') + (d.code ? ' · ' + d.code : '');

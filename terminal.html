@@ -3153,12 +3153,12 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       scene: { windMul: [4, 7, 11], particles: [170, 230, 260], particleColor: '#CBD5E1', particleSize: 0.055 }
     },
     comms: {
-      panel: 'tui-panel-comms', color: '#F472B6', sound: 'static', fx: 'glitch', title: 'ПОТЕРЯ СВЯЗИ',
+      panel: 'tui-panel-comms', color: '#F472B6', sound: 'static', fx: 'glitch', title: 'ПОТЕРЯ СВЯЗИ · АНТЕННА ОБЕСТОЧЕНА',
       metrics: [
         { id: 'tui-latency', to: [480, 2400, 9999], jitter: 60, fmt: v => Math.round(v) + ' ms' },
         { id: 'tui-loss', to: [42, 78, 100], jitter: 5, fmt: v => Math.min(100, v).toFixed(1) + '% LOSS', peak: true }
       ],
-      texts: [{ id: 'tui-conn-status', text: ['ПОМЕХИ', 'КАНАЛ НЕСТАБИЛЕН', 'КАНАЛ ПОТЕРЯН'], status: true }],
+      texts: [{ id: 'tui-conn-status', text: ['АНТЕННА ОБЕСТОЧЕНА', 'СИНХРОНИЗАЦИЯ ТЕРЯЕТСЯ', 'КАНАЛ ПОТЕРЯН'], status: true }],
       spark: { 'tui-loss-spark': { base: 0.48, jitter: 0.3, pull: 0.4 } },
       eq: { 'tui-latency-eq': { spread: 100, floor: 0 } }
     },
@@ -3448,6 +3448,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
         parts.push(`Устранение: отсканируйте коды ремонта — <b>${done} из ${codes.length}</b>`);
       }
       if (prm.resolve && prm.resolve.journal) parts.push('Устранение: сделайте <b>запись в бортовой журнал</b>');
+      if (prm.resolve && prm.resolve.center) parts.push('Устранение: доложите в <b>✉ Центр управления</b> (раздел «Связь»)');
       task.innerHTML = parts.join('<br>');
       card.classList.toggle('has-content', !!(prm.instruction || parts.length || this.timerOn()));
       this.tick();
@@ -3563,6 +3564,15 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       return true;
     },
 
+    // сообщение игрока в «Центр управления» снимает угрозу, если так настроено (потеря связи: антенна снова под питанием)
+    async onCenterMessage() {
+      const a = this.current;
+      if (!a || this.ended || !(a.params && a.params.resolve && a.params.resolve.center)) return;
+      const msg = (a.params.resolve && a.params.resolve.done_message) || 'Доклад принят центром управления. Угроза снята.';
+      Comms.close();
+      App.renderGate('ДОКЛАД ПРИНЯТ', 'центр управления', `<div style="white-space:pre-wrap">${String(msg).replace(/[&<>]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]))}</div>`);
+      await this.resolveHere('center');
+    },
     async onJournalEntry() {
       const a = this.current;
       if (!a || this.ended || !(a.params && a.params.resolve && a.params.resolve.journal)) return;
@@ -5091,6 +5101,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
         if (r.channel_id) this.markSeen(r.channel_id);
         const l = this.$('cmList'); l.scrollTop = l.scrollHeight;
         this.toast('Отправлено');
+        if (r.to_master) ThreatEngine.onCenterMessage();
       } catch (e) { this.err('Не удалось отправить: ' + (e.message || e)); }
     },
     toast(t) { const el = this.$('cmToast'); el.textContent = '✓ ' + t; el.style.opacity = 1; setTimeout(() => el.style.opacity = 0, 1800); },
