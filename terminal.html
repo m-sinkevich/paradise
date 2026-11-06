@@ -3583,8 +3583,10 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       const steps = String(prm.details || '').split('\n').map(x => x.trim()).filter(Boolean);
       if (!steps.length) return;
       const esc = t => t.replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+      const pts = (prm.points || []).length;
       App.renderGate((this.current.label || 'ИНСТРУКЦИЯ').toUpperCase(), 'инструкция',
-        `<ol class="tc-steps">${steps.map(x => `<li>${esc(x)}</li>`).join('')}</ol>`);
+        `<ol class="tc-steps">${steps.map(x => `<li>${esc(x)}</li>`).join('')}</ol>` +
+        (pts ? `<div style="margin-top:14px"><button type="button" class="tui-modal-btn" data-action="threatMapFull">▣ Показать на карте (${pts})</button></div>` : ''));
     },
     async onJournalEntry() {
       const a = this.current;
@@ -5497,6 +5499,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       case 'silenceWarnClick': if (App.currentCharacter) App.goJournal(); else App.goAuth(); break;
       case 'closeComms': Comms.close(); break;
       case 'threatDetails': ThreatEngine.showDetails(); break;
+      case 'threatMapFull': App.closeContentModal(); ThreatMap.open(); if (!ThreatMap.full) ThreatMap.toggleFull(); break;
       case 'collapseMap': ThreatMap.collapse(); break;
       case 'toggleMapSat': ThreatMap.toggleSat(); break;
       case 'mapZoomIn': ThreatMap.view && ThreatMap.view.zoomIn(); break;
