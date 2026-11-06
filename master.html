@@ -5961,6 +5961,8 @@ const Jr = {
       if (d.type) parts.push((THREAT_DEFS[d.type] || {}).name || d.type);
       if (d.code) parts.push('код ' + d.code);
       if (d.reason) parts.push({ time: 'по времени', qr: 'устранена кодами', journal: 'записью в журнал' }[d.reason] || d.reason);
+      if (d.minutes) parts.push('тишина ' + d.minutes + ' мин');
+      if (d.error) parts.push('⚠ угроза не создана: ' + d.error);
       return parts.join(' · ');
     }
     return Object.entries(d).filter(([k]) => !/Id$|^path$|^source$/.test(k)).map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`).join(' · ');

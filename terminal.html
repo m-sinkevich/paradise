@@ -3710,13 +3710,15 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     set(k, v) { try { localStorage.setItem(this.key(k), v); } catch (e) {} },
 
     /* Тишина в бортовом журнале дольше «таймера тишины» модуля:
-       за 10 минут до срока — предупреждение ИИ, по истечении — угроза «Потеря связи»
+       за 10 минут до срока — предупреждение ИИ, по истечении — угроза «Запрос центра управления»
        (только на этом модуле). Снимается записью в журнал или мастером. */
     async check() {
       if (!DB.moduleRow) return;
       const { data } = await sb.from('modules').select('silence_timeout_minutes,last_journal_entry_at').eq('id', DB.moduleRow.id).maybeSingle();
       if (data) Object.assign(DB.moduleRow, data);
-      const minutes = Number(DB.moduleRow.silence_timeout_minutes) || 0;
+      // не задано в модуле — 20 минут (как показывает панель мастера); 0 — выключено
+      const raw = DB.moduleRow.silence_timeout_minutes;
+      const minutes = raw == null || raw === '' ? 20 : (Number(raw) || 0);
       if (!minutes) { this.hideWarn(); return; }
       // журнал ещё ни разу не вели — считаем от первого запуска терминала
       let from = DB.moduleRow.last_journal_entry_at;
@@ -3730,8 +3732,11 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
         return;
       }
       this.hideWarn();
-      if (this.get('fired') === from) return;
-      this.set('fired', from);
+      // одна угроза на один период тишины; если её сняли без записи в журнал (мастер, конец угрозы) —
+      // через ещё один период тишины поднимаем снова
+      const [fFrom, fAt] = String(this.get('fired') || '').split('|');
+      if (fFrom === from && Date.now() - Number(fAt || 0) < minutes * 60000) return;
+      this.set('fired', from + '|' + Date.now());
       await this.raiseThreat(minutes);
       const items = await DB.findSilenceTimeoutContent(DB.moduleRow.id);
       if (items.length) await App.presentSystemContent(items[0]);
@@ -3747,7 +3752,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
         resolve: { codes: [], journal: true, done_message: 'Доклад принят центром управления. Спасибо за службу.' }
       };
       const { error } = await sb.from('alerts').insert(threatRowFromConfig(cfg, new Date(), [me]));
-      if (error) { console.error('[Silence] угроза не создана', error); return; }
+      if (error) { console.error('[Silence] угроза не создана', error); App.log('silence_threat', { minutes, error: error.message || String(error) }); return; }
       App.log('silence_threat', { minutes });
       setTimeout(() => AlertManager.check(), 500);
     },
