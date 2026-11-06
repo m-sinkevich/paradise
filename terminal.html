@@ -1196,9 +1196,10 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     .tui-timer-badge { padding: 4px clamp(8px, 1vw, 16px); }
     @media (max-width: 1500px) { .tui-auth-text { display: none; } }
     /* декоративная всплывашка «SECTOR #…» над куполом закрывала название модуля — убрана */
-    #hud-popup { display: none !important; }
+    /* всплывашка сектора купола — поверх интерфейса; позиция не даёт ей залезть на шапку и за край экрана */
+    #hud-popup { position: fixed; z-index: 8500; }
     /* …но для пробитых секторов во время разгерметизации — показываем, поверх интерфейса */
-    #hud-popup.breach { display: block !important; position: fixed; z-index: 8500; width: 300px; border-color: #FF6B6B; border-left-color: #FF3B3B; color: #FFB4B4; box-shadow: 0 0 25px rgba(255, 70, 70, .45), inset 0 0 15px rgba(255, 70, 70, .15); }
+    #hud-popup.breach { width: 300px; border-color: #FF6B6B; border-left-color: #FF3B3B; color: #FFB4B4; box-shadow: 0 0 25px rgba(255, 70, 70, .45), inset 0 0 15px rgba(255, 70, 70, .15); }
     #hud-popup.breach .hud-title { color: #FF8A8A; }
     #hud-popup.breach #pop-status { color: #FF3B3B; font-weight: 700; animation: tui-breach-blink 1s steps(2) infinite; }
     #hud-popup.breach .hud-bar-fill { background: #FF3B3B; }
@@ -2255,12 +2256,23 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     }
   }
 
+  // курсор над плашкой/карточкой/окном, а не над самим куполом, — сектор не подсвечиваем
+  let pointerOnDome = true;
   window.addEventListener('pointermove', (e) => {
+    const t = e.target;
+    pointerOnDome = !!t && (t.tagName === 'CANVAS' || t === document.body || t.id === 'terminal-ui' || t.id === 'tui-shell' || t.id === 'tui-center' || t.id === 'canvas-container' || t.id === 'tui-col-left' || t.id === 'tui-col-right');
     mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
 
-    popup.style.left = (e.clientX + 20) + 'px';
-    popup.style.top = (e.clientY - 30) + 'px';
+    // справа-снизу от курсора; у края экрана — с другой стороны; не выше нижнего края шапки
+    const pw = popup.offsetWidth || 280, ph = popup.offsetHeight || 170;
+    const hd = document.getElementById('tui-header');
+    const minTop = hd ? hd.getBoundingClientRect().bottom + 8 : 10;
+    let x = e.clientX + 20, y = e.clientY - 30;
+    if (x + pw > window.innerWidth - 10) x = e.clientX - pw - 20;
+    if (y + ph > window.innerHeight - 10) y = window.innerHeight - ph - 10;
+    popup.style.left = Math.max(10, x) + 'px';
+    popup.style.top = Math.max(minTop, y) + 'px';
   });
 
   window.addEventListener('click', () => {
@@ -2341,7 +2353,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 
     // RAYCASTING
     raycaster.setFromCamera(mouse, camera);
-    const intersects = raycaster.intersectObject(domeMesh);
+    const intersects = pointerOnDome ? raycaster.intersectObject(domeMesh) : [];
 
     if (intersects.length > 0) {
       const hit = intersects[0];
