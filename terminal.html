@@ -4901,7 +4901,12 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     mine(m) { const cur = this.who(); return m.from_module_id === this.me() && (!m.from_character_id || !cur || m.from_character_id === cur.id); },
     chMsgs(id) { return this.msgs.filter(m => m.channel_id === id); },
     unreadIn(ch) { const s = this.seen(ch.id), cur = this.who(); return this.chMsgs(ch.id).filter(m => m.created_at > s && m.from_module_id !== this.me() && !(cur && m.from_character_id === cur.id)).length; },
-    directVisible(m) { const cur = this.who(); return !(m.to_module_id === this.me() && m.to_character_id && (!cur || cur.id !== m.to_character_id)); },
+    // Центр управления: каждый видит только своё — сообщения центра всему модулю, лично ему, и то, что писал сам
+    directVisible(m) {
+      const cur = this.who();
+      if (m.from_master) return !m.to_character_id || !!(cur && cur.id === m.to_character_id);
+      return !!(cur && m.from_character_id === cur.id);
+    },
     unreadDirect() { return this.direct.filter(m => m.to_module_id === this.me() && !m.read_at); },
     unreadTotal() { return this.unreadDirect().length + this.relevantChannels().reduce((s, ch) => s + this.unreadIn(ch), 0); },
 
@@ -4964,17 +4969,16 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 
     threads() {
       const list = [];
-      const d = this.direct;
-      if (d.length) {
-        const last = d[0], un = this.unreadDirect().length;
-        list.push({ key: 'center', title: 'ЦЕНТР УПРАВЛЕНИЯ', sub: 'переписка с мастерами', unread: un, last: last.created_at, open: true });
-      }
+      // канал «Центр управления» есть всегда и всегда сверху
+      const d = this.direct.filter(m => this.directVisible(m));
+      const un = this.unreadDirect().filter(m => this.directVisible(m)).length;
+      list.push({ key: 'center', pinned: true, title: '✉ ЦЕНТР УПРАВЛЕНИЯ', sub: 'связь с центром колонии · пишите в любое время', unread: un, last: d[0] ? d[0].created_at : '', open: true });
       this.relevantChannels().forEach(ch => {
         const a = this.access(ch), ms = this.chMsgs(ch.id);
         list.push({ key: ch.id, ch, title: ch.name, open: a.open, hiddenSelf: a.hiddenSelf, owners: a.owners,
           sub: a.open ? this.memberLine(ch) : 'лично: ' + a.owners.join(', '), unread: this.unreadIn(ch), last: ms[0] ? ms[0].created_at : ch.created_at });
       });
-      return list.sort((a, b) => (b.unread > 0) - (a.unread > 0) || String(b.last).localeCompare(String(a.last)));
+      return list.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (b.unread > 0) - (a.unread > 0) || String(b.last).localeCompare(String(a.last)));
     },
     memberLine(ch) {
       const cur = this.who();
@@ -5015,19 +5019,18 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
         (m.kind === 'photo' && m.media_path ? `<a href="${this.esc(this.url(m.media_path))}" target="_blank"><img class="cm-photo" src="${this.esc(this.url(m.media_path))}" alt=""></a>` : '');
       const pers = m.to_character_id ? `<span class="cm-pers">ЛИЧНО: ${this.esc(this.charName(m.to_character_id))}</span>` : '';
       return `<div class="cm-msg ${mine ? 'out' : 'in'}">
-        <div class="cm-meta"><b>${this.esc(mine ? 'ВЫ' + (m.anon ? ' (АНОНИМНО)' : '') : this.senderName(m))}</b>${pers}<span class="cm-time">${new Date(m.created_at).toLocaleTimeString().slice(0, 5)}</span></div>${body}</div>`;
+        <div class="cm-meta"><b>${this.esc(mine ? 'ВЫ' + (m.anon ? ' (АНОНИМНО)' : '') : this.senderName(m))}</b>${pers}<span class="cm-time">${new Date(m.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</span></div>${body}</div>`;
     },
     renderThread() {
       const key = this.cur, cur = this.who();
       let msgs, allow, title, members = '', writable = true, note = '';
       if (key === 'center') {
         title = 'ЦЕНТР УПРАВЛЕНИЯ';
-        msgs = this.direct.slice().reverse();
-        const lastMaster = this.direct.find(m => m.from_master && m.to_module_id === this.me() && this.directVisible(m));
-        writable = !!(lastMaster && lastMaster.allow_reply !== false);
-        if (!writable) note = 'Центр управления не ждёт ответа.';
+        msgs = this.direct.filter(m => this.directVisible(m)).reverse();
+        writable = !!cur;
+        if (!cur) note = 'Войдите по бейджу, чтобы видеть свою переписку с центром.';
         allow = { text: true, voice: true, photo: true };
-        this.$('cmList').innerHTML = msgs.map(m => this.msgHtml(m, !this.directVisible(m))).join('') || '<p class="tui-status-line">Сообщений нет.</p>';
+        this.$('cmList').innerHTML = msgs.map(m => this.msgHtml(m, false)).join('') || '<p class="tui-status-line">Напишите в Центр управления — сообщение сразу получат в центре колонии.</p>';
         const ids = this.unreadDirect().filter(m => this.directVisible(m)).map(m => m.id);
         if (ids.length) { const now = new Date().toISOString(); this.direct.forEach(m => { if (ids.includes(m.id)) m.read_at = now; }); sb.from('comm_messages').update({ read_at: now }).in('id', ids).then(() => {}); }
       } else {

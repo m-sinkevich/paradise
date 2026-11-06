@@ -72,6 +72,15 @@
 ::-webkit-scrollbar-corner { background: transparent; }
 input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+  #coToasts { position: fixed; right: 18px; bottom: 18px; z-index: 99999; display: flex; flex-direction: column; gap: 10px; width: min(380px, calc(100vw - 36px)); }
+  .co-toast { background: #0b1622; border: 1px solid #F59E0B; border-left: 4px solid #F59E0B; box-shadow: 0 8px 30px rgba(0,0,0,.5), 0 0 18px rgba(245,158,11,.25); padding: 10px 12px; color: #E5E7EB; animation: coToastIn .3s ease; }
+  @keyframes coToastIn { from { opacity: 0; transform: translateY(12px); } }
+  .co-toast-h { display: flex; align-items: center; gap: 8px; font-weight: 700; letter-spacing: 1.5px; font-size: 12px; color: #F59E0B; }
+  .co-toast-h span { color: #9CA3AF; font-weight: 400; letter-spacing: 0; margin-left: auto; }
+  .co-toast-h button { background: none; border: 0; color: #9CA3AF; font-size: 18px; cursor: pointer; line-height: 1; }
+  .co-toast-from { margin-top: 6px; font-weight: 600; font-size: 13px; }
+  .co-toast-text { margin-top: 4px; font-size: 13.5px; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
+  .co-toast-act { margin-top: 8px; text-align: right; }
 </style>
 <script>
 (function () {
@@ -2252,7 +2261,7 @@ const Admin = {
   },
   moduleNowHtml(m, online) {
     const s = (this.modSessions || {})[m.id] || {};
-    const hm = d => new Date(d).toLocaleTimeString().slice(0, 5);
+    const hm = d => new Date(d).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
     const dt = d => { const x = new Date(d); return x.toLocaleDateString().slice(0, 5) + ' ' + hm(d); };
     const thr = this.activeThreatsOf(m.id);
     const inSys = s.active && online;
@@ -2321,7 +2330,7 @@ const Admin = {
     if (!list.length) return '';
     return '<div class="mod-threats" style="grid-column:1 / -1;">' + list.map(a => {
       const d = (typeof THREAT_DEFS !== 'undefined' && THREAT_DEFS[a.threat_type]) || { icon: '⚠', color: '#FF6B6B' };
-      const until = a.ends_at ? ' · ДО ' + new Date(a.ends_at).toLocaleTimeString().slice(0, 5) : '';
+      const until = a.ends_at ? ' · ДО ' + new Date(a.ends_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : '';
       return `<span class="mod-threat" style="--tc:${this.escape(a.color || d.color)}">${d.icon} ${this.escape(a.label)}${until}
         <button type="button" class="mod-x" data-th="excludeHere" data-id="${a.id}" data-mod="${moduleId}" title="Прекратить угрозу на этом модуле">✕ СНЯТЬ</button></span>`;
     }).join('') + '</div>';
@@ -5585,7 +5594,7 @@ const Co = {
   fillSelects() {
     const mods = Admin.modules.filter(m => !m.is_master_terminal).map(m => `<option value="${m.id}">${this.esc(m.name || m.access_code)}</option>`).join('');
     const cur = this.$('coToMod').value;
-    this.$('coToMod').innerHTML = mods; if (cur) this.$('coToMod').value = cur;
+    this.$('coToMod').innerHTML = mods + '<option value="">— без модуля: лично персонажу (сканер) —</option>'; if (cur) this.$('coToMod').value = cur;
     this.fillCharSelect('coToChar', this.$('coToMod').value);
     this.fillFilter(); this.fillTarget();
   },
@@ -5606,7 +5615,7 @@ const Co = {
     const ch = this.$('coTarget').value.startsWith('ch:');
     this.$('coFromWrap').style.display = ch ? '' : 'none';
     this.$('coDirectWrap').style.display = ch ? 'none' : '';
-    this.$('coAllowReplyWrap').style.display = ch ? 'none' : '';
+    this.$('coAllowReplyWrap').style.display = 'none';   // игроки могут писать в центр всегда
     if (ch) this.cancelReply(true);
   },
   syncTargetFromFilter() {
@@ -5755,8 +5764,52 @@ const Co = {
     const { data, error } = await sb.from('comm_messages').select(this.sel).order('created_at', { ascending: false }).limit(400);
     if (error) { this.$('coFeed').innerHTML = `<div class="empty-line" style="color:var(--red)">${this.esc(error.message)}${/comm_|from_label|anon/.test(error.message) ? ' — выполните sql/channels_v2.sql' : ''}</div>`; return; }
     this.msgs = data || []; this.fullAt = Date.now();
+    this.notifyNew();
     this.renderFeed(); this.renderChannels(); this.renderBadge();
     if (Admin.modules && Admin.modules.length) { Admin.renderModuleList(); Admin.renderModuleTable(); }
+  },
+  /* ---------- уведомления: новое сообщение игроков в «Центр управления» ---------- */
+  notifyNew() {
+    const fresh = this.knownIds ? this.msgs.filter(m => !this.knownIds.has(m.id) && !m.channel_id && m.to_master && !m.from_master) : [];
+    this.knownIds = this.knownIds || new Set();
+    this.msgs.forEach(m => this.knownIds.add(m.id));
+    if (!fresh.length) return;
+    fresh.slice(0, 5).reverse().forEach(m => this.toast(m));
+    this.ding();
+  },
+  toast(m) {
+    let box = this.$('coToasts');
+    if (!box) { box = document.createElement('div'); box.id = 'coToasts'; document.body.appendChild(box); }
+    const mod = m.from_module_id ? this.modName(m.from_module_id) : 'без модуля (сканер)';
+    const who = m.from_character_id ? this.charName(m.from_character_id) : 'неизвестный';
+    const what = m.text ? this.esc(m.text.length > 220 ? m.text.slice(0, 220) + '…' : m.text) : m.kind === 'audio' ? '🎤 голосовое сообщение' : m.kind === 'photo' ? '📷 фото' : '';
+    const el = document.createElement('div');
+    el.className = 'co-toast';
+    el.innerHTML = `<div class="co-toast-h">✉ ЦЕНТР УПРАВЛЕНИЯ <span>${new Date(m.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</span><button type="button" data-x title="Закрыть">×</button></div>
+      <div class="co-toast-from">▣ ${this.esc(mod)} · ◉ ${this.esc(who)}</div>
+      <div class="co-toast-text">${what}</div>
+      <div class="co-toast-act"><button type="button" class="btn" data-open>Открыть и ответить</button></div>`;
+    el.querySelector('[data-x]').onclick = e => { e.stopPropagation(); el.remove(); };
+    el.querySelector('[data-open]').onclick = () => {
+      el.remove();
+      Admin.switchTab('comms');
+      setTimeout(() => { this.pickThread('center'); this.reply(m.id); }, 50);
+    };
+    box.prepend(el);
+    while (box.children.length > 6) box.lastChild.remove();
+  },
+  ding() {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext; this.ac = this.ac || new AC();
+      if (this.ac.state === 'suspended') this.ac.resume();
+      const t = this.ac.currentTime;
+      [[0, 880], [0.16, 1175], [0.32, 1568]].forEach(([d, f]) => {
+        const o = this.ac.createOscillator(), g = this.ac.createGain();
+        o.frequency.value = f; o.type = 'sine';
+        g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.3, t + d + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.22);
+        o.connect(g); g.connect(this.ac.destination); o.start(t + d); o.stop(t + d + 0.25);
+      });
+    } catch (e) {}
   },
   renderBadge() {
     const n = this.msgs.filter(m => !m.channel_id && m.to_master && !m.read_at).length + this.channels.reduce((s, c) => s + this.unreadIn(c.id), 0);
@@ -5765,7 +5818,7 @@ const Co = {
   unreadFor(moduleId) { return this.msgs.filter(m => !m.channel_id && m.to_module_id === moduleId && !m.read_at).length; },
   fromName(m) {
     if (m.from_master) return (m.from_label || 'Центр управления') + (m.from_label ? ' (мастер)' : '');
-    const real = this.modName(m.from_module_id) + (m.from_character_id ? ' · ' + this.charName(m.from_character_id) : '');
+    const real = (m.from_module_id ? this.modName(m.from_module_id) : 'сканер') + (m.from_character_id ? ' · ' + this.charName(m.from_character_id) : '');
     return m.anon ? 'Аноним 🕶 — ' + real : real;
   },
   toName(m) {
@@ -5805,7 +5858,7 @@ const Co = {
     const m = this.msgs.find(x => x.id === id); if (!m) return;
     this.replyTo = m;
     this.$('coTarget').value = 'direct'; this.applyTarget();
-    this.$('coToMod').value = m.from_module_id; this.fillCharSelect('coToChar', m.from_module_id);
+    this.$('coToMod').value = m.from_module_id || ''; this.fillCharSelect('coToChar', m.from_module_id || '');
     this.$('coToChar').value = m.from_character_id || '';
     this.$('coComposeTitle').textContent = 'Ответ: ' + this.fromName(m);
     this.$('coCancelReply').style.display = '';
@@ -5816,7 +5869,7 @@ const Co = {
     const text = this.$('coText').value.trim();
     if (kind === 'text' && !text) return (this.$('coErr').textContent = 'Введите текст.');
     const tgt = this.$('coTarget').value;
-    if (tgt === 'direct' && !this.$('coToMod').value) return (this.$('coErr').textContent = 'Выберите модуль.');
+    if (tgt === 'direct' && !this.$('coToMod').value && !this.$('coToChar').value) return (this.$('coErr').textContent = 'Выберите модуль или персонажа.');
     this.$('coErr').textContent = ''; this.$('coOk').textContent = 'Отправка…';
     let media_path = null;
     if (blob) {
@@ -5826,8 +5879,8 @@ const Co = {
     }
     const row = tgt.startsWith('ch:')
       ? { from_master: true, from_label: this.$('coFromLabel').value.trim() || null, channel_id: tgt.slice(3), kind, text: text || null, media_path }
-      : { from_master: true, to_module_id: this.$('coToMod').value, to_character_id: this.$('coToChar').value || null,
-          kind, text: text || null, media_path, allow_reply: this.$('coAllowReply').checked, reply_to: this.replyTo ? this.replyTo.id : null };
+      : { from_master: true, to_module_id: this.$('coToMod').value || null, to_character_id: this.$('coToChar').value || null,
+          kind, text: text || null, media_path, allow_reply: true, reply_to: this.replyTo ? this.replyTo.id : null };
     const { error } = await sb.from('comm_messages').insert(row);
     if (error) { this.$('coOk').textContent = ''; return (this.$('coErr').textContent = 'Ошибка: ' + error.message); }
     this.$('coText').value = ''; this.discard(); this.cancelReply();
