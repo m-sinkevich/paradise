@@ -3123,14 +3123,11 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       scene: { bgPulse: 4.5 }
     },
     atmo: {
-      panel: 'tui-panel-atmo', color: '#C084FC', sound: 'beep', fx: 'suffocate', title: 'ОТКАЗ ЖИЗНЕОБЕСПЕЧЕНИЯ',
-      metrics: [
-        { id: 'tui-o2', to: [18.2, 16.1, 13.4], jitter: 0.08, fmt: v => v.toFixed(1) + '%', peak: true },
-        { id: 'tui-co2', to: [1.2, 2.8, 4.9], jitter: 0.04, fmt: v => v.toFixed(2) + '%' },
-        { id: 'tui-humidity', to: [61, 72, 86], jitter: 0.5, fmt: v => v.toFixed(1) + '% (КРИТИЧНО)' }
-      ],
+      // ночь: газ снаружи — спокойная тревога без звука и эффектов, воздух в модуле в норме
+      panel: 'tui-panel-atmo', color: '#7186B8', sound: null, fx: null, title: 'НОЧЬ · ЯДОВИТЫЙ ГАЗ СНАРУЖИ',
+      metrics: [],
       texts: [],
-      scene: { bgPulse: 0.8 }
+      scene: { bgPulse: 0.35, particles: [60, 50, 40], particleColor: '#8FA3D1' }
     },
     power: {
       panel: 'tui-panel-power', color: '#FACC15', sound: 'hum', fx: 'flicker', title: 'ПЕРЕГРУЗКА ЭНЕРГОСИСТЕМЫ',
@@ -3143,14 +3140,14 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       scene: { bgPulse: 7 }
     },
     meteo: {
-      panel: 'tui-panel-meteo', color: '#93C5FD', sound: 'wind', fx: 'dust', title: 'ПЫЛЕВАЯ БУРЯ',
+      panel: 'tui-panel-meteo', color: '#BFA57A', sound: 'wind', fx: 'dust', title: 'ПЫЛЕВАЯ БУРЯ · ГАЗ СДУВАЕТ',
       metrics: [
         { id: 'tui-wind-val', to: [38, 64, 96], jitter: 4, fmt: v => v.toFixed(1) + ' m/s', peak: true },
         { id: 'tui-temp-out', to: [-71, -84, -103], jitter: 1.5, fmt: v => v.toFixed(1) + ' °C' }
       ],
-      texts: [{ id: 'tui-storm-val', text: ['ШТОРМ · УРОВЕНЬ 1', 'ШТОРМ · УРОВЕНЬ 2', 'УРАГАН · УРОВЕНЬ 3'], status: true }],
+      texts: [{ id: 'tui-storm-val', text: ['ГАЗ РАССЕИВАЕТСЯ', 'ГАЗ СДУТ · ОКНО ДЛЯ ВЫХОДА', 'ГАЗ СДУТ · ОКНО ДЛЯ ВЫХОДА'], status: true }],
       spark: { 'tui-temp-spark': { base: -69, jitter: 3, pull: 0.25 } },
-      scene: { windMul: [4, 7, 11], particles: [170, 230, 260], particleColor: '#CBD5E1', particleSize: 0.055 }
+      scene: { windMul: [4, 7, 11], particles: [170, 230, 260], particleColor: '#D8C7A3', particleSize: 0.055 }
     },
     comms: {
       panel: 'tui-panel-comms', color: '#F472B6', sound: 'static', fx: 'glitch', title: 'ПОТЕРЯ СВЯЗИ · АНТЕННА ОБЕСТОЧЕНА',
