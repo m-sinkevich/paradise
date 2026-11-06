@@ -1048,6 +1048,11 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     .tc-task { font-family: var(--tui-font-body); font-weight: 600; font-size: 12.5px; letter-spacing: .8px; text-transform: uppercase; color: var(--tui-ink-100);
       border: 1px dashed color-mix(in srgb, var(--tui-alert-color) 60%, transparent); padding: 6px 10px; }
     .tc-task:empty { display: none; }
+    .tc-more { pointer-events: auto; cursor: pointer; align-self: flex-end; background: transparent; border: 1px solid var(--tui-alert-color); color: var(--tui-alert-color);
+      font-family: var(--tui-font-body); font-weight: 700; font-size: 12.5px; letter-spacing: .8px; text-transform: uppercase; padding: 6px 12px; }
+    .tc-more:hover { background: color-mix(in srgb, var(--tui-alert-color) 18%, transparent); }
+    .tc-steps { margin: 0; padding-left: 22px; text-align: left; font-size: clamp(15px, 1.25vw, 19px); line-height: 1.5; }
+    .tc-steps li { margin: 6px 0; }
     .tc-task b { color: var(--tui-alert-color); }
 
     /* --- сейсмика: тряска --- */
@@ -1526,6 +1531,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       <div class="tc-row">
         <div class="tc-timer" id="tc-timer"><span class="tc-timer-label" id="tc-timer-label"></span><span class="tc-timer-val" id="tc-timer-val">--:--</span></div>
         <div class="tc-task" id="tc-task"></div>
+        <button type="button" class="tc-more" id="tc-more" data-action="threatDetails">ⓘ Подробная инструкция</button>
       </div>
     </div>
 
@@ -3130,12 +3136,12 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       scene: { bgPulse: 0.35, particles: [60, 50, 40], particleColor: '#8FA3D1' }
     },
     power: {
-      panel: 'tui-panel-power', color: '#FACC15', sound: 'hum', fx: 'flicker', title: 'ПЕРЕГРУЗКА ЭНЕРГОСИСТЕМЫ',
+      panel: 'tui-panel-power', color: '#FACC15', sound: 'hum', fx: 'flicker', title: 'ПЕРЕГРУЗКА ЭНЕРГОСИСТЕМЫ · НУЖЕН ЖЁЛТЫЙ РАСПЛАВ',
       metrics: [
         { id: 'tui-power-load', to: [78, 112, 164], jitter: 4, fmt: v => v.toFixed(1) + ' kW', peak: true },
         { id: 'tui-batt-val', to: [64, 31, 7], jitter: 1, fmt: v => Math.round(v) + '%' }
       ],
-      texts: [{ id: 'tui-reactor-val', text: ['118% (ПЕРЕГРЕВ)', '137% (ПЕРЕГРУЗКА)', '164% (АВАРИЯ)'], status: true }],
+      texts: [{ id: 'tui-reactor-val', text: ['РАСПЛАВ НА ИСХОДЕ', 'НУЖЕН РАСПЛАВ', 'РАСПЛАВА НЕТ'], status: true }],
       eq: { 'tui-power-eq': { spread: 25, floor: [60, 70, 76] } },
       scene: { bgPulse: 7 }
     },
@@ -3447,6 +3453,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       if (prm.resolve && prm.resolve.journal) parts.push('Устранение: сделайте <b>запись в бортовой журнал</b>');
       if (prm.resolve && prm.resolve.center) parts.push('Устранение: доложите в <b>✉ Центр управления</b> (раздел «Связь»)');
       task.innerHTML = parts.join('<br>');
+      document.getElementById('tc-more').style.display = String(prm.details || '').trim() ? '' : 'none';
       card.classList.toggle('has-content', !!(prm.instruction || parts.length || this.timerOn()));
       this.tick();
     },
@@ -3569,6 +3576,15 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       Comms.close();
       App.renderGate('ДОКЛАД ПРИНЯТ', 'центр управления', `<div style="white-space:pre-wrap">${String(msg).replace(/[&<>]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]))}</div>`);
       await this.resolveHere('center');
+    },
+    // подробная инструкция угрозы — по шагам, во всплывающем окне
+    showDetails() {
+      const prm = this.params();
+      const steps = String(prm.details || '').split('\n').map(x => x.trim()).filter(Boolean);
+      if (!steps.length) return;
+      const esc = t => t.replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+      App.renderGate((this.current.label || 'ИНСТРУКЦИЯ').toUpperCase(), 'инструкция',
+        `<ol class="tc-steps">${steps.map(x => `<li>${esc(x)}</li>`).join('')}</ol>`);
     },
     async onJournalEntry() {
       const a = this.current;
@@ -5480,6 +5496,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       case 'openComms': Comms.open(); break;
       case 'silenceWarnClick': if (App.currentCharacter) App.goJournal(); else App.goAuth(); break;
       case 'closeComms': Comms.close(); break;
+      case 'threatDetails': ThreatEngine.showDetails(); break;
       case 'collapseMap': ThreatMap.collapse(); break;
       case 'toggleMapSat': ThreatMap.toggleSat(); break;
       case 'mapZoomIn': ThreatMap.view && ThreatMap.view.zoomIn(); break;

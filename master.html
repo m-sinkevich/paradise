@@ -1118,6 +1118,10 @@ details.fold.small > .row-list{ padding:8px 10px; max-height:320px; overflow-y:a
         <label>Что делать игрокам — крупно на терминале</label>
         <textarea class="input" id="thInstr" rows="3"></textarea>
       </div>
+      <div class="field">
+        <label>Подробная инструкция — по кнопке «ⓘ Подробно» на терминале (каждый шаг с новой строки; можно оставить пустым)</label>
+        <textarea class="input" id="thDetails" rows="4"></textarea>
+      </div>
 
       <div class="field-row">
         <div class="field">
@@ -4594,11 +4598,20 @@ const THREAT_DEFS = {
       'Все, кто снаружи без скафандра, — немедленно вернуться в модуль. Оставаться внутри до восхода солнца.',
     peakLabel: '', peak: [], status: [], severity: 1, duration: 600,
     desc: 'Спокойная ночная тревога: сумеречно-синий фон, без звука и тряски. Длительность — до восхода (по умолчанию 10 ч, поставьте своё). Пылевая буря поверх неё «сдувает газ» — открывает короткое окно для выхода.' },
-  power: { name: 'Перегрузка энергосистемы', panel: 'Энергосистема', color: '#FACC15', icon: 'ϟ',
-    title: 'ПЕРЕГРУЗКА ЭНЕРГОСИСТЕМЫ', timerLabel: 'До отключения питания',
-    instruction: 'Отключите все приборы и свет в модуле. Найдите аварийный рубильник.',
-    peakLabel: 'Потребление модуля, kW', peak: [78, 112, 164], status: ['118% (ПЕРЕГРЕВ)', '137% (ПЕРЕГРУЗКА)', '164% (АВАРИЯ)'],
-    desc: 'Потребление зашкаливает, накопители садятся, экран мигает и проседает, гул и треск.' },
+  power: { name: 'Перегрузка энергосистемы: нужен расплав', panel: 'Энергосистема', color: '#FACC15', icon: 'ϟ',
+    title: 'ПЕРЕГРУЗКА ЭНЕРГОСИСТЕМЫ · НУЖЕН ЖЁЛТЫЙ РАСПЛАВ', timerLabel: 'До отключения энергосистемы',
+    instruction: 'Накопители на исходе. Найдите ЖЁЛТЫЙ магматический расплав в одной из 3 точек сбора («бубликов»), наберите шприцом и залейте в ёмкость на плате энергосистемы снаружи модуля. Затем доложите в «✉ Центр управления».',
+    details: 'Точки сбора — 3 контейнера-«бублика». Контейнер НЕ ПЕРЕМЕЩАТЬ: он стоит на выходе жилы расплава.\n' +
+      'Цвет = состав. Нужен только ЖЁЛТЫЙ. Другие цвета — примеси: в энергосистему не лить. Где какой цвет — неизвестно, проверьте точки.\n' +
+      'Набирайте только специальным шприцом. Для переноски можно перелить в малый контейнер.\n' +
+      'Расплав общий с другими модулями и не бесконечен — берите столько, сколько нужно.\n' +
+      'Залейте расплав шприцом в ёмкость на плате энергосистемы снаружи модуля.\n' +
+      'Нажмите кнопку на крышке ёмкости: загорелась индикация — расплава достаточно. Не загорелась — долейте.\n' +
+      'Вернитесь в модуль и доложите в «✉ Центр управления» (раздел «Связь»): что индикация горит.',
+    peakLabel: 'Потребление модуля, kW', peak: [78, 112, 164], status: ['РАСПЛАВ НА ИСХОДЕ', 'НУЖЕН РАСПЛАВ', 'РАСПЛАВА НЕТ'],
+    duration: 25, center: true,
+    done: 'Центр управления принял доклад. Расплав поступает в контур, накопители заряжаются. Энергосистема в норме.',
+    desc: 'Потребление растёт, накопители садятся, экран мигает, гул. Реквизит: 3 «бублика» с расплавами разного цвета (жёлтый — в одном), шприц, малый контейнер, ёмкость с кнопкой и подсветкой на «плате» снаружи. Снимается докладом в Центр управления; на терминале есть кнопка «Подробная инструкция».' },
   meteo: { name: 'Пылевая буря: газ сдувает', panel: 'Метеорология', color: '#BFA57A', icon: '≋',
     title: 'ПЫЛЕВАЯ БУРЯ · ГАЗ СДУВАЕТ', timerLabel: 'Окно для выхода закроется через',
     instruction: 'Буря сдувает ночной газ — снаружи можно дышать. Можно ненадолго выйти без скафандра: не дальше 20 метров от модуля и только пока идёт таймер. ' +
@@ -4781,7 +4794,7 @@ Object.assign(Admin, {
   defaultConfig(pattern) {
     const d = THREAT_DEFS[pattern] || THREAT_DEFS.alert;
     return {
-      pattern, title: d.title, instruction: d.instruction, severity: d.severity || 2, color: d.color, peak: null, status: '',
+      pattern, title: d.title, instruction: d.instruction, details: d.details || '', severity: d.severity || 2, color: d.color, peak: null, status: '',
       duration_min: d.duration || 10, timer: { show: pattern !== 'alert', label: d.timerLabel },
       resolve: { codes: (d.codes || []).map(c => Object.assign({}, c)), journal: !!d.journal, center: !!d.center, done_message: d.done || '' },
       sound_mode: pattern === 'alert' ? 'none' : 'builtin', sound_url: null, sound_loop: true,
@@ -4795,6 +4808,7 @@ Object.assign(Admin, {
     document.getElementById('thPatternHint').textContent = d.desc;
     document.getElementById('thTitle').value = c.title || d.title;
     document.getElementById('thInstr').value = c.instruction || '';
+    document.getElementById('thDetails').value = c.details || '';
     this.setSev(c.severity || 2);
     this.setThreatColor(c.color || d.color);
     document.getElementById('thPeak').value = c.peak != null ? c.peak : '';
@@ -4922,6 +4936,7 @@ Object.assign(Admin, {
       pattern,
       title: document.getElementById('thTitle').value.trim() || THREAT_DEFS[pattern].title,
       instruction: document.getElementById('thInstr').value.trim(),
+      details: document.getElementById('thDetails').value.trim(),
       severity: this.th.sev,
       color: this.th.color,
       peak: peakRaw === '' ? null : parseFloat(peakRaw),
