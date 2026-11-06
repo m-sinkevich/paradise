@@ -1180,6 +1180,22 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     @media (max-width: 1500px) { .tui-auth-text { display: none; } }
     /* декоративная всплывашка «SECTOR #…» над куполом закрывала название модуля — убрана */
     #hud-popup { display: none !important; }
+    /* …но для пробитых секторов во время разгерметизации — показываем, поверх интерфейса */
+    #hud-popup.breach { display: block !important; position: fixed; z-index: 8500; width: 300px; border-color: #FF6B6B; border-left-color: #FF3B3B; color: #FFB4B4; box-shadow: 0 0 25px rgba(255, 70, 70, .45), inset 0 0 15px rgba(255, 70, 70, .15); }
+    #hud-popup.breach .hud-title { color: #FF8A8A; }
+    #hud-popup.breach #pop-status { color: #FF3B3B; font-weight: 700; animation: tui-breach-blink 1s steps(2) infinite; }
+    #hud-popup.breach .hud-bar-fill { background: #FF3B3B; }
+    #hud-popup.breach.sealed { border-color: #5EEAD4; border-left-color: #5EEAD4; color: #A7F3D0; box-shadow: 0 0 25px rgba(94, 234, 212, .35); }
+    #hud-popup.breach.sealed .hud-title { color: #5EEAD4; }
+    #hud-popup.breach.sealed #pop-status { color: #5EEAD4; animation: none; }
+    #hud-popup.breach.sealed .hud-bar-fill { background: #5EEAD4; }
+    #hud-popup.breach .hud-status { background: rgba(255, 59, 59, .16); border-color: #FF3B3B; }
+    #hud-popup.breach .hud-line-unit.active { background: #FF3B3B; box-shadow: 0 0 6px #FF3B3B; }
+    #hud-popup.breach.sealed .hud-status { background: rgba(94, 234, 212, .14); border-color: #5EEAD4; }
+    #hud-popup.breach.sealed .hud-line-unit.active { background: #5EEAD4; box-shadow: 0 0 6px #5EEAD4; }
+    #hud-popup .hud-note { display: none; margin-top: 8px; font-size: 11.5px; line-height: 1.4; white-space: pre-line; color: inherit; }
+    #hud-popup.breach .hud-note { display: block; }
+    @keyframes tui-breach-blink { 50% { opacity: .35; } }
 
     /* спокойная палитра, пока нет угрозы: вместо жёлтого/красного — приглушённые холодные тона */
     body:not(.tui-alerting) #terminal-ui { --tui-amber: #9DB9C6; --tui-red: #C9A3A3; }
@@ -1239,7 +1255,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   <div id="hud-popup">
     <div class="hud-header">
       <span class="hud-title" id="pop-sector">SECTOR #04-A</span>
-      <span class="hud-status">ONLINE</span>
+      <span class="hud-status" id="pop-status">ONLINE</span>
     </div>
     <div class="hud-row">
       <span>INTEGRITY:</span>
@@ -1254,8 +1270,9 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     </div>
     <div class="hud-row">
       <span>PRESSURE:</span>
-      <span>1.01 ATM</span>
+      <span id="pop-press">1.01 ATM</span>
     </div>
+    <div class="hud-note" id="pop-note"></div>
     <div class="hud-tech-lines">
       <div class="hud-line-unit active"></div>
       <div class="hud-line-unit active"></div>
@@ -2136,7 +2153,73 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   let currentFaceIndex = null;
   let hoverTimer = null;
 
+  // ---------- ПРОБОИ КУПОЛА (угроза «Разгерметизация»): красные треугольники + своё описание ----------
+  // Сектора выбираются на видимой стороне купола, на средней высоте, разнесённые по сторонам.
+  const BREACH_ANGLES = [-0.62, 0.04, 0.66, -1.05, 1.08, -0.3];
+  const BREACH_NAMES = ['07-A', '14-B', '22-C', '03-D', '29-E', '11-F'];
+  const breachFaces = [];
+  {
+    const nF = posAttr.count / 3;
+    BREACH_ANGLES.forEach(ang => {
+      let best = -1, bd = 1e9;
+      for (let f = 0; f < nF; f++) {
+        if (breachFaces.includes(f)) continue;
+        const cx = (posAttr.getX(f * 3) + posAttr.getX(f * 3 + 1) + posAttr.getX(f * 3 + 2)) / 3;
+        const cy = (posAttr.getY(f * 3) + posAttr.getY(f * 3 + 1) + posAttr.getY(f * 3 + 2)) / 3;
+        const cz = (posAttr.getZ(f * 3) + posAttr.getZ(f * 3 + 1) + posAttr.getZ(f * 3 + 2)) / 3;
+        if (cy < 1.2 || cy > 2.6) continue;
+        const d = Math.abs(Math.atan2(cx, cz) - ang) + Math.abs(cy - 1.9) * 0.35;
+        if (d < bd) { bd = d; best = f; }
+      }
+      breachFaces.push(best);
+    });
+  }
+  const breachMeshes = breachFaces.map(f => {
+    const g = new THREE.BufferGeometry();
+    const v = [];
+    for (let k = 0; k < 3; k++) v.push(posAttr.getX(f * 3 + k) * 1.004, posAttr.getY(f * 3 + k) * 1.004, posAttr.getZ(f * 3 + k) * 1.004);
+    g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
+    const mesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: 0xFF2D2D, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false }));
+    const edge = new THREE.LineLoop(g, new THREE.LineBasicMaterial({ color: 0xFF6B6B, transparent: true, opacity: 0.95 }));
+    mesh.add(edge);
+    mesh.renderOrder = 4; edge.renderOrder = 4;
+    mesh.visible = false;
+    scene.add(mesh);
+    return mesh;
+  });
+  // state: null — пробоев нет; иначе [{ sealed }] по числу кодов устранения (до 6)
+  window.TUI_DOME = {
+    state: null,
+    setBreach(list) {
+      this.state = list && list.length ? list.slice(0, breachMeshes.length) : null;
+      breachMeshes.forEach((m, i) => { m.visible = !!(this.state && this.state[i]); });
+      if (currentFaceIndex !== null) { const i = breachFaces.indexOf(currentFaceIndex); if (i >= 0) showPopupForFace(currentFaceIndex); }
+    },
+    breachIndex(faceIdx) { const i = breachFaces.indexOf(faceIdx); return this.state && i >= 0 && i < this.state.length ? i : -1; }
+  };
+  document.body.appendChild(popup);   // всплывашка поверх панелей интерфейса
+
   function showPopupForFace(faceIdx) {
+    const bi = window.TUI_DOME.breachIndex(faceIdx);
+    if (bi >= 0) {
+      const sealed = !!window.TUI_DOME.state[bi].sealed;
+      popup.classList.add('breach'); popup.classList.toggle('sealed', sealed);
+      document.getElementById('pop-sector').innerText = `СЕКТОР #${BREACH_NAMES[bi]}`;
+      document.getElementById('pop-status').innerText = sealed ? 'ЗАГЕРМЕТИЗИРОВАН' : 'ПРОБОЙ';
+      const integ = sealed ? (68 + Math.random() * 6).toFixed(1) : (4 + Math.random() * 7).toFixed(1);
+      document.getElementById('pop-integrity').innerText = `${integ}%`;
+      document.getElementById('pop-bar').style.width = `${integ}%`;
+      document.getElementById('pop-temp').innerText = sealed ? `${(2 + Math.random() * 4).toFixed(1)} °C` : `${(-58 - Math.random() * 6).toFixed(1)} °C`;
+      document.getElementById('pop-press').innerText = sealed ? '0.94 ATM ▲' : `${(0.08 + Math.random() * 0.08).toFixed(2)} ATM ▼ УТЕЧКА`;
+      document.getElementById('pop-note').innerText = sealed
+        ? 'Датчик пробоя принят терминалом. Заплата держит, давление в секторе восстанавливается.'
+        : 'Пробой внешней обшивки, воздух уходит наружу.\nСнаружи на обшивке — аварийный датчик пробоя. Выйти в скафандре (одному!), снять датчик, вернуться и отсканировать его в терминале.';
+      popup.classList.add('visible');
+      return;
+    }
+    popup.classList.remove('breach', 'sealed');
+    document.getElementById('pop-status').innerText = 'ONLINE';
+    document.getElementById('pop-press').innerText = '1.01 ATM';
     document.getElementById('pop-sector').innerText = `SECTOR #${(faceIdx % 32 + 1).toString().padStart(2, '0')}`;
     const rndIntegrity = (94 + Math.random() * 5.9).toFixed(1);
     document.getElementById('pop-integrity').innerText = `${rndIntegrity}%`;
@@ -2226,6 +2309,13 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       }
     });
 
+    // пробои купола: пульсируют красным; загерметизированные — ровный бирюзовый
+    if (window.TUI_DOME.state) breachMeshes.forEach((m, i) => {
+      const st = window.TUI_DOME.state[i]; if (!st) return;
+      if (st.sealed) { m.material.color.setHex(0x2DD4BF); m.material.opacity = 0.28; m.children[0].material.color.setHex(0x5EEAD4); }
+      else { m.material.color.setHex(0xFF2D2D); m.material.opacity = 0.42 + 0.33 * (Math.sin(elapsedTime * 5 + i * 1.7) * 0.5 + 0.5); m.children[0].material.color.setHex(0xFF6B6B); }
+    });
+
     // RAYCASTING
     raycaster.setFromCamera(mouse, camera);
     const intersects = raycaster.intersectObject(domeMesh);
@@ -2241,13 +2331,13 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       hPos.needsUpdate = true;
       hoverMesh.visible = true;
 
+      const isBreach = window.TUI_DOME.breachIndex(faceIdx) >= 0;
+      hoverMat.color.setHex(isBreach ? 0xFFB4B4 : 0x5EEAD4);
       if (currentFaceIndex !== faceIdx) {
         hidePopup();
         currentFaceIndex = faceIdx;
-
-        hoverTimer = setTimeout(() => {
-          showPopupForFace(faceIdx);
-        }, 1000);
+        if (isBreach) showPopupForFace(faceIdx);
+        else hoverTimer = setTimeout(() => { showPopupForFace(faceIdx); }, 1000);
       }
     } else {
       hoverMesh.visible = false;
@@ -3318,6 +3408,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       card.classList.remove('has-content');
       ThreatMap.hide();
       this.current = null; this.pattern = null; this.progress = new Set();
+      if (window.TUI_DOME) window.TUI_DOME.setBreach(null);
     },
 
     /* ---------- карточка: инструкция, таймер, задание ---------- */
@@ -3408,10 +3499,21 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       const a = this.current;
       if (!a || !DB.moduleRow) return;
       const codes = (a.params && a.params.resolve && a.params.resolve.codes) || [];
+      this.syncDome();
       if (!codes.length) return;
       const { data } = await sb.from('threat_progress').select('code').eq('alert_id', a.id).eq('module_id', DB.moduleRow.id);
       this.progress = new Set((data || []).map(r => normCode(r.code)));
       this.renderCard();
+      this.syncDome();
+    },
+    // купол: при разгерметизации — по красному сектору на каждый код устранения (без кодов — 3); снятые — бирюзовые
+    syncDome() {
+      if (!window.TUI_DOME) return;
+      const a = this.current;
+      if (!a || a.threat_type !== 'hull' || this.ended) { window.TUI_DOME.setBreach(null); return; }
+      const codes = (a.params && a.params.resolve && a.params.resolve.codes) || [];
+      const list = codes.length ? codes.map(c => ({ sealed: this.progress.has(normCode(c.code)) })) : [{}, {}, {}];
+      window.TUI_DOME.setBreach(list);
     },
 
     /* Код со сканера (после авторизации): если это код устранения текущей угрозы —
