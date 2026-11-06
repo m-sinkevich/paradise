@@ -3741,10 +3741,10 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       const { data: ex } = await sb.from('alerts').select('id,excluded_module_ids').eq('active', true).eq('target_module_id', me).eq('params->>auto', 'silence');
       if (ex && ex.some(a => !(a.excluded_module_ids || []).includes(me))) return;
       const cfg = {
-        pattern: 'comms', title: 'ПОТЕРЯ СВЯЗИ', severity: 2, auto: 'silence',
-        instruction: `Бортовой журнал молчит дольше ${minutes} мин. ИИ модуля перевёл связь и внешнюю ремонтную панель в консервацию. Сделайте запись в бортовой журнал — системы вернутся.`,
+        pattern: 'journal', title: 'ЗАПРОС ЦЕНТРА УПРАВЛЕНИЯ', severity: 2, auto: 'silence',
+        instruction: `Центр управления не получает докладов от модуля дольше ${minutes} мин. Немедленно сделайте запись в бортовой журнал с докладом об обстановке в модуле.`,
         timer: { show: false, label: '' },
-        resolve: { codes: [], journal: true, done_message: 'Запись принята. Связь с другими модулями восстанавливается.' }
+        resolve: { codes: [], journal: true, done_message: 'Доклад принят центром управления. Спасибо за службу.' }
       };
       const { error } = await sb.from('alerts').insert(threatRowFromConfig(cfg, new Date(), [me]));
       if (error) { console.error('[Silence] угроза не создана', error); return; }
