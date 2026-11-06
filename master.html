@@ -4570,10 +4570,14 @@ const THREAT_DEFS = {
     peakLabel: 'Контаминация, PPM', peak: [8.5, 36, 120], status: ['2.4% [ПАРАЗИТ Ф-02]', '11.8% [РАЗМНОЖЕНИЕ]', '38.5% [КЛАДКА ЯИЦ]'],
     desc: 'В модуле паразиты: контаминация ползёт вверх, по экрану летят споры, щелчки дозиметра. Устранение — QR-коды на снятых и закрытых в контейнер клещах.' },
   hull: { name: 'Разгерметизация', panel: 'Целостность модуля', color: '#FF6B6B', icon: '◎',
-    title: 'РАЗГЕРМЕТИЗАЦИЯ', timerLabel: 'До критического падения давления',
-    instruction: 'Найдите и загерметизируйте пробой. Если не успеваете — все в шлюз, закройте за собой дверь.',
-    peakLabel: 'Прочность купола, %', peak: [78, 61, 38], status: ['2 DENT DETECTED', '4 DENT DETECTED', '7 BREACH DETECTED'],
-    desc: 'Прочность купола и давление падают, загораются точки пробоев, красная пульсация, шипение воздуха.' },
+    title: 'РАЗГЕРМЕТИЗАЦИЯ · 3 ПРОБОЯ ОБШИВКИ', timerLabel: 'До критического падения давления',
+    instruction: 'Пробиты 3 сектора внешней обшивки. Шлюз пропускает только одного: воздуха в баллонах хватит на один выход, второй цикл шлюзования сбросит давление в модуле. ' +
+      'Один человек надевает скафандр, выходит, находит метки пробоев (QR-датчики на обшивке), снимает их и возвращается. В модуле — отсканировать все 3 датчика в терминале. Остальным — не открывать шлюз, держаться вместе, дышать спокойно.',
+    peakLabel: 'Прочность купола, %', peak: [78, 61, 38], status: ['3 BREACH DETECTED', '3 BREACH DETECTED', '3 BREACH DETECTED'],
+    duration: 15,
+    codes: ['MFFAKJ', '79M6BS', '5CSV79'].map(code => ({ code, message: 'Код связи с блоком контроля обшивки принят.\nДатчик пробоя снят, сектор загерметизирован, давление в секторе стабилизировано.' })),
+    done: 'Все сектора обшивки загерметизированы. Давление восстанавливается.\nШлюз закрыт. Модуль в безопасности.',
+    desc: 'Прочность купола и давление падают, загораются точки пробоев, красная пульсация, шипение воздуха. Устранение: один в скафандре снимает с обшивки 3 QR-датчика (MFFAKJ, 79M6BS, 5CSV79) и сканирует их в терминале.' },
   atmo: { name: 'Отказ жизнеобеспечения', panel: 'Атмосфера модуля', color: '#C084FC', icon: '≈',
     title: 'ОТКАЗ ЖИЗНЕОБЕСПЕЧЕНИЯ', timerLabel: 'Запас кислорода',
     instruction: 'Не бегайте, говорите шёпотом, дышите медленно. Наденьте кислородные маски, если они есть.',
@@ -4704,7 +4708,12 @@ Object.assign(Admin, {
       // смена паттерна: подставляем его значения, но сохраняем цель, время и коды
       const keep = this.readConfig();
       const d = this.defaultConfig(sel.value);
-      this.fillForm(Object.assign(d, { duration_min: keep.duration_min, resolve: Object.assign({}, keep.resolve, { journal: !!THREAT_DEFS[sel.value].journal || keep.resolve.journal }), next_ref: keep.next_ref, next_delay_sec: keep.next_delay_sec }), true);
+      // у шаблона свои коды устранения (разгерметизация — 3 датчика обшивки): подставляем, если своих кодов не вводили
+      const def = THREAT_DEFS[sel.value];
+      const res = Object.assign({}, keep.resolve, { journal: !!def.journal || keep.resolve.journal });
+      if (!res.codes.length && d.resolve.codes.length) res.codes = d.resolve.codes;
+      if (!res.done_message && d.resolve.done_message) res.done_message = d.resolve.done_message;
+      this.fillForm(Object.assign(d, { duration_min: def.duration || keep.duration_min, resolve: res, next_ref: keep.next_ref, next_delay_sec: keep.next_delay_sec }), true);
     });
     document.getElementById('thColorRow').innerHTML = THREAT_COLORS.map(c =>
       `<button type="button" class="color-chip" data-color="${c}" title="${c}"><span class="swatch" style="background:${c}"></span></button>`).join('') +
@@ -4756,8 +4765,8 @@ Object.assign(Admin, {
     const d = THREAT_DEFS[pattern] || THREAT_DEFS.alert;
     return {
       pattern, title: d.title, instruction: d.instruction, severity: 2, color: d.color, peak: null, status: '',
-      duration_min: 10, timer: { show: pattern !== 'alert', label: d.timerLabel },
-      resolve: { codes: [], journal: !!d.journal, done_message: '' },
+      duration_min: d.duration || 10, timer: { show: pattern !== 'alert', label: d.timerLabel },
+      resolve: { codes: (d.codes || []).map(c => Object.assign({}, c)), journal: !!d.journal, done_message: d.done || '' },
       sound_mode: pattern === 'alert' ? 'none' : 'builtin', sound_url: null, sound_loop: true,
       next_ref: '', next_delay_sec: 5
     };

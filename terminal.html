@@ -3006,13 +3006,13 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
       scene: { particleColor: '#A3E635', particles: 170, particleSize: 0.065, bgPulse: 1.2 }
     },
     hull: {
-      panel: 'tui-panel-hull', color: '#FF6B6B', sound: 'hiss', fx: 'breach', title: 'РАЗГЕРМЕТИЗАЦИЯ',
+      panel: 'tui-panel-hull', color: '#FF6B6B', sound: 'hiss', fx: 'breach', title: 'РАЗГЕРМЕТИЗАЦИЯ · 3 ПРОБОЯ ОБШИВКИ',
       metrics: [
         { id: 'tui-hull-val', to: [78, 61, 38], jitter: 0.5, fmt: v => v.toFixed(1) + '%', peak: true, bar: 'tui-hull-bar', barMax: 100 },
         { id: 'tui-pressure', to: [0.86, 0.68, 0.44], jitter: 0.012, fmt: v => v.toFixed(2) + ' ATM' }
       ],
-      texts: [{ id: 'tui-dent-val', text: ['2 DENT DETECTED', '4 DENT DETECTED', '7 BREACH DETECTED'], status: true }],
-      dents: [2, 4, 7],
+      texts: [{ id: 'tui-dent-val', text: ['3 BREACH DETECTED', '3 BREACH DETECTED', '3 BREACH DETECTED'], status: true }],
+      dents: [3, 3, 3],
       scene: { bgPulse: 4.5 }
     },
     atmo: {
