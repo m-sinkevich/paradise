@@ -72,6 +72,11 @@
 ::-webkit-scrollbar-corner { background: transparent; }
 input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+  #mg-guest-bar { position: fixed; left: 50%; top: 0; transform: translateX(-50%); z-index: 99998; background: #3B2A05; border: 1px solid #F59E0B; border-top: 0;
+    color: #FCD34D; font: 600 12px/1.2 'IBM Plex Mono', monospace; letter-spacing: 1px; padding: 6px 12px; display: flex; gap: 12px; align-items: center; white-space: nowrap; max-width: 96vw; overflow: hidden; text-overflow: ellipsis; }
+  #mg-guest-bar button { background: transparent; border: 1px solid #F59E0B; color: #FCD34D; font: inherit; padding: 2px 8px; cursor: pointer; }
+  .mg-guest-toast { position: fixed; left: 50%; top: 40px; transform: translateX(-50%); z-index: 99999; background: #0b1622; border: 1px solid #F59E0B; color: #FCD34D;
+    font: 600 13px 'IBM Plex Mono', monospace; padding: 10px 16px; box-shadow: 0 8px 30px rgba(0,0,0,.5); }
   #coToasts { position: fixed; right: 18px; bottom: 18px; z-index: 99999; display: flex; flex-direction: column; gap: 10px; width: min(380px, calc(100vw - 36px)); }
   .co-toast { background: #0b1622; border: 1px solid #F59E0B; border-left: 4px solid #F59E0B; box-shadow: 0 8px 30px rgba(0,0,0,.5), 0 0 18px rgba(245,158,11,.25); padding: 10px 12px; color: #E5E7EB; animation: coToastIn .3s ease; }
   @keyframes coToastIn { from { opacity: 0; transform: translateY(12px); } }
@@ -102,7 +107,26 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     ready: function (fn) { if (document.documentElement.classList.contains('mg-unlocked')) fn(); else waiting.push(fn); },
     logout: function () { try { localStorage.removeItem(KEY); } catch (e) {} location.reload(); }
   };
+  // гостевой режим: пустой пароль — всё видно, ничего нельзя создать, изменить или удалить (см. guestFetch ниже)
+  function guestOn() {
+    window.MASTER_GUEST = true;
+    document.documentElement.classList.add('mg-guest');
+    try { sessionStorage.setItem('mg_guest', '1'); } catch (e) {}
+    var addBar = function () {
+      if (document.getElementById('mg-guest-bar')) return;
+      var b = document.createElement('div'); b.id = 'mg-guest-bar';
+      b.innerHTML = '👁 ГОСТЕВОЙ РЕЖИМ · только просмотр — создавать, изменять и удалять нельзя <button type="button">Выйти</button>';
+      b.querySelector('button').onclick = function () { window.MasterGate.logout(); };
+      document.body.appendChild(b);
+    };
+    if (document.body) addBar(); else document.addEventListener('DOMContentLoaded', addBar);
+  }
+  window.MasterGate.isGuest = function () { return !!window.MASTER_GUEST; };
+  var _logout = window.MasterGate.logout;
+  window.MasterGate.logout = function () { try { sessionStorage.removeItem('mg_guest'); } catch (e) {} _logout(); };
   if (remembered()) { document.documentElement.classList.add('mg-unlocked'); return; }
+  var wasGuest = false; try { wasGuest = sessionStorage.getItem('mg_guest') === '1'; } catch (e) {}
+  if (wasGuest) { guestOn(); document.documentElement.classList.add('mg-unlocked'); return; }
   async function check(pw) {
     var key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits']);
     var bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: bytes(SALT), iterations: ITER }, key, 256);
@@ -113,12 +137,14 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     gate.id = 'mg-gate';
     gate.innerHTML = '<form autocomplete="off"><div class="k">◈ ДОСТУП ОГРАНИЧЕН</div><h1>ТЕРМИНАЛ МАСТЕРА</h1>' +
       '<input type="password" id="mg-pw" placeholder="ПАРОЛЬ" autofocus>' +
-      '<button type="submit">ВОЙТИ</button><div class="err" id="mg-err"></div></form>';
+      '<button type="submit">ВОЙТИ</button><div class="err" id="mg-err"></div>' +
+      '<div style="font-size:11px;color:#64748B;letter-spacing:.5px">Пустой пароль — гостевой просмотр без права изменений</div></form>';
     document.body.appendChild(gate);
     var input = gate.querySelector('#mg-pw'), err = gate.querySelector('#mg-err');
     setTimeout(function () { input.focus(); }, 50);
     gate.querySelector('form').addEventListener('submit', async function (e) {
       e.preventDefault();
+      if (input.value === '') { err.textContent = ''; guestOn(); unlock(); return; }
       if (!window.crypto || !crypto.subtle) { err.textContent = 'Браузер не поддерживает проверку (нужен https или localhost).'; return; }
       err.textContent = 'ПРОВЕРКА…';
       var ok = false;
@@ -1946,7 +1972,26 @@ if (typeof supabase === 'undefined' || typeof QRCode === 'undefined') {
    ========================================================================= */
 const SUPABASE_URL = "https://yfogwbxxomuzbezgpqjm.supabase.co";
 const SUPABASE_KEY = "sb_publishable_TflOx6ZH1UM3wQPg_rEe4A_b6oxzSmd";
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// гость: любые записи в базу и хранилище блокируются здесь, до сервера не доходят (чтение работает как обычно)
+const GUEST_READ_RPC = ['content_price'];
+let guestWarnAt = 0;
+function guestFetch(input, init) {
+  const url = typeof input === 'string' ? input : (input && input.url) || '';
+  const method = String((init && init.method) || (input && input.method) || 'GET').toUpperCase();
+  if (window.MASTER_GUEST && url.startsWith(SUPABASE_URL) && method !== 'GET' && method !== 'HEAD'
+      && !GUEST_READ_RPC.some(f => url.includes('/rpc/' + f))) {
+    if (Date.now() - guestWarnAt > 2500) {
+      guestWarnAt = Date.now();
+      const t = document.createElement('div'); t.className = 'mg-guest-toast';
+      t.textContent = '👁 Гостевой режим: изменения не сохраняются';
+      document.body.appendChild(t); setTimeout(() => t.remove(), 2600);
+    }
+    return Promise.resolve(new Response(JSON.stringify({ message: 'Гостевой режим: только просмотр', code: 'GUEST', details: null, hint: null }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } }));
+  }
+  return fetch(input, init);
+}
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { global: { fetch: guestFetch } });
 const MEDIA_BUCKET = "content-media";
 
 const TEMPLATE_STORAGE_KEY = "colonist_terminal_alert_templates_v1";
