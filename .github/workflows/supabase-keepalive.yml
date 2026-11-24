@@ -1,6 +1,6 @@
 # «Будильник» для бесплатного проекта Supabase.
 # Бесплатный проект ставится на паузу после ~7 дней без запросов.
-# Этот сценарий раз в 3 дня делает маленький запрос к базе (читает одну строку из modules),
+# Этот сценарий раз в день читает несколько таблиц и делает служебную запись (функция keepalive_ping, sql/keepalive.sql),
 # а если в репозитории давно не было коммитов — обновляет файл-отметку, чтобы GitHub
 # не отключил расписание (GitHub отключает scheduled-сценарии в публичных репозиториях
 # после 60 дней без активности).
@@ -9,7 +9,7 @@ name: Supabase keepalive
 
 on:
   schedule:
-    - cron: "17 5 */3 * *"   # в 05:17 UTC (09:17 по Тбилиси) каждые 3 дня
+    - cron: "17 5 * * *"     # каждый день в 05:17 UTC (09:17 по Тбилиси)
   workflow_dispatch:          # кнопка «Run workflow» для ручного запуска
 
 permissions:
@@ -24,23 +24,32 @@ jobs:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://yfogwbxxomuzbezgpqjm.supabase.co' }}
       SUPABASE_KEY: ${{ secrets.SUPABASE_KEY || 'sb_publishable_TflOx6ZH1UM3wQPg_rEe4A_b6oxzSmd' }}
     steps:
-      - name: Запрос к базе
+      - name: Запросы к базе
         run: |
           set -e
+          H=(-H "apikey: $SUPABASE_KEY" -H "Authorization: Bearer $SUPABASE_KEY")
+          ok=0
           for attempt in 1 2 3; do
-            code=$(curl -s -o response.json -w "%{http_code}" \
-              -H "apikey: $SUPABASE_KEY" \
+            code=$(curl -s -o response.json -w "%{http_code}" "${H[@]}" \
               "$SUPABASE_URL/rest/v1/modules?select=id&limit=1" || echo "000")
             echo "Попытка $attempt: HTTP $code"
-            if [ "$code" = "200" ]; then
-              echo "База на связи: $(cat response.json)"
-              exit 0
-            fi
+            if [ "$code" = "200" ]; then ok=1; break; fi
             sleep 30
           done
-          echo "::error::Supabase не ответил (HTTP $code). Возможно, проект уже на паузе — откройте панель Supabase и нажмите Restore project."
-          cat response.json || true
-          exit 1
+          if [ "$ok" != "1" ]; then
+            echo "::error::Supabase не ответил (HTTP $code). Возможно, проект уже на паузе — откройте панель Supabase и нажмите Restore project."
+            cat response.json || true
+            exit 1
+          fi
+          # ещё несколько чтений
+          for t in characters content_items alerts journal_entries; do
+            echo "$t: HTTP $(curl -s -o /dev/null -w '%{http_code}' "${H[@]}" "$SUPABASE_URL/rest/v1/$t?select=id&limit=5")"
+          done
+          # служебная запись в базу (sql/keepalive.sql); если функции ещё нет — не ошибка
+          code=$(curl -s -o ping.json -w "%{http_code}" -X POST "${H[@]}" -H "Content-Type: application/json" -d '{}' \
+            "$SUPABASE_URL/rest/v1/rpc/keepalive_ping" || echo "000")
+          echo "keepalive_ping: HTTP $code $(cat ping.json)"
+          if [ "$code" = "404" ]; then echo "::warning::Выполните sql/keepalive.sql в Supabase — тогда будильник будет ещё и записывать в базу."; fi
 
       - name: Отметка активности репозитория (раз в ~50 дней)
         uses: actions/checkout@v4
